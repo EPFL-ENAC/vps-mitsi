@@ -1,2 +1,0 @@
-export const SWITZERLAND_LATITUDE = 46.8182;
-export const SWITZERLAND_LONGITUDE = 8.2275;

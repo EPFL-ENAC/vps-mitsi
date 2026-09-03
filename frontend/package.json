@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@quasar/extras": "^1.16.4",
+    "echarts": "^6.1.0",
     "lefthook": "^2.1.4",
     "maplibre-gl": "^5.23.0",
     "pinia": "^3.0.1",
