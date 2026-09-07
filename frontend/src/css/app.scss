@@ -1,7 +1,37 @@
 // app global css in SCSS form
 
 $border-color: rgba(0, 0, 0, 0.15);
+/*
+// ─── MITSI design ──────────────────────────────────────────────────────
+// Okabe–Ito colour-safe palette + MITSI brand styling as in interface draft
+:root {
+    --mitsi-ink: #141920;
+    --mitsi-ink-2: #48525f;
+    --mitsi-ink-3: #78828f;
+    --mitsi-rule: #dce2ea;
+    --mitsi-rule-strong: #c2cbd6;
+    --mitsi-surface: #ffffff;
+    --mitsi-surface-2: #eff2f6;
 
+    // Semantic emissions palette (Okabe–Ito, CVD-safe)
+    --mitsi-embodied: #0072b2; // blue
+    --mitsi-operational: #e69f00; // orange
+    --mitsi-underlying: #009e73; // green
+
+    // Hardware category palette
+    --mitsi-cat-server: #0072b2;
+    --mitsi-cat-storage: #56b4e9;
+    --mitsi-cat-network: #009e73;
+    --mitsi-cat-spare: #cc79a7;
+
+    // Status colours
+    --mitsi-ok: #0b7a55;
+    --mitsi-warn: #8a5a00;
+    --mitsi-warn-wash: #fff6e2;
+    --mitsi-crit: #a3211b;
+    --mitsi-crit-wash: #fdedec;
+}
+*/
 body {
     font-family: 'Google Sans Flex', sans-serif;
     touch-action: pan-x pan-y;
