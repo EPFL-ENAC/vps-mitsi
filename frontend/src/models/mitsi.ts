@@ -13,6 +13,12 @@ export const MITSI_SCHEMA_VERSION = 1;
 /** Storage key used for client-side (Quasar LocalStorage) persistence. */
 export const MITSI_STORAGE_KEY = 'mitsi-assessment';
 
+/** Completion state of an assessment block shown in the nav rail / status bar. */
+export type BlockStatus = 'complete' | 'partial' | 'not_started';
+
+/** The four assessment blocks, in the order shown in the navigation rail. */
+export type BlockKey = 'scope' | 'inventory' | 'energy' | 'results';
+
 // ─── Scope of the assessment ────────────────────────────────────────────────
 
 /** Drop-down time unit used to build the functional unit sentence. */

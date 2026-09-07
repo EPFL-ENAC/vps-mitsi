@@ -57,11 +57,16 @@
 
         <q-footer bordered class="bg-white text-dark">
             <q-toolbar class="q-px-md">
-                <span class="text-caption text-grey-7">Draft saved in this browser</span>
+                <span class="text-caption text-grey-7">{{ savedText }}</span>
+                <span v-if="exportedText" class="text-caption text-grey-6 q-ml-sm">
+                    · {{ exportedText }}
+                </span>
                 <q-space />
-                <span class="text-caption text-grey-8">Total: — tCO₂e</span>
+                <span class="text-caption text-grey-8">Total: {{ totalLifespanText }}</span>
                 <q-space />
-                <span class="text-caption text-grey-7">Per functional unit: — gCO₂e</span>
+                <span class="text-caption text-grey-7">
+                    Per functional unit: {{ perFunctionalUnitText }}
+                </span>
             </q-toolbar>
         </q-footer>
     </q-layout>
@@ -70,8 +75,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 
-type BlockStatus = 'complete' | 'partial' | 'not_started';
-type BlockKey = 'scope' | 'inventory' | 'energy' | 'results';
+import type { BlockKey, BlockStatus } from 'src/models/mitsi';
+import { useMitsiStore } from 'src/stores/mitsi';
 
 interface BlockDef {
     label: string;
@@ -81,39 +86,41 @@ interface BlockDef {
 }
 
 const leftDrawerOpen = ref(false);
+const mitsi = useMitsiStore();
 
 const blocks = computed<Record<'welcome', { label: string }>>(() => ({
     welcome: { label: 'Welcome' },
 }));
 
-// NOTE: completion states are placeholders for the foundation.
-// They will be derived from the assessment store once the blocks are built.
-const assessmentBlocks = computed<Record<BlockKey, BlockDef>>(() => ({
-    scope: {
-        label: 'Scope of the assessment',
-        to: '/scope',
-        icon: 'scope',
-        status: 'not_started',
-    },
-    inventory: {
-        label: 'Hardware inventory',
-        to: '/inventory',
-        icon: 'dns',
-        status: 'not_started',
-    },
-    energy: {
-        label: 'Energy consumption',
-        to: '/energy',
-        icon: 'bolt',
-        status: 'not_started',
-    },
-    results: {
-        label: 'Results',
-        to: '/results',
-        icon: 'insights',
-        status: 'not_started',
-    },
-}));
+const assessmentBlocks = computed<Record<BlockKey, BlockDef>>(() => {
+    const status = mitsi.blockStatus;
+    return {
+        scope: {
+            label: 'Scope of the assessment',
+            to: '/scope',
+            icon: 'scope',
+            status: status.scope,
+        },
+        inventory: {
+            label: 'Hardware inventory',
+            to: '/inventory',
+            icon: 'dns',
+            status: status.inventory,
+        },
+        energy: {
+            label: 'Energy consumption',
+            to: '/energy',
+            icon: 'bolt',
+            status: status.energy,
+        },
+        results: {
+            label: 'Results',
+            to: '/results',
+            icon: 'insights',
+            status: status.results,
+        },
+    };
+});
 
 function completionLabel(status: BlockStatus): string {
     switch (status) {
@@ -124,6 +131,34 @@ function completionLabel(status: BlockStatus): string {
         default:
             return 'Not started';
     }
+}
+
+/** Total over the lifespan in tonnes of CO2-eq, or a dash until the scope is valid. */
+const totalLifespanText = computed<string>(() =>
+    mitsi.isScopeValid ? `${(mitsi.totalLifespan / 1000).toFixed(2)} tCO₂e` : '—',
+);
+
+/** Per-functional-unit emissions in grams of CO2-eq, or a dash when not computable. */
+const perFunctionalUnitText = computed<string>(() => {
+    const v = mitsi.perFunctionalUnit;
+    return v !== null ? `${(v * 1000).toFixed(2)} gCO₂e` : '—';
+});
+
+const savedText = computed<string>(() =>
+    mitsi.savedAt ? `Saved ${formatTimeAgo(mitsi.savedAt)}` : 'Draft saved in this browser',
+);
+const exportedText = computed<string | null>(() =>
+    mitsi.exportedAt ? `Exported ${formatTimeAgo(mitsi.exportedAt)}` : null,
+);
+
+function formatTimeAgo(ts: number): string {
+    const diffSec = Math.round((Date.now() - ts) / 1000);
+    if (diffSec < 60) return 'just now';
+    const mins = Math.round(diffSec / 60);
+    if (mins < 60) return `${mins} min ago`;
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return `${hrs} h ago`;
+    return `${Math.round(hrs / 24)} d ago`;
 }
 </script>
 
