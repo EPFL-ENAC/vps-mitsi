@@ -1,110 +1,148 @@
 <template>
     <q-layout view="hHh LpR lFf">
-        <AppHeader />
+        <q-header elevated class="bg-white text-dark">
+            <q-toolbar>
+                <q-btn
+                    flat
+                    dense
+                    round
+                    icon="menu"
+                    aria-label="Menu"
+                    @click="leftDrawerOpen = !leftDrawerOpen"
+                />
+                <q-toolbar-title class="text-weight-medium">MITSI</q-toolbar-title>
+                <q-space />
+                <span class="text-caption text-grey-7 q-mr-sm">
+                    IT service carbon impact assessment
+                </span>
+            </q-toolbar>
+        </q-header>
 
-        <q-drawer v-model="leftDrawerOpen" :breakpoint="0" :width="314" bordered />
+        <q-drawer v-model="leftDrawerOpen" show-if-above :width="280" bordered>
+            <q-list padding>
+                <q-item clickable v-ripple to="/" exact>
+                    <q-item-section avatar>
+                        <q-icon name="home" />
+                    </q-item-section>
+                    <q-item-section>{{ blocks.welcome.label }}</q-item-section>
+                </q-item>
+
+                <q-separator spaced />
+
+                <q-item
+                    v-for="(block, key) in assessmentBlocks"
+                    :key="key"
+                    clickable
+                    v-ripple
+                    :to="block.to"
+                >
+                    <q-item-section avatar>
+                        <q-icon :name="block.icon" />
+                    </q-item-section>
+                    <q-item-section>{{ block.label }}</q-item-section>
+                    <q-item-section side>
+                        <span
+                            class="completion-dot"
+                            :class="`completion-dot--${block.status}`"
+                            :title="completionLabel(block.status)"
+                        />
+                    </q-item-section>
+                </q-item>
+            </q-list>
+        </q-drawer>
 
         <q-page-container>
-            <q-page class="leman-page text-white">
-                <div class="layout-content">
-                    <div class="page-shell">
-                        <router-view />
-                    </div>
-                </div>
-            </q-page>
+            <router-view />
         </q-page-container>
 
-        <AppFooter />
+        <q-footer bordered class="bg-white text-dark">
+            <q-toolbar class="q-px-md">
+                <span class="text-caption text-grey-7">Draft saved in this browser</span>
+                <q-space />
+                <span class="text-caption text-grey-8">Total: — tCO₂e</span>
+                <q-space />
+                <span class="text-caption text-grey-7">Per functional unit: — gCO₂e</span>
+            </q-toolbar>
+        </q-footer>
     </q-layout>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import AppHeader from 'src/components/navigation/AppHeader.vue';
-import AppFooter from 'src/components/navigation/AppFooter.vue';
-import { useInactivityTimer } from 'src/composables/useInactivityTimer';
+import { computed, ref } from 'vue';
+
+type BlockStatus = 'complete' | 'partial' | 'not_started';
+type BlockKey = 'scope' | 'inventory' | 'energy' | 'results';
+
+interface BlockDef {
+    label: string;
+    to: string;
+    icon: string;
+    status: BlockStatus;
+}
 
 const leftDrawerOpen = ref(false);
-const router = useRouter();
-const route = useRoute();
 
-const { onInactivityThresholdReached } = useInactivityTimer({
-    timeoutMs: 60_000,
-});
+const blocks = computed<Record<'welcome', { label: string }>>(() => ({
+    welcome: { label: 'Welcome' },
+}));
 
-onInactivityThresholdReached(() => {
-    if (route.path !== '/') {
-        void router.push('/');
+// NOTE: completion states are placeholders for the foundation.
+// They will be derived from the assessment store once the blocks are built.
+const assessmentBlocks = computed<Record<BlockKey, BlockDef>>(() => ({
+    scope: {
+        label: 'Scope of the assessment',
+        to: '/scope',
+        icon: 'scope',
+        status: 'not_started',
+    },
+    inventory: {
+        label: 'Hardware inventory',
+        to: '/inventory',
+        icon: 'dns',
+        status: 'not_started',
+    },
+    energy: {
+        label: 'Energy consumption',
+        to: '/energy',
+        icon: 'bolt',
+        status: 'not_started',
+    },
+    results: {
+        label: 'Results',
+        to: '/results',
+        icon: 'insights',
+        status: 'not_started',
+    },
+}));
+
+function completionLabel(status: BlockStatus): string {
+    switch (status) {
+        case 'complete':
+            return 'Complete';
+        case 'partial':
+            return 'In progress';
+        default:
+            return 'Not started';
     }
-});
+}
 </script>
 
-<style scoped lang="scss">
-.leman-page {
-    background:
-        radial-gradient(circle at top center, rgba(0, 210, 255, 0.14), transparent 38%),
-        linear-gradient(180deg, #073640 0%, #03161b 55%, #00090c 100%);
-
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
+<style scoped>
+.completion-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid #c2cbd6;
 }
 
-.layout-content {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
+.completion-dot--partial {
+    border-color: #8a5a00;
+    background: linear-gradient(90deg, #8a5a00 50%, transparent 50%);
 }
 
-.page-shell {
-    width: 100%;
-    max-width: 1600px;
-    margin: 0 auto;
-    padding: 4rem;
-    flex: 1;
-}
-
-.app-footer {
-    width: 100%;
-    padding: 32px 24px 40px;
-}
-
-.footer-logos {
-    max-width: 1080px;
-    margin: 0 auto;
-    padding-top: 24px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 28px;
-    flex-wrap: wrap;
-}
-
-.footer-logo {
-    height: 28px;
-    width: auto;
-    object-fit: contain;
-    opacity: 0.9;
-}
-
-@media (max-width: 640px) {
-    .page-shell {
-        padding: 36px 16px 24px;
-    }
-
-    .app-footer {
-        padding: 24px 16px 32px;
-    }
-
-    .footer-logos {
-        gap: 20px;
-        padding-top: 20px;
-    }
-
-    .footer-logo {
-        height: 22px;
-    }
+.completion-dot--complete {
+    border-color: #0b7a55;
+    background: #0b7a55;
 }
 </style>
