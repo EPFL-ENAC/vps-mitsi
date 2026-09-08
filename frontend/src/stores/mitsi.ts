@@ -23,6 +23,7 @@ import {
     type TimeUnit,
     type UnderlyingService,
 } from 'src/models/mitsi';
+import { MitsiStateSchema } from 'src/models/schema';
 
 /**
  * Counts of each time unit per year, matching the "Counts of time unit for a
@@ -216,10 +217,6 @@ export const useMitsiStore = defineStore('mitsi', () => {
     }
 
     // ── Internal helpers ─────────────────────────────────────────────────────
-    function isRecord(v: unknown): v is Record<string, unknown> {
-        return typeof v === 'object' && v !== null && !Array.isArray(v);
-    }
-
     function buildState(): MitsiState {
         return {
             schemaVersion: MITSI_SCHEMA_VERSION,
@@ -234,48 +231,18 @@ export const useMitsiStore = defineStore('mitsi', () => {
     }
 
     function parseState(raw: unknown): MitsiState | null {
-        if (!raw || typeof raw !== 'object') return null;
-        const o = raw as Record<string, unknown>;
-
-        // Only bare, finite numbers are trusted as schema versions.
-        const version = o.schemaVersion;
-        if (typeof version !== 'number' || !Number.isFinite(version)) return null;
-        // Reject schemas newer than the current one; accept same or older.
-        if (version > MITSI_SCHEMA_VERSION) return null;
-
-        const blank = emptyMitsiState();
-        // Merge the loaded JSON over the blank state so any missing field falls
-        // back to its default instead of remaining undefined.
-        const state: MitsiState = {
-            ...blank,
-            ...(isRecord(o.scope) ? { scope: { ...blank.scope, ...o.scope } } : {}),
-            ...(Array.isArray(o.hardware) ? { hardware: o.hardware as HardwareItem[] } : {}),
-            ...(isRecord(o.monitoringPeriod)
-                ? { monitoringPeriod: { ...blank.monitoringPeriod, ...o.monitoringPeriod } }
-                : {}),
-            ...(Array.isArray(o.energy) ? { energy: o.energy as DatacenterEnergy[] } : {}),
-            ...(typeof o.includeSecondHandEmbodied === 'boolean'
-                ? { includeSecondHandEmbodied: o.includeSecondHandEmbodied }
-                : {}),
-            ...(typeof o.includeUnderlyingServices === 'boolean'
-                ? { includeUnderlyingServices: o.includeUnderlyingServices }
-                : {}),
-            ...(Array.isArray(o.underlyingServices)
-                ? { underlyingServices: o.underlyingServices as UnderlyingService[] }
-                : {}),
-        };
-        return state;
+        const parsed = MitsiStateSchema.safeParse(raw);
+        return parsed.success ? parsed.data : null;
     }
 
     function applyState(state: MitsiState): void {
-        const blank = emptyMitsiState();
-        scope.value = { ...blank.scope, ...state.scope };
-        hardware.value = state.hardware ?? [];
-        monitoringPeriod.value = { ...blank.monitoringPeriod, ...state.monitoringPeriod };
-        energy.value = state.energy ?? [];
-        includeSecondHandEmbodied.value = state.includeSecondHandEmbodied ?? false;
-        includeUnderlyingServices.value = state.includeUnderlyingServices ?? false;
-        underlyingServices.value = state.underlyingServices ?? [];
+        scope.value = state.scope;
+        hardware.value = state.hardware;
+        monitoringPeriod.value = state.monitoringPeriod;
+        energy.value = state.energy;
+        includeSecondHandEmbodied.value = state.includeSecondHandEmbodied;
+        includeUnderlyingServices.value = state.includeUnderlyingServices;
+        underlyingServices.value = state.underlyingServices;
     }
 
     return {
