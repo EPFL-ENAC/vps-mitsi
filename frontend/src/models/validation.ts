@@ -1,10 +1,9 @@
 /**
  * MITSI — form validation rules
  *
- * Simple validation rule factories compatible with Quasar's `QInput`/`QSelect`
- * `:rules` prop (each rule returns `true` when valid, or a string error message).
- *
- * No Zod — kept intentionally light, per project decision.
+ * Rule factories for Quasar QInput/QSelect `:rules` (true | error string).
+ * Form-level validation only — data-boundary validation (LocalStorage,
+ * JSON import/export) is Zod's job in src/models/schema.ts.
  */
 
 export type ValidationRule = (value: unknown) => true | string;
