@@ -63,6 +63,14 @@
                 </span>
                 <q-space />
                 <span class="text-caption text-grey-8">
+                    {{ $t('mainFooterEmbodied', { value: embodiedText }) }}
+                </span>
+                <q-space />
+                <span class="text-caption text-grey-8">
+                    {{ $t('mainFooterOperational', { value: operationalText }) }}
+                </span>
+                <q-space />
+                <span class="text-caption text-grey-8">
                     {{ $t('mainFooterTotal', { value: totalLifespanText }) }}
                 </span>
                 <q-space />
@@ -134,10 +142,24 @@ function completionLabelKey(status: BlockStatus): string {
     }
 }
 
+/** Embodied emissions in tonnes, or a dash until the scope is valid. */
+const embodiedText = computed<string>(() =>
+    mitsi.isScopeValid
+        ? `${(mitsi.totalEmbodied / 1000).toFixed(1)} ${t('mainUnitTonnes')}`
+        : t('mainNotApplicable'),
+);
+
+/** Operational emissions in tonnes, or a dash until the scope is valid. */
+const operationalText = computed<string>(() =>
+    mitsi.isScopeValid
+        ? `${(mitsi.totalOperational / 1000).toFixed(1)} ${t('mainUnitTonnes')}`
+        : t('mainNotApplicable'),
+);
+
 /** Total over the lifespan in tonnes of CO2-eq, or a dash until the scope is valid. */
 const totalLifespanText = computed<string>(() =>
     mitsi.isScopeValid
-        ? `${(mitsi.totalLifespan / 1000).toFixed(2)} ${t('mainUnitTonnesCo2e')}`
+        ? `${(mitsi.totalLifespan / 1000).toFixed(1)} ${t('mainUnitTonnesCo2e')}`
         : t('mainNotApplicable'),
 );
 
