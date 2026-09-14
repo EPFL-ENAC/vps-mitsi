@@ -64,17 +64,31 @@ export const useMitsiStore = defineStore('mitsi', () => {
         );
     });
 
+    /**
+     * Whether a second-hand row is excluded from the embodied total — i.e. it is
+     * second-hand AND second-hand embodied emissions are not being accounted for.
+     * Single definition of the rule, reused by the getters and the inventory page.
+     */
+    function isSecondHandExcluded(row: HardwareItem): boolean {
+        return row.isSecondHand && !includeSecondHandEmbodied.value;
+    }
+
+    /** Embodied emissions of one row: quantity × per-unit impact. */
+    function rowSubtotal(row: HardwareItem): number {
+        return row.quantity * row.impactManufacturingDistributionEol;
+    }
+
     /** Embodied emissions (kg CO2-eq), honouring the second-hand setting. */
     const totalEmbodied = computed<number>(() =>
         hardware.value.reduce((sum, h) => {
-            if (h.isSecondHand && !includeSecondHandEmbodied.value) return sum;
-            return sum + h.quantity * h.impactManufacturingDistributionEol;
+            if (isSecondHandExcluded(h)) return sum;
+            return sum + rowSubtotal(h);
         }, 0),
     );
 
     /** Count of hardware rows excluded because second-hand & not accounted. */
-    const secondHandExcludedCount = computed<number>(() =>
-        includeSecondHandEmbodied.value ? 0 : hardware.value.filter((h) => h.isSecondHand).length,
+    const secondHandExcludedCount = computed<number>(
+        () => hardware.value.filter(isSecondHandExcluded).length,
     );
 
     /** Operational emissions over the whole lifespan (kg CO2-eq). */
@@ -109,11 +123,14 @@ export const useMitsiStore = defineStore('mitsi', () => {
         // infinite or negative per-functional-unit figure.
         if (s.resourcesInService <= 0) return null;
         if (s.functionalUnit.usageDuration <= 0) return null;
+        if (s.functionalUnit.resourceCount <= 0) return null;
         if (s.lifespanYears <= 0) return null;
         if (totalLifespan.value <= 0) return null;
 
+        // one functional unit consumes usageDuration × resourceCount resource-hours.
         const uses =
-            s.lifespanYears * COUNTS_PER_YEAR[s.functionalUnit.timeUnit] * s.resourcesInService;
+            (s.lifespanYears * COUNTS_PER_YEAR[s.functionalUnit.timeUnit] * s.resourcesInService) /
+            (s.functionalUnit.usageDuration * s.functionalUnit.resourceCount);
         if (uses <= 0) return null;
         return totalLifespan.value / uses;
     });
@@ -129,6 +146,11 @@ export const useMitsiStore = defineStore('mitsi', () => {
     /** True when an energy record carries every field needed for the totals. */
     const energyRowValid = (e: DatacenterEnergy): boolean =>
         e.datacenterId.trim().length > 0 && e.carbonIntensity > 0 && e.energyConsumption >= 0;
+
+    /** Count of hardware rows missing a mandatory value (reuses hardwareRowValid). */
+    const missingMandatoryHardware = computed<number>(
+        () => hardware.value.filter((h) => !hardwareRowValid(h)).length,
+    );
 
     const hardwareRowsComplete = computed<boolean>(
         () => hardware.value.length > 0 && hardware.value.every(hardwareRowValid),
@@ -256,6 +278,8 @@ export const useMitsiStore = defineStore('mitsi', () => {
         savedAt,
         exportedAt,
         isScopeValid,
+        isSecondHandExcluded,
+        rowSubtotal,
         totalEmbodied,
         secondHandExcludedCount,
         totalOperational,
@@ -263,6 +287,7 @@ export const useMitsiStore = defineStore('mitsi', () => {
         totalLifespan,
         perFunctionalUnit,
         blockStatus,
+        missingMandatoryHardware,
         loadFromStorage,
         saveToStorage,
         reset,

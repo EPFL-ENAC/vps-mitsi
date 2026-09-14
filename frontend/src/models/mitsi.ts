@@ -7,7 +7,12 @@
  * that are not part of the persisted schema, so pages and components keep
  * importing from `src/models/mitsi` exactly as before.
  */
-import { MitsiStateSchema, type MitsiState } from 'src/models/schema';
+import {
+    HardwareItemSchema,
+    MitsiStateSchema,
+    type HardwareItem,
+    type MitsiState,
+} from 'src/models/schema';
 
 export { MITSI_SCHEMA_VERSION } from 'src/models/schema';
 export type {
@@ -43,4 +48,14 @@ export type BlockKey = 'scope' | 'inventory' | 'energy' | 'results';
  */
 export function emptyMitsiState(): MitsiState {
     return MitsiStateSchema.parse({});
+}
+
+/**
+ * Creates a ready-to-edit hardware row. Parsing `{}` fills every field from the
+ * schema defaults; the UI then overwrites the fallback id with a fresh uuid so
+ * each new row is uniquely identified before it is ever persisted.
+ */
+export function newHardwareItem(): HardwareItem {
+    const base = HardwareItemSchema.parse({});
+    return { ...base, id: crypto.randomUUID() };
 }

@@ -38,6 +38,16 @@ export function nonNegativeNumber(label = 'This field'): ValidationRule {
     };
 }
 
+/** Value must be empty OR a finite number >= 0 (optional numeric field). */
+export function optionalNumber(label = 'This field'): ValidationRule {
+    return (value) => {
+        if (value === null || value === undefined || value === '') return true;
+        const n = Number(value);
+        const valid = Number.isFinite(n) && n >= 0;
+        return valid || `${label} must be zero or a positive number.`;
+    };
+}
+
 /** Value must be a number > 0 (quantity, durations…). */
 export function positiveNumber(label = 'This field'): ValidationRule {
     return (value) => {
