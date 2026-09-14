@@ -101,7 +101,7 @@
                             <div class="text-subtitle2 q-mb-xs">
                                 {{ $t('scopeFunctionalUnitLabel') }}
                             </div>
-                            <div class="scope-fu row items-center q-gutter-sm flex-wrap">
+                            <div class="scope-fu row items-center q-gutter-sm flex-nowrap">
                                 <span>{{ $t('scopeFuBefore') }}</span>
                                 <q-input
                                     type="number"
@@ -113,6 +113,7 @@
                                     :rules="[positiveNumber(t('scopeFuDuration'))]"
                                     dense
                                     outlined
+                                    hide-bottom-space
                                 />
                                 <q-select
                                     class="scope-fu-select"
@@ -137,6 +138,7 @@
                                     :rules="[positiveInteger(t('scopeFuResourceCount'))]"
                                     dense
                                     outlined
+                                    hide-bottom-space
                                 />
                                 <q-select
                                     class="scope-fu-select scope-fu-select--grow"
@@ -223,6 +225,7 @@
                                     :rules="[required(t('scopeDcColAbbreviation'))]"
                                     dense
                                     outlined
+                                    hide-bottom-space
                                 />
                             </div>
                             <div class="scope-table__cell col-3">
@@ -232,6 +235,7 @@
                                     :rules="[required(t('scopeDcColName'))]"
                                     dense
                                     outlined
+                                    hide-bottom-space
                                 />
                             </div>
                             <div class="scope-table__cell col-3">
@@ -240,6 +244,7 @@
                                     @update:model-value="(v) => (dc.comment = String(v ?? ''))"
                                     dense
                                     outlined
+                                    hide-bottom-space
                                 />
                             </div>
                             <div class="scope-table__cell col-2 text-right text-grey-7">
