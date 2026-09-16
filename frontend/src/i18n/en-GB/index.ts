@@ -128,8 +128,6 @@ export default {
     inventoryModeAdvanced: 'Advanced',
     inventoryModeHint:
         'Switching modes only hides or shows columns — it never deletes data. Hidden values stay in the file and in the report.',
-    inventoryShowAllRows: 'Show all {n} rows',
-    inventoryShowFewer: 'Show fewer rows',
     inventoryAddRow: '+ Add row',
     inventorySave: 'Save',
     inventoryDeleteRow: 'Delete',

@@ -208,64 +208,69 @@
                         :label="$t('scopeDcAdd')"
                         @click="addDatacenter"
                     />
-                    <div v-if="mitsi.scope.datacenters.length" class="scope-table">
-                        <div class="scope-table__row scope-table__row--head">
-                            <div class="scope-table__cell col-3">
-                                {{ $t('scopeDcColAbbreviation') }}
-                            </div>
-                            <div class="scope-table__cell col-3">{{ $t('scopeDcColName') }}</div>
-                            <div class="scope-table__cell col-3">{{ $t('scopeDcColComment') }}</div>
-                            <div class="scope-table__cell col-2 text-right">
-                                {{ $t('scopeDcColUsedBy') }}
-                            </div>
-                            <div class="scope-table__cell col-1" />
+                    <div class="row items-center q-col-gutter-x-sm q-py-xs">
+                        <div class="col-3">
+                            <div class="scope-th">{{ $t('scopeDcColAbbreviation') }}</div>
                         </div>
-                        <div
-                            v-for="dc in mitsi.scope.datacenters"
-                            :key="dc.id"
-                            class="scope-table__row"
-                        >
-                            <div class="scope-table__cell col-3">
-                                <q-input
-                                    :model-value="dc.abbreviation"
-                                    @update:model-value="(v) => (dc.abbreviation = String(v ?? ''))"
-                                    :rules="[required(t('scopeDcColAbbreviation'))]"
-                                    dense
-                                    outlined
-                                    hide-bottom-space
-                                />
-                            </div>
-                            <div class="scope-table__cell col-3">
-                                <q-input
-                                    :model-value="dc.name"
-                                    @update:model-value="(v) => (dc.name = String(v ?? ''))"
-                                    :rules="[required(t('scopeDcColName'))]"
-                                    dense
-                                    outlined
-                                    hide-bottom-space
-                                />
-                            </div>
-                            <div class="scope-table__cell col-3">
-                                <q-input
-                                    :model-value="dc.comment"
-                                    @update:model-value="(v) => (dc.comment = String(v ?? ''))"
-                                    dense
-                                    outlined
-                                    hide-bottom-space
-                                />
-                            </div>
-                            <div class="scope-table__cell col-2 text-right text-grey-7">
-                                {{ usedByCell(dc) }}
-                            </div>
-                            <div class="scope-table__cell col-1 text-right">
-                                <q-btn
-                                    flat
-                                    dense
-                                    icon="delete"
-                                    :aria-label="$t('scopeDcDelete')"
-                                    @click="removeDatacenter(dc)"
-                                />
-                            </div>
+                        <div class="col-3">
+                            <div class="scope-th">{{ $t('scopeDcColName') }}</div>
+                        </div>
+                        <div class="col-3">
+                            <div class="scope-th">{{ $t('scopeDcColComment') }}</div>
+                        </div>
+                        <div class="col-2">
+                            <div class="scope-th text-right">{{ $t('scopeDcColUsedBy') }}</div>
+                        </div>
+                        <div class="col-1" />
+                    </div>
+                    <div
+                        v-for="dc in mitsi.scope.datacenters"
+                        :key="dc.id"
+                        class="row items-center q-col-gutter-x-sm q-py-xs"
+                    >
+                        <div class="col-3">
+                            <q-input
+                                class="full-width"
+                                :model-value="dc.abbreviation"
+                                @update:model-value="(v) => (dc.abbreviation = String(v ?? ''))"
+                                :rules="[required(t('scopeDcColAbbreviation'))]"
+                                dense
+                                outlined
+                                hide-bottom-space
+                            />
+                        </div>
+                        <div class="col-3">
+                            <q-input
+                                class="full-width"
+                                :model-value="dc.name"
+                                @update:model-value="(v) => (dc.name = String(v ?? ''))"
+                                :rules="[required(t('scopeDcColName'))]"
+                                dense
+                                outlined
+                                hide-bottom-space
+                            />
+                        </div>
+                        <div class="col-3">
+                            <q-input
+                                class="full-width"
+                                :model-value="dc.comment"
+                                @update:model-value="(v) => (dc.comment = String(v ?? ''))"
+                                dense
+                                outlined
+                                hide-bottom-space
+                            />
+                        </div>
+                        <div class="col-2 text-right text-grey-7">
+                            {{ usedByCell(dc) }}
+                        </div>
+                        <div class="col-1 text-right">
+                            <q-btn
+                                flat
+                                dense
+                                icon="delete"
+                                :aria-label="$t('scopeDcDelete')"
+                                @click="removeDatacenter(dc)"
+                            />
                         </div>
                     </div>
                 </q-card-section>
@@ -541,11 +546,6 @@ function removeItem(which: 'included' | 'excluded', id: string): void {
 </script>
 
 <style scoped>
-.scope-page {
-    max-width: 1180px;
-    margin: 0 auto;
-}
-
 .scope-zone-title {
     font-weight: 600;
 }
@@ -587,22 +587,11 @@ function removeItem(which: 'included' | 'excluded', id: string): void {
     max-width: 220px;
 }
 
-.scope-table__row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 0;
-    border-bottom: 1px solid #e6e9ef;
-}
-
-.scope-table__row--head {
-    color: #78828f;
+.scope-th {
     font-size: 12px;
-    text-transform: uppercase;
     letter-spacing: 0.03em;
-}
-
-.scope-table__cell {
-    flex: 0 0 auto;
+    text-transform: uppercase;
+    color: #78828f;
+    font-weight: 600;
 }
 </style>
