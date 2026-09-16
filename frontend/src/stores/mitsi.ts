@@ -116,12 +116,24 @@ export const useMitsiStore = defineStore('mitsi', () => {
         () => totalEmbodied.value + totalOperational.value + totalUnderlying.value,
     );
 
+    /**
+     * Number of resources related to the functional unit, derived from the
+     * inventory: Σ (quantity × gpuQuantity) over accounted rows — Excel
+     * '4.Hardware inventory'!D7×X7. Second-hand rows are excluded.
+     */
+    const resourcesInService = computed<number>(() =>
+        hardware.value.reduce(
+            (sum, h) => (isSecondHandExcluded(h) ? sum : sum + h.quantity * h.gpuQuantity),
+            0,
+        ),
+    );
+
     /** Amount per functional unit (kg CO2-eq per usage). Null when not computable. */
     const perFunctionalUnit = computed<number | null>(() => {
         const s = scope.value;
         // Guard against missing/zero inputs that would yield a meaningless,
         // infinite or negative per-functional-unit figure.
-        if (s.resourcesInService <= 0) return null;
+        if (resourcesInService.value <= 0) return null;
         if (s.functionalUnit.usageDuration <= 0) return null;
         if (s.functionalUnit.resourceCount <= 0) return null;
         if (s.lifespanYears <= 0) return null;
@@ -129,7 +141,9 @@ export const useMitsiStore = defineStore('mitsi', () => {
 
         // one functional unit consumes usageDuration × resourceCount resource-hours.
         const uses =
-            (s.lifespanYears * COUNTS_PER_YEAR[s.functionalUnit.timeUnit] * s.resourcesInService) /
+            (s.lifespanYears *
+                COUNTS_PER_YEAR[s.functionalUnit.timeUnit] *
+                resourcesInService.value) /
             (s.functionalUnit.usageDuration * s.functionalUnit.resourceCount);
         if (uses <= 0) return null;
         return totalLifespan.value / uses;
@@ -285,6 +299,7 @@ export const useMitsiStore = defineStore('mitsi', () => {
         totalOperational,
         totalUnderlying,
         totalLifespan,
+        resourcesInService,
         perFunctionalUnit,
         blockStatus,
         missingMandatoryHardware,

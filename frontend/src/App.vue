@@ -8,7 +8,7 @@ import { useMitsiStore } from 'src/stores/mitsi';
 const mitsi = useMitsiStore();
 mitsi.loadFromStorage();
 
-// TEMP: убрать перед коммитом
+// TEMP
 if (import.meta.env.DEV) {
     (window as unknown as Record<string, unknown>).mitsi = mitsi;
 }

@@ -65,9 +65,6 @@ export default {
     scopeFuMiddle: 'of the service with',
     scopeFuDuration: 'Usage duration',
     scopeFuResourceCount: 'Number of resources',
-    scopeResourcesInServiceLabel: 'Resources in service',
-    scopeResourcesInServiceHint:
-        'Total resources across the whole service. Estimate from inventory → 44 × 4 = 176.',
     scopeTimeUnitSecond: 'second',
     scopeTimeUnitMinute: 'minute',
     scopeTimeUnitHour: 'hour',

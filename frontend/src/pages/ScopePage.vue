@@ -159,21 +159,6 @@
                                 />
                             </div>
                         </div>
-
-                        <div class="col-12 col-md-4">
-                            <q-input
-                                type="number"
-                                :model-value="mitsi.scope.resourcesInService"
-                                @update:model-value="
-                                    (v) => (mitsi.scope.resourcesInService = toNum(v))
-                                "
-                                :label="$t('scopeResourcesInServiceLabel')"
-                                :hint="$t('scopeResourcesInServiceHint')"
-                                :rules="[nonNegativeNumber(t('scopeResourcesInServiceLabel'))]"
-                                dense
-                                outlined
-                            />
-                        </div>
                     </div>
                 </q-card-section>
             </q-expansion-item>
@@ -433,12 +418,7 @@ import { useQuasar } from 'quasar';
 
 import type { Datacenter } from 'src/models/mitsi';
 import { useMitsiStore } from 'src/stores/mitsi';
-import {
-    nonNegativeNumber,
-    positiveInteger,
-    positiveNumber,
-    required,
-} from 'src/models/validation';
+import { positiveInteger, positiveNumber, required } from 'src/models/validation';
 import { TimeUnitSchema } from 'src/models/schema';
 
 const { t } = useI18n();

@@ -10,7 +10,9 @@
 import { z } from 'zod';
 
 /** Bumped whenever the persisted/exported JSON shape changes. */
-export const MITSI_SCHEMA_VERSION = 1;
+// v2: resourcesInService removed — derived from inventory (Excel '4.Hardware inventory'!D7×X7).
+// Version 1 files still parse: unknown keys are stripped.
+export const MITSI_SCHEMA_VERSION = 2;
 
 // ─── Shared enums ────────────────────────────────────────────────────────────
 
@@ -67,8 +69,6 @@ export const ScopeSchema = z.object({
     function: z.string().default(''),
     // factory (not object) — each parse gets a fresh instance.
     functionalUnit: FunctionalUnitSchema.default(() => FunctionalUnitSchema.parse({})),
-    /** Total resources in the service (e.g. all H100 GPUs). */
-    resourcesInService: z.number().default(0),
     datacenters: z.array(DatacenterSchema).default([]),
     includedItems: z.array(BoundaryItemSchema).default([]),
     excludedItems: z.array(BoundaryItemSchema).default([]),
