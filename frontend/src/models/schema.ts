@@ -10,9 +10,8 @@
 import { z } from 'zod';
 
 /** Bumped whenever the persisted/exported JSON shape changes. */
-// v2: resourcesInService removed — derived from inventory (Excel '4.Hardware inventory'!D7×X7).
-// Version 1 files still parse: unknown keys are stripped.
-export const MITSI_SCHEMA_VERSION = 2;
+// v3: locationComment added (optional; spec: Location has its own comment). Versions 1-2 still parse: defaults fill gaps, unknown keys stripped.
+export const MITSI_SCHEMA_VERSION = 3;
 
 // ─── Shared enums ────────────────────────────────────────────────────────────
 
@@ -146,6 +145,7 @@ export const MonitoringPeriodSchema = z.object({
 export const DatacenterEnergySchema = z.object({
     datacenterId: z.string().default(''),
     location: z.string().default(''),
+    locationComment: z.string().optional(),
     comment: z.string().default(''),
     /** Carbon intensity of the grid mix (gCO₂/kWh). */
     carbonIntensity: z.number().default(0),
