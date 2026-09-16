@@ -50,16 +50,18 @@ export default {
     scopeBlockFirstHint: 'Complete this block first',
     scopeReportOnly: 'Report only',
     scopeUsedInCalculation: 'used in calculation',
+    scopeBadgeCalcTooltip: 'This field feeds the calculation',
+    scopeBadgeReportTooltip: 'No field in this zone affects a number',
     // General (report-only zone)
     scopeGeneralTitle: 'General',
     scopeOrganizationLabel: 'Name of the organization',
     scopeAssessorsLabel: 'People working on the evaluation',
     scopeServiceNameLabel: 'Name of the IT service',
-    scopeServiceNameHint: 'For example: HPC service',
+    scopeServiceNameTooltip: 'For example: HPC service',
     // Function
     scopeFunctionTitle: 'Function',
     scopeFunctionLabel: 'Function',
-    scopeFunctionHint: 'For example: Computing service using GPU nodes (H100)',
+    scopeFunctionTooltip: 'For example: Computing service using GPU nodes (H100)',
     scopeFunctionalUnitLabel: 'Functional unit',
     scopeFuBefore: 'Usage of',
     scopeFuMiddle: 'of the service with',
@@ -73,11 +75,17 @@ export default {
     scopeTimeUnitMonth: 'month',
     scopeTimeUnitYear: 'year',
     scopeResourceTypePlaceholder: 'Resource type',
+    scopeFuTimeUnitTooltip: "e.g. hours — 'for 2 hours with 2 CPUs'",
+    scopeFuDurationTooltip: "e.g. 2 — 'for 2 hours with 2 CPUs'",
+    scopeFuResourceCountTooltip: 'e.g. 2 CPUs — one usage uses 2 resources',
+    scopeFuResourceTypeTooltip: 'e.g. CPUs — the resource type of one usage',
     // Boundaries — datacenters
     scopeBoundariesDcTitle: 'Boundaries — datacenters',
     scopeDcColAbbreviation: 'Abbreviation',
     scopeDcColName: 'Full name',
     scopeDcColComment: 'Comment',
+    scopeDcColumnsTooltip:
+        'Identify each datacenter of the service boundary — abbreviation, full name, comment. Lines can be added, edited and deleted; deletion is blocked while the datacenter is referenced.',
     scopeDcColUsedBy: 'Used by',
     scopeDcAdd: '+ Add',
     scopeDcDelete: 'Delete',
@@ -99,13 +107,14 @@ export default {
     scopeBndColPurpose: 'Purpose',
     scopeBndColReasonInclusion: 'Reason of inclusion',
     scopeBndColReasonExclusion: 'Reason of exclusion',
+    scopeBndColumnsTooltip:
+        'Document what is included in / excluded from the IT service — type, purpose, reason.',
     scopeBndAdd: '+ Add',
     scopeBndDelete: 'Delete',
     // Lifespan
     scopeLifespanTitle: 'Lifespan',
     scopeLifespanLabel: 'Service lifespan',
     scopeLifespanYears: 'years',
-    scopeLifespanHint: 'The whole lifespan of the IT service, in years. For example: 6.',
     // --- Hardware inventory page ---
     inventoryPageTitle: 'Embodied emissions — hardware inventory',
     inventoryPageHint:

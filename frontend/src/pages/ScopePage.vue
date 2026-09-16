@@ -17,9 +17,10 @@
                         <q-item-label>{{ $t('scopeGeneralTitle') }}</q-item-label>
                     </q-item-section>
                     <q-item-section side>
-                        <span class="scope-badge scope-badge--report">{{
-                            $t('scopeReportOnly')
-                        }}</span>
+                        <span class="scope-badge scope-badge--report"
+                            >{{ $t('scopeReportOnly')
+                            }}<q-tooltip>{{ $t('scopeBadgeReportTooltip') }}</q-tooltip></span
+                        >
                     </q-item-section>
                 </template>
                 <q-separator />
@@ -56,11 +57,12 @@
                                     (v) => (mitsi.scope.serviceName = String(v ?? ''))
                                 "
                                 :label="$t('scopeServiceNameLabel')"
-                                :hint="$t('scopeServiceNameHint')"
                                 :rules="[required(t('scopeServiceNameLabel'))]"
                                 dense
                                 outlined
-                            />
+                            >
+                                <q-tooltip>{{ $t('scopeServiceNameTooltip') }}</q-tooltip>
+                            </q-input>
                         </div>
                     </div>
                 </q-card-section>
@@ -76,7 +78,8 @@
                     </q-item-section>
                     <q-item-section side>
                         <span class="scope-badge scope-badge--calc"
-                            >∑ {{ $t('scopeUsedInCalculation') }}</span
+                            >∑ {{ $t('scopeUsedInCalculation')
+                            }}<q-tooltip>{{ $t('scopeBadgeCalcTooltip') }}</q-tooltip></span
                         >
                     </q-item-section>
                 </template>
@@ -91,10 +94,11 @@
                                     (v) => (mitsi.scope.function = String(v ?? ''))
                                 "
                                 :label="$t('scopeFunctionLabel')"
-                                :hint="$t('scopeFunctionHint')"
                                 :rules="[required(t('scopeFunctionLabel'))]"
                                 outlined
-                            />
+                            >
+                                <q-tooltip>{{ $t('scopeFunctionTooltip') }}</q-tooltip>
+                            </q-input>
                         </div>
 
                         <div class="col-12">
@@ -114,7 +118,9 @@
                                     dense
                                     outlined
                                     hide-bottom-space
-                                />
+                                >
+                                    <q-tooltip>{{ $t('scopeFuDurationTooltip') }}</q-tooltip>
+                                </q-input>
                                 <q-select
                                     class="scope-fu-select"
                                     :model-value="mitsi.scope.functionalUnit.timeUnit"
@@ -126,7 +132,11 @@
                                     map-options
                                     dense
                                     outlined
-                                />
+                                >
+                                    <q-tooltip anchor="top middle" self="top middle">{{
+                                        $t('scopeFuTimeUnitTooltip')
+                                    }}</q-tooltip>
+                                </q-select>
                                 <span>{{ $t('scopeFuMiddle') }}</span>
                                 <q-input
                                     type="number"
@@ -139,24 +149,32 @@
                                     dense
                                     outlined
                                     hide-bottom-space
-                                />
+                                >
+                                    <q-tooltip>{{ $t('scopeFuResourceCountTooltip') }}</q-tooltip>
+                                </q-input>
                                 <q-select
                                     class="scope-fu-select scope-fu-select--grow"
                                     :model-value="mitsi.scope.functionalUnit.resourceType"
                                     @update:model-value="
-                                        (v) =>
-                                            (mitsi.scope.functionalUnit.resourceType = String(
+                                        (v) => {
+                                            rememberResourceType(v);
+                                            mitsi.scope.functionalUnit.resourceType = String(
                                                 v ?? '',
-                                            ))
+                                            );
+                                        }
                                     "
                                     :options="resourceTypeOptions"
                                     :placeholder="$t('scopeResourceTypePlaceholder')"
                                     use-input
                                     input-debounce="0"
-                                    new-value-mode="add"
+                                    new-value-mode="add-unique"
                                     dense
                                     outlined
-                                />
+                                >
+                                    <q-tooltip anchor="center right" self="center left">{{
+                                        $t('scopeFuResourceTypeTooltip')
+                                    }}</q-tooltip>
+                                </q-select>
                             </div>
                         </div>
                     </div>
@@ -169,12 +187,16 @@
             <q-expansion-item default-opened>
                 <template #header>
                     <q-item-section class="scope-zone-title">
-                        <q-item-label>{{ $t('scopeBoundariesDcTitle') }}</q-item-label>
+                        <q-item-label
+                            >{{ $t('scopeBoundariesDcTitle')
+                            }}<q-tooltip>{{ $t('scopeDcColumnsTooltip') }}</q-tooltip></q-item-label
+                        >
                     </q-item-section>
                     <q-item-section side>
-                        <span class="scope-badge scope-badge--report">{{
-                            $t('scopeReportOnly')
-                        }}</span>
+                        <span class="scope-badge scope-badge--report"
+                            >{{ $t('scopeReportOnly')
+                            }}<q-tooltip>{{ $t('scopeBadgeReportTooltip') }}</q-tooltip></span
+                        >
                     </q-item-section>
                 </template>
                 <q-separator />
@@ -255,12 +277,18 @@
             <q-expansion-item>
                 <template #header>
                     <q-item-section class="scope-zone-title">
-                        <q-item-label>{{ $t('scopeBoundariesInclExclTitle') }}</q-item-label>
+                        <q-item-label
+                            >{{ $t('scopeBoundariesInclExclTitle')
+                            }}<q-tooltip>{{
+                                $t('scopeBndColumnsTooltip')
+                            }}</q-tooltip></q-item-label
+                        >
                     </q-item-section>
                     <q-item-section side>
-                        <span class="scope-badge scope-badge--report">{{
-                            $t('scopeReportOnly')
-                        }}</span>
+                        <span class="scope-badge scope-badge--report"
+                            >{{ $t('scopeReportOnly')
+                            }}<q-tooltip>{{ $t('scopeBadgeReportTooltip') }}</q-tooltip></span
+                        >
                     </q-item-section>
                 </template>
                 <q-separator />
@@ -388,7 +416,9 @@
                         <q-item-label>{{ $t('scopeLifespanTitle') }}</q-item-label>
                     </q-item-section>
                     <q-item-section side>
-                        <span class="scope-badge scope-badge--calc">∑</span>
+                        <span class="scope-badge scope-badge--calc"
+                            >∑<q-tooltip>{{ $t('scopeBadgeCalcTooltip') }}</q-tooltip></span
+                        >
                     </q-item-section>
                 </template>
                 <q-separator />
@@ -399,7 +429,6 @@
                         :model-value="mitsi.scope.lifespanYears"
                         @update:model-value="(v) => (mitsi.scope.lifespanYears = toNum(v))"
                         :label="$t('scopeLifespanLabel')"
-                        :hint="$t('scopeLifespanHint')"
                         :suffix="$t('scopeLifespanYears')"
                         :rules="[positiveNumber(t('scopeLifespanLabel'))]"
                         dense
@@ -412,7 +441,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 
@@ -437,9 +466,21 @@ const timeUnitOptions = computed(() =>
     })),
 );
 
+const RESOURCE_TYPE_SUGGESTIONS = ['CPU', 'GPU', 'H100 GPU'];
+/** Session-local record of user-typed resource types (never persisted). */
+const resourceTypeSession = ref<Set<string>>(new Set<string>());
+
+function rememberResourceType(value: unknown): void {
+    const s = typeof value === 'string' ? value : '';
+    if (s) resourceTypeSession.value.add(s);
+}
+
 const resourceTypeOptions = computed<string[]>(() => {
     const v = mitsi.scope.functionalUnit.resourceType;
-    return v ? [v] : [];
+    const options = new Set<string>(RESOURCE_TYPE_SUGGESTIONS);
+    for (const s of resourceTypeSession.value) options.add(s);
+    if (v) options.add(v);
+    return [...options];
 });
 
 function addDatacenter(): void {
