@@ -23,7 +23,7 @@ import {
     type TimeUnit,
     type UnderlyingService,
 } from 'src/models/mitsi';
-import { MitsiStateSchema } from 'src/models/schema';
+import { DatacenterEnergySchema, MitsiStateSchema } from 'src/models/schema';
 
 /**
  * Counts of each time unit per year, matching the "Counts of time unit for a
@@ -252,6 +252,17 @@ export const useMitsiStore = defineStore('mitsi', () => {
         return { hardwareRowCount, energyRecordCount };
     }
 
+    /** Energy records follow Scope: create a blank record for each datacenter
+     *  that has none yet (schema defaults). Gap-fill only — runs on mount and
+     *  on datacenter count increase; deleted rows are not re-added by sync. */
+    function ensureEnergyRows(): void {
+        for (const dc of scope.value.datacenters) {
+            if (!energy.value.some((e) => e.datacenterId === dc.id)) {
+                energy.value.push(DatacenterEnergySchema.parse({ datacenterId: dc.id }));
+            }
+        }
+    }
+
     // ── Internal helpers ─────────────────────────────────────────────────────
     function buildState(): MitsiState {
         return {
@@ -309,5 +320,6 @@ export const useMitsiStore = defineStore('mitsi', () => {
         exportJson,
         importJson,
         deleteDatacenterGuard,
+        ensureEnergyRows,
     };
 });
