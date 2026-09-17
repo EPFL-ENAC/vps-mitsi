@@ -15,6 +15,12 @@
                 <span class="text-caption text-grey-7 q-mr-sm">
                     {{ $t('mainTagline') }}
                 </span>
+                <q-btn
+                    unelevated
+                    color="primary"
+                    :label="$t('mainSave')"
+                    @click="mitsi.saveToStorage()"
+                />
             </q-toolbar>
         </q-header>
 

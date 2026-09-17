@@ -8,15 +8,8 @@
             </p>
         </div>
 
-        <!-- Toolbar (one line): Save left, mode toggle right, Add row rightmost -->
+        <!-- Toolbar (one line): mode toggle left, Add row rightmost -->
         <div class="row items-center q-gutter-x-md q-mb-sm inventory-toolbar">
-            <q-btn
-                unelevated
-                color="primary"
-                :label="$t('inventorySave')"
-                @click="mitsi.saveToStorage()"
-            />
-            <div class="col" />
             <q-btn-toggle v-model="mode" toggle-color="primary" :options="modeOptions" />
             <q-btn unelevated color="primary" :label="$t('inventoryAddRow')" @click="addRow" />
         </div>

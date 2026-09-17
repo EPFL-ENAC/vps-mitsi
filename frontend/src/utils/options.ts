@@ -1,8 +1,7 @@
 /**
  * Shared helpers for building Quasar select options from schema enums.
  *
- * Any select whose values come from a Zod enum (see ARCHITECTURE.md — the
- * "Dropdown enum rule") must build its options from the schema's `.options`
+ * Any select whose values come from a Zod enum must build its options from the schema's `.options`
  * and map each value to an i18n label, always using `emit-value` + `map-options`
  * so the store receives the primitive value, never an option object.
  */

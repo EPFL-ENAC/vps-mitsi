@@ -20,6 +20,7 @@ export default {
     // --- Main layout (header, nav rail, footer) ---
     mainMenuAriaLabel: 'Menu',
     mainTagline: 'IT service carbon impact assessment',
+    mainSave: 'Save',
     mainNavWelcome: 'Welcome',
     mainNavScope: 'Scope of the assessment',
     mainNavInventory: 'Hardware inventory',
@@ -201,6 +202,40 @@ export default {
     inventoryStorageTechnologyQlc: 'QLC',
     inventoryStorageCasingM2: 'M2',
     inventoryStorageCasing25Inch: '2.5 inch',
+    // --- Energy consumption page ---
+    energyPageTitle: 'Operational emissions — energy consumption',
+    energyPageHint:
+        'Describe how the IT service consumes electricity: the usage monitoring period and, per datacenter, the grid carbon intensity and the power consumed during that period. These figures drive the operational emissions.',
+    energyNoScopeHint: 'Complete the “Scope of the assessment” block first to unlock the fields.',
+    energyNoDatacentersHint:
+        'No datacenters defined yet — add them in the “Scope of the assessment” block first.',
+    // Usage monitoring period
+    energyMonitorTitle: 'Usage monitoring period',
+    energyMonitorUnitLabel: 'Unit',
+    energyMonitorValueLabel: 'Period value',
+    energyMonitorCommentLabel: 'Comment',
+    energyMonitorUnitDay: 'day',
+    energyMonitorUnitWeek: 'week',
+    energyMonitorUnitMonth: 'month',
+    energyMonitorUnitYear: 'year',
+    // Datacenters' information
+    energyDcTitle: 'Datacenters’ information',
+    energyDcColumnsTooltip:
+        'Per datacenter, record the grid carbon intensity (gCO₂/kWh), the optional PUE, and the electricity consumed (kWh) over the monitoring period. Delete removes the row from the grid.',
+    energyDcColName: 'Datacenter',
+    energyDcColNameComment: 'Datacenter comment',
+    energyDcColLocation: 'Location',
+    energyDcColLocationComment: 'Location comment',
+    energyDcColIntensity: 'Carbon intensity',
+    energyDcColIntensityComment: 'Intensity comment',
+    energyDcColPue: 'PUE',
+    energyDcColPueComment: 'PUE comment',
+    energyDcColKwh: 'Energy (kWh)',
+    energyDcColKwhComment: 'Energy comment',
+    energyDcDeleteRow: 'Delete row',
+    energyDeleteRowConfirmTitle: 'Delete energy row',
+    energyDeleteRowConfirmMessage:
+        'Delete the energy record for {name}? This clears the consumption data for that datacenter.',
     // --- Validation messages ---
     validationRequired: '{label} is required.',
     validationNotANumber: '{label} must be a number.',
