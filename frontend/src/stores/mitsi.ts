@@ -284,7 +284,22 @@ export const useMitsiStore = defineStore('mitsi', () => {
 
     function parseState(raw: unknown): MitsiState | null {
         const parsed = MitsiStateSchema.safeParse(raw);
-        return parsed.success ? parsed.data : null;
+        if (!parsed.success) return null;
+        return sanitizeReferences(parsed.data);
+    }
+
+    /** Referential integrity at the data boundary: the schema validates each
+     *  record's shape, but a hand-edited/foreign file may reference datacenters
+     *  the same file does not define. The UI can never create such rows
+     *  (deleteDatacenterGuard blocks deletion while referenced), so sanitize
+     *  once here — everything downstream sees a consistent state. */
+    function sanitizeReferences(state: MitsiState): MitsiState {
+        const ids = new Set(state.scope.datacenters.map((dc) => dc.id));
+        return {
+            ...state,
+            hardware: state.hardware.filter((h) => ids.has(h.datacenterId)),
+            energy: state.energy.filter((e) => ids.has(e.datacenterId)),
+        };
     }
 
     function applyState(state: MitsiState): void {

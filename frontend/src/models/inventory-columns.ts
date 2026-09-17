@@ -8,7 +8,7 @@
  * what mode they belong to, and what validation rules they carry.
  *
  * The page renders whatever this module returns; it holds no column list of
- * its own (see ARCHITECTURE.md — pages are display + input only).
+ * its own.
  */
 import {
     HardwareCategorySchema,

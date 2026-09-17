@@ -10,7 +10,7 @@
 import { z } from 'zod';
 
 /** Bumped whenever the persisted/exported JSON shape changes. */
-// v3: locationComment added (optional; spec: Location has its own comment). Versions 1-2 still parse: defaults fill gaps, unknown keys stripped.
+// v3: locationComment added (optional; spec: Location has its own comment).
 export const MITSI_SCHEMA_VERSION = 3;
 
 // ─── Shared enums ────────────────────────────────────────────────────────────
@@ -144,9 +144,10 @@ export const MonitoringPeriodSchema = z.object({
 /** Per-datacenter energy record used for the operational emissions computation. */
 export const DatacenterEnergySchema = z.object({
     datacenterId: z.string().default(''),
+    comment: z.string().default(''),
+    /** Location of datacenter*/
     location: z.string().default(''),
     locationComment: z.string().optional(),
-    comment: z.string().default(''),
     /** Carbon intensity of the grid mix (gCO₂/kWh). */
     carbonIntensity: z.number().default(0),
     carbonIntensityComment: z.string().optional(),
