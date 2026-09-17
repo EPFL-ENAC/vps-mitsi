@@ -201,4 +201,10 @@ export default {
     inventoryStorageTechnologyQlc: 'QLC',
     inventoryStorageCasingM2: 'M2',
     inventoryStorageCasing25Inch: '2.5 inch',
+    // --- Validation messages ---
+    validationRequired: '{label} is required.',
+    validationNotANumber: '{label} must be a number.',
+    validationNonNegative: '{label} must be zero or a positive number.',
+    validationPositive: '{label} must be greater than zero.',
+    validationPositiveInteger: '{label} must be a whole number greater than zero.',
 };

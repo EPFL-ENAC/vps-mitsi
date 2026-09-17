@@ -6,6 +6,15 @@
  * JSON import/export) is Zod's job in src/models/schema.ts.
  */
 
+/** Translator injected once at app boot (see boot/i18n.ts), because
+ *  rule factories run outside component setup and cannot use useI18n(). */
+type Translate = (key: string, params?: Record<string, unknown>) => string;
+let translate: Translate = (key, params) =>
+    params && 'label' in params ? String(params['label']) : key;
+export function setValidationTranslator(fn: Translate): void {
+    translate = fn;
+}
+
 export type ValidationRule = (value: unknown) => true | string;
 
 /** Field must be filled with a non-empty string. */
@@ -16,7 +25,7 @@ export function required(label = 'This field'): ValidationRule {
             v !== null &&
             v !== undefined &&
             (typeof v === 'number' ? !Number.isNaN(v) : String(v).trim().length > 0);
-        return valid || `${label} is required.`;
+        return valid || translate('validationRequired', { label });
     };
 }
 
@@ -25,7 +34,7 @@ export function isNumber(label = 'This field'): ValidationRule {
     return (value) => {
         const n = Number(value);
         const valid = value !== '' && value !== null && value !== undefined && !Number.isNaN(n);
-        return valid || `${label} must be a number.`;
+        return valid || translate('validationNotANumber', { label });
     };
 }
 
@@ -34,7 +43,7 @@ export function nonNegativeNumber(label = 'This field'): ValidationRule {
     return (value) => {
         const n = Number(value);
         const valid = Number.isFinite(n) && n >= 0;
-        return valid || `${label} must be zero or a positive number.`;
+        return valid || translate('validationNonNegative', { label });
     };
 }
 
@@ -44,7 +53,7 @@ export function optionalNumber(label = 'This field'): ValidationRule {
         if (value === null || value === undefined || value === '') return true;
         const n = Number(value);
         const valid = Number.isFinite(n) && n >= 0;
-        return valid || `${label} must be zero or a positive number.`;
+        return valid || translate('validationNonNegative', { label });
     };
 }
 
@@ -53,7 +62,7 @@ export function positiveNumber(label = 'This field'): ValidationRule {
     return (value) => {
         const n = Number(value);
         const valid = Number.isFinite(n) && n > 0;
-        return valid || `${label} must be greater than zero.`;
+        return valid || translate('validationPositive', { label });
     };
 }
 
@@ -62,7 +71,7 @@ export function positiveInteger(label = 'This field'): ValidationRule {
     return (value) => {
         const n = Number(value);
         const valid = Number.isInteger(n) && n >= 1;
-        return valid || `${label} must be a whole number greater than zero.`;
+        return valid || translate('validationPositiveInteger', { label });
     };
 }
 
