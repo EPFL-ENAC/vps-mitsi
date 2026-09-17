@@ -117,16 +117,21 @@ export const useMitsiStore = defineStore('mitsi', () => {
     );
 
     /**
-     * Number of resources related to the functional unit, derived from the
-     * inventory: Σ (quantity × gpuQuantity) over accounted rows — Excel
-     * '4.Hardware inventory'!D7×X7. Second-hand rows are excluded.
+     * Fleet of the resource type selected in the functional unit, derived
+     * from the inventory over accounted rows (second-hand excluded) —
+     * Excel '4.Hardware inventory'!D7×X7 (44 × 4 = 176). 'CPU' selection →
+     * CPU fleet (quantity × cpuQuantity); any other value → GPU fleet.
      */
-    const resourcesInService = computed<number>(() =>
-        hardware.value.reduce(
-            (sum, h) => (isSecondHandExcluded(h) ? sum : sum + h.quantity * h.gpuQuantity),
+    const resourcesInService = computed<number>(() => {
+        const cpu = scope.value.functionalUnit.resourceType.trim().toLowerCase() === 'cpu';
+        return hardware.value.reduce(
+            (sum, h) =>
+                isSecondHandExcluded(h)
+                    ? sum
+                    : sum + h.quantity * (cpu ? h.cpuQuantity : h.gpuQuantity),
             0,
-        ),
-    );
+        );
+    });
 
     /** Amount per functional unit (kg CO2-eq per usage). Null when not computable. */
     const perFunctionalUnit = computed<number | null>(() => {

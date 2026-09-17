@@ -157,17 +157,14 @@
                                     :model-value="mitsi.scope.functionalUnit.resourceType"
                                     @update:model-value="
                                         (v) => {
-                                            rememberResourceType(v);
                                             mitsi.scope.functionalUnit.resourceType = String(
                                                 v ?? '',
                                             );
                                         }
                                     "
                                     :options="resourceTypeOptions"
-                                    :placeholder="$t('scopeResourceTypePlaceholder')"
-                                    use-input
-                                    input-debounce="0"
-                                    new-value-mode="add-unique"
+                                    emit-value
+                                    map-options
                                     dense
                                     outlined
                                 >
@@ -446,7 +443,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 
@@ -471,22 +468,10 @@ const timeUnitOptions = computed(() =>
     })),
 );
 
-const RESOURCE_TYPE_SUGGESTIONS = ['CPU', 'GPU', 'H100 GPU'];
-/** Session-local record of user-typed resource types (never persisted). */
-const resourceTypeSession = ref<Set<string>>(new Set<string>());
-
-function rememberResourceType(value: unknown): void {
-    const s = typeof value === 'string' ? value : '';
-    if (s) resourceTypeSession.value.add(s);
-}
-
-const resourceTypeOptions = computed<string[]>(() => {
-    const v = mitsi.scope.functionalUnit.resourceType;
-    const options = new Set<string>(RESOURCE_TYPE_SUGGESTIONS);
-    for (const s of resourceTypeSession.value) options.add(s);
-    if (v) options.add(v);
-    return [...options];
-});
+const resourceTypeOptions = computed(() => [
+    { label: t('scopeResourceTypeCpu'), value: 'CPU' },
+    { label: t('scopeResourceTypeGpu'), value: 'GPU' },
+]);
 
 function addDatacenter(): void {
     mitsi.scope.datacenters.push({
