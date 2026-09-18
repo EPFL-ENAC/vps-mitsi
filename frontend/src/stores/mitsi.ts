@@ -247,13 +247,13 @@ export const useMitsiStore = defineStore('mitsi', () => {
         inventory:
             hardware.value.length === 0
                 ? 'not_started'
-                : hardwareRowsComplete.value
+                : hardwareRowsComplete.value && isScopeValid.value
                   ? 'complete'
                   : 'partial',
         energy:
             energy.value.length === 0
                 ? 'not_started'
-                : energyRowsComplete.value && monitoringPeriod.value.value > 0
+                : energyRowsComplete.value && monitoringPeriod.value.value > 0 && isScopeValid.value
                   ? 'complete'
                   : 'partial',
         results:

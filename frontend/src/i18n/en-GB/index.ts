@@ -121,6 +121,8 @@ export default {
     inventoryPageTitle: 'Embodied emissions — hardware inventory',
     inventoryPageHint:
         'List every IT element of the service: compute servers, storage bays, network devices and spare parts. Three editing modes control which columns are shown.',
+    inventoryNoScopeHint:
+        'Complete the “Scope of the assessment” block first to unlock the fields.',
     inventoryStats: '{rows} items · {elements} elements · {total} kgCO₂e',
     inventoryWarningBar:
         '⚠ {n} rows are missing a mandatory value. Rows without an impact figure count as 0 kgCO₂e and are listed as incomplete in the report — they are not treated as carbon-free.',

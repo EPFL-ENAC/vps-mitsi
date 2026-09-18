@@ -8,6 +8,11 @@
             </p>
         </div>
 
+        <!-- Scope gating hint -->
+        <q-banner v-if="!mitsi.isScopeValid" inline-actions class="bg-warning text-white q-mb-md">
+            {{ $t('inventoryNoScopeHint') }}
+        </q-banner>
+
         <!-- Toolbar (one line): mode toggle left, Add row rightmost -->
         <div class="row items-center q-gutter-x-md q-mb-sm inventory-toolbar">
             <q-btn-toggle v-model="mode" toggle-color="primary" :options="modeOptions" />

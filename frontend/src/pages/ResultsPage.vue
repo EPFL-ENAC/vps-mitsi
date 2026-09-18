@@ -1,7 +1,7 @@
 <template>
     <div class="q-pa-md">
         <div class="text-h4 q-mb-sm">{{ $t('resultsPageTitle') }}</div>
-
+        <!-- Scope gating hint -->
         <q-banner v-if="!mitsi.isScopeValid" inline-actions class="bg-warning text-white q-mb-md">
             {{ $t('resultsNoScopeHint') }}
         </q-banner>
@@ -109,12 +109,18 @@
                         </div>
                     </q-expansion-item>
 
-                    <div class="results-total-row">
-                        <strong
-                            >{{ $t('resultsTotalEmbodied') }} =
-                            {{ formatKg(mitsi.totalEmbodied) }}</strong
-                        >
-                    </div>
+                    <q-markup-table dense flat bordered class="results-total-table">
+                        <tbody>
+                            <tr class="results-total">
+                                <td>
+                                    <strong>{{ $t('resultsTotalEmbodied') }}</strong>
+                                </td>
+                                <td class="text-right">
+                                    <strong>{{ formatKg(mitsi.totalEmbodied) }}</strong>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </q-markup-table>
                 </q-card-section>
             </q-expansion-item>
         </q-card>
@@ -145,14 +151,17 @@
                                 <td class="text-right">{{ formatKg(op.co2Period) }}</td>
                                 <td class="text-right">{{ formatKg(op.co2Lifespan) }}</td>
                             </tr>
+                            <tr class="results-total">
+                                <td>
+                                    <strong>{{ $t('resultsTotalOperational') }}</strong>
+                                </td>
+                                <td></td>
+                                <td class="text-right">
+                                    <strong>{{ formatKg(mitsi.totalOperational) }}</strong>
+                                </td>
+                            </tr>
                         </tbody>
                     </q-markup-table>
-                    <div class="results-total-row">
-                        <strong
-                            >{{ $t('resultsTotalOperational') }} =
-                            {{ formatKg(mitsi.totalOperational) }}</strong
-                        >
-                    </div>
                 </q-card-section>
             </q-expansion-item>
         </q-card>
@@ -328,9 +337,8 @@ const perFunctionalUnitText = computed(() =>
     padding: 4px 8px 8px;
     font-size: 0.85rem;
 }
-.results-total-row {
+.results-total-table {
     margin-top: 8px;
-    font-size: 0.95rem;
 }
 .results-excluded {
     opacity: 0.55;
