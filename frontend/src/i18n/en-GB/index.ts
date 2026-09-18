@@ -133,7 +133,6 @@ export default {
     inventoryModeHint:
         'Switching modes only hides or shows columns — it never deletes data. Hidden values stay in the file and in the report.',
     inventoryAddRow: '+ Add row',
-    inventorySave: 'Save',
     inventoryDeleteRow: 'Delete',
     inventoryDeleteConfirmTitle: 'Delete row',
     inventoryDeleteConfirmMessage:
