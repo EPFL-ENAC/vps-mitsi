@@ -16,7 +16,6 @@ import {
     type BlockKey,
     type BlockStatus,
     type DatacenterEnergy,
-    type HardwareCategory,
     type HardwareItem,
     type MitsiState,
     type MonitoringPeriod,
@@ -24,7 +23,11 @@ import {
     type TimeUnit,
     type UnderlyingService,
 } from 'src/models/mitsi';
-import { DatacenterEnergySchema, MitsiStateSchema } from 'src/models/schema';
+import {
+    DatacenterEnergySchema,
+    MitsiStateSchema,
+    HardwareCategorySchema,
+} from 'src/models/schema';
 
 /**
  * Counts of each time unit per year, matching the "Counts of time unit for a
@@ -178,18 +181,12 @@ export const useMitsiStore = defineStore('mitsi', () => {
     });
 
     /** Embodied rows grouped by category for the Results tables (spec: one table
-     *  per category used): per-element CO2 and per-row cumulated CO2; rows whose
+     *  per category used): per-element CO₂ and per-row cumulated CO₂; rows whose
      *  second-hand embodied emissions are not accounted are flagged `excluded`
-     *  so the page can strike them through. Category labels stay in the page. */
-    const embodiedByCategory = computed(() => {
-        const order: HardwareCategory[] = [
-            'server',
-            'compute_server',
-            'storage_bay',
-            'network_device',
-            'spare_part',
-        ];
-        return order
+     *  so the page can strike them through. Category values come from the schema
+     *  enum at runtime — a new schema category automatically appears in Results. */
+    const embodiedByCategory = computed(() =>
+        HardwareCategorySchema.options
             .map((category) => {
                 const rows = hardware.value
                     .filter((h) => h.category === category)
@@ -208,8 +205,8 @@ export const useMitsiStore = defineStore('mitsi', () => {
                     categoryTotal: rows.reduce((s, r) => (r.excluded ? s : s + r.co2RowTotal), 0),
                 };
             })
-            .filter((g) => g.rows.length > 0);
-    });
+            .filter((g) => g.rows.length > 0),
+    );
 
     /** kg CO2-eq per ONE resource of the FU fleet over the whole lifespan
      *  (Excel Results: total ÷ resourcesInService). */
