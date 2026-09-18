@@ -250,6 +250,7 @@ import {
     type VisibilityMode,
 } from 'src/models/inventory-columns';
 import type { SchemaOption } from 'src/utils/options';
+import { formatKg } from 'src/utils/format';
 import { useMitsiStore } from 'src/stores/mitsi';
 
 const { t } = useI18n();
@@ -271,13 +272,6 @@ const MODE_RANK: Record<VisibilityMode, number> = { simple: 0, normal: 1, advanc
 function toNum(v: unknown): number {
     const n = Number(v);
     return Number.isFinite(n) ? n : 0;
-}
-
-function formatKg(n: number): string {
-    const parts = n.toFixed(2).split('.');
-    const int = parts[0] ?? '0';
-    const dec = parts[1] ?? '00';
-    return `${int.replace(/\B(?=(?:\d{3})+(?!\d))/g, ' ')}.${dec}`;
 }
 
 /** True when a row's impact must be struck through (second-hand, not accounted). */

@@ -16,6 +16,7 @@ import {
     type BlockKey,
     type BlockStatus,
     type DatacenterEnergy,
+    type HardwareCategory,
     type HardwareItem,
     type MitsiState,
     type MonitoringPeriod,
@@ -153,6 +154,68 @@ export const useMitsiStore = defineStore('mitsi', () => {
         if (uses <= 0) return null;
         return totalLifespan.value / uses;
     });
+
+    /** Per-datacenter operational emissions: CO₂ (kg) over the monitoring period
+     *  and over the whole lifespan — mirrors totalOperational's math exactly so
+     *  that sum(co2Lifespan) === totalOperational. */
+    const operationalPerDc = computed<
+        { datacenterId: string; co2Period: number; co2Lifespan: number }[]
+    >(() => {
+        const monitoringPeriodYears =
+            monitoringPeriod.value.value / COUNTS_PER_YEAR[monitoringPeriod.value.unit];
+        const lifespanYears = scope.value.lifespanYears || 0;
+        const scaling = monitoringPeriodYears > 0 ? lifespanYears / monitoringPeriodYears : 0;
+        return energy.value.map((dc) => {
+            const pue = dc.pue && dc.pue > 0 ? dc.pue : 1;
+            const perKwh = (dc.carbonIntensity / 1000) * pue;
+            const co2Period = dc.energyConsumption * perKwh;
+            return {
+                datacenterId: dc.datacenterId,
+                co2Period,
+                co2Lifespan: co2Period * scaling,
+            };
+        });
+    });
+
+    /** Embodied rows grouped by category for the Results tables (spec: one table
+     *  per category used): per-element CO2 and per-row cumulated CO2; rows whose
+     *  second-hand embodied emissions are not accounted are flagged `excluded`
+     *  so the page can strike them through. Category labels stay in the page. */
+    const embodiedByCategory = computed(() => {
+        const order: HardwareCategory[] = [
+            'server',
+            'compute_server',
+            'storage_bay',
+            'network_device',
+            'spare_part',
+        ];
+        return order
+            .map((category) => {
+                const rows = hardware.value
+                    .filter((h) => h.category === category)
+                    .map((h) => ({
+                        id: h.id,
+                        name: h.name,
+                        description: h.description ?? '',
+                        number: h.quantity,
+                        co2PerUnit: h.impactManufacturingDistributionEol,
+                        co2RowTotal: rowSubtotal(h),
+                        excluded: isSecondHandExcluded(h),
+                    }));
+                return {
+                    category,
+                    rows,
+                    categoryTotal: rows.reduce((s, r) => (r.excluded ? s : s + r.co2RowTotal), 0),
+                };
+            })
+            .filter((g) => g.rows.length > 0);
+    });
+
+    /** kg CO2-eq per ONE resource of the FU fleet over the whole lifespan
+     *  (Excel Results: total ÷ resourcesInService). */
+    const totalPerResource = computed<number | null>(() =>
+        resourcesInService.value > 0 ? totalLifespan.value / resourcesInService.value : null,
+    );
 
     /** True when a hardware row carries every field needed for the totals. */
     const hardwareRowValid = (h: HardwareItem): boolean =>
@@ -332,6 +395,9 @@ export const useMitsiStore = defineStore('mitsi', () => {
         totalLifespan,
         resourcesInService,
         perFunctionalUnit,
+        operationalPerDc,
+        embodiedByCategory,
+        totalPerResource,
         blockStatus,
         missingMandatoryHardware,
         loadFromStorage,
