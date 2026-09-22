@@ -67,7 +67,7 @@
                     <q-expansion-item
                         v-for="g in mitsi.embodiedByCategory"
                         :key="g.category"
-                        :label="t(categoryLabelKey(g.category))"
+                        :label="t('inventoryCategory_' + normalizeKey(g.category))"
                         default-opened
                         dense
                         class="results-category"
@@ -255,29 +255,16 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import type { HardwareCategory } from 'src/models/mitsi';
 import { useMitsiStore } from 'src/stores/mitsi';
-import { buildFunctionalUnitSentence, formatKg } from 'src/utils/format';
+import { buildFunctionalUnitSentence, formatKg, normalizeKey } from 'src/utils/format';
 
 const { t } = useI18n();
 const mitsi = useMitsiStore();
 
-/** Category label key ('server' → 'inventoryCategoryServer'), matching the i18n keys. */
-function categoryLabelKey(category: HardwareCategory): string {
-    return (
-        'inventoryCategory' +
-        category
-            .split('_')
-            .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-            .join('')
-    );
-}
-
 /** Time-unit label resolved with the same keys the ScopePage FU select uses. */
-const timeUnitLabel = computed(() => {
-    const unit = mitsi.scope.functionalUnit.timeUnit;
-    return t(`scopeTimeUnit${unit.charAt(0).toUpperCase()}${unit.slice(1)}`);
-});
+const timeUnitLabel = computed(() =>
+    t('scopeTimeUnit_' + normalizeKey(mitsi.scope.functionalUnit.timeUnit)),
+);
 
 /** Assembled functional-unit sentence ('Usage of 1 hour of the service with 1 GPU'). */
 const fuSentence = computed(() =>

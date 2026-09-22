@@ -79,3 +79,5 @@ export function positiveInteger(label = 'This field'): ValidationRule {
 export function combine(...rules: ValidationRule[]): ValidationRule[] {
     return rules;
 }
+
+// faire toutes les validations dans schema

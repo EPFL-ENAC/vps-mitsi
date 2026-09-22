@@ -56,6 +56,7 @@ export const useMitsiStore = defineStore('mitsi', () => {
     const exportedAt = ref<number | null>(null);
 
     // ── Getters ──────────────────────────────────────────────────────────────
+    // u mena dla etogo est uje zod nado prosto brat otttuda a ne delat nowiy metod
     const isScopeValid = computed<boolean>(() => {
         const s = scope.value;
         const has = (v: string) => v.trim().length > 0;
@@ -76,6 +77,8 @@ export const useMitsiStore = defineStore('mitsi', () => {
     function isSecondHandExcluded(row: HardwareItem): boolean {
         return row.isSecondHand && !includeSecondHandEmbodied.value;
     }
+
+    //mettre les petit trucs qui ne prend rien depuis le store donc mieux de mettre dans composant (rowSubtotal(),)
 
     /** Embodied emissions of one row: quantity × per-unit impact. */
     function rowSubtotal(row: HardwareItem): number {
@@ -214,6 +217,7 @@ export const useMitsiStore = defineStore('mitsi', () => {
         resourcesInService.value > 0 ? totalLifespan.value / resourcesInService.value : null,
     );
 
+    // u mena dla etogo est uje zod nado prosto brat otttuda a ne delat nowiy metod
     /** True when a hardware row carries every field needed for the totals. */
     const hardwareRowValid = (h: HardwareItem): boolean =>
         h.name.trim().length > 0 &&
@@ -357,7 +361,7 @@ export const useMitsiStore = defineStore('mitsi', () => {
         const ids = new Set(state.scope.datacenters.map((dc) => dc.id));
         return {
             ...state,
-            hardware: state.hardware.filter((h) => ids.has(h.datacenterId)),
+            hardware: state.hardware.filter((h) => ids.has(h.datacenterId)), // dans zod on peut faire .refine plutot que faire une fonction dans store! faire dans zod .refine
             energy: state.energy.filter((e) => ids.has(e.datacenterId)),
         };
     }

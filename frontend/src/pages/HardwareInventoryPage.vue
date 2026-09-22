@@ -133,10 +133,7 @@
                             <q-input
                                 v-else
                                 type="number"
-                                :model-value="props.row.impactManufacturingDistributionEol"
-                                @update:model-value="
-                                    (v) => (props.row.impactManufacturingDistributionEol = toNum(v))
-                                "
+                                v-model.number="props.row.impactManufacturingDistributionEol"
                                 :rules="col.rules"
                                 dense
                                 outlined
@@ -198,8 +195,7 @@
                         <template v-else-if="col.kind === 'number'">
                             <q-input
                                 type="number"
-                                :model-value="props.row[col.field]"
-                                @update:model-value="(v) => (props.row[col.field] = toNum(v))"
+                                v-model.number="props.row[col.field]"
                                 :rules="col.rules"
                                 dense
                                 outlined
@@ -210,10 +206,7 @@
                         <!-- Free text -->
                         <template v-else-if="col.kind === 'text'">
                             <q-input
-                                :model-value="props.row[col.field]"
-                                @update:model-value="
-                                    (v) => (props.row[col.field] = String(v ?? ''))
-                                "
+                                v-model="props.row[col.field]"
                                 :rules="col.rules"
                                 dense
                                 outlined
@@ -254,7 +247,6 @@ import {
     type InventoryColumn,
     type VisibilityMode,
 } from 'src/models/inventory-columns';
-import type { SchemaOption } from 'src/utils/options';
 import { formatKg } from 'src/utils/format';
 import { useMitsiStore } from 'src/stores/mitsi';
 
@@ -274,11 +266,6 @@ const modeOptions = [
 const MODE_RANK: Record<VisibilityMode, number> = { simple: 0, normal: 1, advanced: 2 };
 
 // ── Display-only helpers (never written back to the store) ──────────────────
-function toNum(v: unknown): number {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
-}
-
 /** True when a row's impact must be struck through (second-hand, not accounted). */
 function isNotCounted(row: HardwareItem): boolean {
     return mitsi.isSecondHandExcluded(row);
@@ -290,7 +277,7 @@ function isNotCounted(row: HardwareItem): boolean {
 const built = computed(() => buildInventoryColumns(t, mode.value, mitsi.rowSubtotal));
 
 // Options for the datacenter select come from the store's datacenters.
-const datacenterOptions = computed<SchemaOption[]>(() =>
+const datacenterOptions = computed<{ label: string; value: string }[]>(() =>
     mitsi.scope.datacenters.map((dc) => ({
         label:
             dc.abbreviation && dc.name

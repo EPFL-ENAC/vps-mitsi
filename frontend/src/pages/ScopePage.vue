@@ -28,10 +28,7 @@
                     <div class="row q-col-gutter-md">
                         <div class="col-12 col-md-4">
                             <q-input
-                                :model-value="mitsi.scope.organizationName"
-                                @update:model-value="
-                                    (v) => (mitsi.scope.organizationName = String(v ?? ''))
-                                "
+                                v-model="mitsi.scope.organizationName"
                                 :label="$t('scopeOrganizationLabel')"
                                 :rules="[required(t('scopeOrganizationLabel'))]"
                                 dense
@@ -40,10 +37,7 @@
                         </div>
                         <div class="col-12 col-md-4">
                             <q-input
-                                :model-value="mitsi.scope.assessors"
-                                @update:model-value="
-                                    (v) => (mitsi.scope.assessors = String(v ?? ''))
-                                "
+                                v-model="mitsi.scope.assessors"
                                 :label="$t('scopeAssessorsLabel')"
                                 :rules="[required(t('scopeAssessorsLabel'))]"
                                 dense
@@ -52,10 +46,7 @@
                         </div>
                         <div class="col-12 col-md-4">
                             <q-input
-                                :model-value="mitsi.scope.serviceName"
-                                @update:model-value="
-                                    (v) => (mitsi.scope.serviceName = String(v ?? ''))
-                                "
+                                v-model="mitsi.scope.serviceName"
                                 :label="$t('scopeServiceNameLabel')"
                                 :rules="[required(t('scopeServiceNameLabel'))]"
                                 dense
@@ -89,10 +80,7 @@
                         <div class="col-12">
                             <q-input
                                 type="textarea"
-                                :model-value="mitsi.scope.function"
-                                @update:model-value="
-                                    (v) => (mitsi.scope.function = String(v ?? ''))
-                                "
+                                v-model="mitsi.scope.function"
                                 :label="$t('scopeFunctionLabel')"
                                 :rules="[required(t('scopeFunctionLabel'))]"
                                 outlined
@@ -110,10 +98,7 @@
                                 <q-input
                                     type="number"
                                     class="scope-fu-input"
-                                    :model-value="mitsi.scope.functionalUnit.usageDuration"
-                                    @update:model-value="
-                                        (v) => (mitsi.scope.functionalUnit.usageDuration = toNum(v))
-                                    "
+                                    v-model.number="mitsi.scope.functionalUnit.usageDuration"
                                     :rules="[positiveNumber(t('scopeFuDuration'))]"
                                     dense
                                     outlined
@@ -141,10 +126,7 @@
                                 <q-input
                                     type="number"
                                     class="scope-fu-input"
-                                    :model-value="mitsi.scope.functionalUnit.resourceCount"
-                                    @update:model-value="
-                                        (v) => (mitsi.scope.functionalUnit.resourceCount = toNum(v))
-                                    "
+                                    v-model.number="mitsi.scope.functionalUnit.resourceCount"
                                     :rules="[positiveInteger(t('scopeFuResourceCount'))]"
                                     dense
                                     outlined
@@ -228,8 +210,7 @@
                         <div class="col-3">
                             <q-input
                                 class="full-width"
-                                :model-value="dc.abbreviation"
-                                @update:model-value="(v) => (dc.abbreviation = String(v ?? ''))"
+                                v-model="dc.abbreviation"
                                 :rules="[required(t('scopeDcColAbbreviation'))]"
                                 dense
                                 outlined
@@ -239,8 +220,7 @@
                         <div class="col-3">
                             <q-input
                                 class="full-width"
-                                :model-value="dc.name"
-                                @update:model-value="(v) => (dc.name = String(v ?? ''))"
+                                v-model="dc.name"
                                 :rules="[required(t('scopeDcColName'))]"
                                 dense
                                 outlined
@@ -250,8 +230,7 @@
                         <div class="col-3">
                             <q-input
                                 class="full-width"
-                                :model-value="dc.comment"
-                                @update:model-value="(v) => (dc.comment = String(v ?? ''))"
+                                v-model="dc.comment"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -311,8 +290,7 @@
                     >
                         <div class="col-3">
                             <q-input
-                                :model-value="item.type"
-                                @update:model-value="(v) => (item.type = String(v ?? ''))"
+                                v-model="item.type"
                                 :placeholder="$t('scopeBndColType')"
                                 :rules="[required(t('scopeBndColType'))]"
                                 dense
@@ -321,8 +299,7 @@
                         </div>
                         <div class="col-3">
                             <q-input
-                                :model-value="item.purpose"
-                                @update:model-value="(v) => (item.purpose = String(v ?? ''))"
+                                v-model="item.purpose"
                                 :placeholder="$t('scopeBndColPurpose')"
                                 :rules="[required(t('scopeBndColPurpose'))]"
                                 dense
@@ -331,8 +308,7 @@
                         </div>
                         <div class="col-5">
                             <q-input
-                                :model-value="item.reason"
-                                @update:model-value="(v) => (item.reason = String(v ?? ''))"
+                                v-model="item.reason"
                                 :placeholder="$t('scopeBndColReasonInclusion')"
                                 :rules="[required(t('scopeBndColReasonInclusion'))]"
                                 dense
@@ -368,8 +344,7 @@
                     >
                         <div class="col-3">
                             <q-input
-                                :model-value="item.type"
-                                @update:model-value="(v) => (item.type = String(v ?? ''))"
+                                v-model="item.type"
                                 :placeholder="$t('scopeBndColType')"
                                 :rules="[required(t('scopeBndColType'))]"
                                 dense
@@ -378,8 +353,7 @@
                         </div>
                         <div class="col-3">
                             <q-input
-                                :model-value="item.purpose"
-                                @update:model-value="(v) => (item.purpose = String(v ?? ''))"
+                                v-model="item.purpose"
                                 :placeholder="$t('scopeBndColPurpose')"
                                 :rules="[required(t('scopeBndColPurpose'))]"
                                 dense
@@ -388,8 +362,7 @@
                         </div>
                         <div class="col-5">
                             <q-input
-                                :model-value="item.reason"
-                                @update:model-value="(v) => (item.reason = String(v ?? ''))"
+                                v-model="item.reason"
                                 :placeholder="$t('scopeBndColReasonExclusion')"
                                 :rules="[required(t('scopeBndColReasonExclusion'))]"
                                 dense
@@ -428,8 +401,7 @@
                     <q-input
                         type="number"
                         class="scope-lifespan"
-                        :model-value="mitsi.scope.lifespanYears"
-                        @update:model-value="(v) => (mitsi.scope.lifespanYears = toNum(v))"
+                        v-model.number="mitsi.scope.lifespanYears"
                         :label="$t('scopeLifespanLabel')"
                         :suffix="$t('scopeLifespanYears')"
                         :rules="[positiveNumber(t('scopeLifespanLabel'))]"
@@ -451,19 +423,15 @@ import type { Datacenter } from 'src/models/mitsi';
 import { useMitsiStore } from 'src/stores/mitsi';
 import { positiveInteger, positiveNumber, required } from 'src/models/validation';
 import { TimeUnitSchema } from 'src/models/schema';
+import { normalizeKey } from 'src/utils/format';
 
 const { t } = useI18n();
 const $q = useQuasar();
 const mitsi = useMitsiStore();
 
-function toNum(v: unknown): number {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
-}
-
 const timeUnitOptions = computed(() =>
     TimeUnitSchema.options.map((unit) => ({
-        label: t(`scopeTimeUnit${unit.charAt(0).toUpperCase()}${unit.slice(1)}`),
+        label: t('scopeTimeUnit_' + normalizeKey(unit)),
         value: unit,
     })),
 );
@@ -517,6 +485,7 @@ function removeDatacenter(dc: Datacenter): void {
     });
 }
 
+//maybe to change, add function in store not here if we even use store so why just dont put it all there to centrelize
 function addItem(which: 'included' | 'excluded'): void {
     const item = { id: crypto.randomUUID(), type: '', purpose: '', reason: '' };
     if (which === 'included') mitsi.scope.includedItems.push(item);

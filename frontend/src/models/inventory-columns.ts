@@ -20,7 +20,13 @@ import {
 } from 'src/models/schema';
 import type { ValidationRule } from 'src/models/validation';
 import { nonNegativeNumber, optionalNumber, required } from 'src/models/validation';
-import { schemaEnumOptions, type SchemaOption } from 'src/utils/options';
+import { normalizeKey } from 'src/utils/format';
+
+/** A single `{ label, value }` choice for a schema-driven select. */
+export interface SchemaOption {
+    label: string;
+    value: string;
+}
 
 // ── Public types ─────────────────────────────────────────────────────────────
 
@@ -518,8 +524,8 @@ function warnOnMissingSchemaFields(registry: InventoryColumn[]): void {
  * columns). The `mode` argument is intentionally not used to filter here:
  * cumulative (rank-based) visibility is the page's job, so it receives every
  * non-hidden column and decides which to render for the active mode.
- * Options for the schema-driven selects are resolved here via
- * `schemaEnumOptions`, so the returned columns are render-ready.
+ * Options for the schema-driven selects are resolved here with the shared
+ * `normalizeKey` one-liner, so the returned columns are render-ready.
  */
 export function buildInventoryColumns(
     t: (key: string) => string,
@@ -528,10 +534,22 @@ export function buildInventoryColumns(
 ): { groups: InventoryGroup[]; columns: InventoryColumn[] } {
     void mode; // visibility filtering is applied by the page (rank-based).
     const options: EnumOptionSets = {
-        category: schemaEnumOptions(HardwareCategorySchema, t, 'inventoryCategory'),
-        type: schemaEnumOptions(StorageTypeSchema, t, 'inventoryStorageType'),
-        tech: schemaEnumOptions(StorageTechnologySchema, t, 'inventoryStorageTechnology'),
-        casing: schemaEnumOptions(StorageCasingSchema, t, 'inventoryStorageCasing'),
+        category: HardwareCategorySchema.options.map((v) => ({
+            label: t('inventoryCategory_' + normalizeKey(v)),
+            value: v,
+        })),
+        type: StorageTypeSchema.options.map((v) => ({
+            label: t('inventoryStorageType_' + normalizeKey(v)),
+            value: v,
+        })),
+        tech: StorageTechnologySchema.options.map((v) => ({
+            label: t('inventoryStorageTechnology_' + normalizeKey(v)),
+            value: v,
+        })),
+        casing: StorageCasingSchema.options.map((v) => ({
+            label: t('inventoryStorageCasing_' + normalizeKey(v)),
+            value: v,
+        })),
     };
     const all = makeColumns(t, options, rowSubtotal);
     warnOnMissingSchemaFields(all);

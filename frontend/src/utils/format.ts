@@ -1,17 +1,28 @@
-/** kg CO₂-eq, space thousands separator, 2 decimals ("213 281.89"). */
+/** kg CO₂-eq, en-US formatting with comma thousands separator, 2 decimals ("48,852.77"). */
 export function formatKg(n: number): string {
-    const parts = n.toFixed(2).split('.');
-    const int = parts[0] ?? '0';
-    const dec = parts[1] ?? '00';
-    return `${int.replace(/\B(?=(?:\d{3})+(?!\d))/g, ' ')}.${dec}`;
+    return new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(n);
 }
 
-/** Assembled functional-unit sentence ("Usage of 1 hour of the service with 1 GPU").
- *  t and the translated time-unit label are injected at call time. */
+/** Normalizes a schema enum value into an i18n key suffix: every run of
+ *  non-alphanumeric characters becomes a single underscore. e.g. 'compute_server'
+ *  → 'compute_server', '2.5 inch' → '2_5_inch', 'HDD' → 'HDD'. */
+export function normalizeKey(v: string): string {
+    return v.replace(/[^A-Za-z0-9]+/g, '_');
+}
+
+/** Assembled functional-unit sentence, per-language word order driven from i18n. */
 export function buildFunctionalUnitSentence(
     t: (key: string, params?: Record<string, unknown>) => string,
     fu: { usageDuration: number; resourceCount: number; resourceType: string },
     timeUnitLabel: string,
 ): string {
-    return `${t('scopeFuBefore')} ${fu.usageDuration} ${timeUnitLabel} ${t('scopeFuMiddle')} ${fu.resourceCount} ${fu.resourceType}`;
+    return t('scopeFuSentence', {
+        duration: fu.usageDuration,
+        unit: timeUnitLabel,
+        count: fu.resourceCount,
+        type: fu.resourceType,
+    });
 }

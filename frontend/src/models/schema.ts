@@ -13,6 +13,16 @@ import { z } from 'zod';
 // v3: locationComment added (optional; spec: Location has its own comment).
 export const MITSI_SCHEMA_VERSION = 3;
 
+/** Empty FORM values ('' | null | undefined) fall back to the schema default:
+ *  a cleared input must never break the whole persisted state on save + reload. */
+const emptyToUndefined = (v: unknown) =>
+    v === '' || v === null || v === undefined ? undefined : v;
+
+/** Numeric drafts: '' → default (never rejects the whole state). */
+const num = (d: number) => z.preprocess(emptyToUndefined, z.number().default(d));
+/** Optional numerics: '' → absent (PUE empty → store applies factor 1). */
+const numOpt = () => z.preprocess(emptyToUndefined, z.number().optional());
+
 // ─── Shared enums ────────────────────────────────────────────────────────────
 
 /** Drop-down time unit used to build the functional unit sentence. */
@@ -36,8 +46,8 @@ export const MonitoringUnitSchema = z.enum(['day', 'week', 'month', 'year']);
 /** The functional unit is built as a fill-in-the-blank sentence. */
 export const FunctionalUnitSchema = z.object({
     timeUnit: TimeUnitSchema.default('hour'),
-    usageDuration: z.number().default(1),
-    resourceCount: z.number().default(1),
+    usageDuration: num(1),
+    resourceCount: num(1),
     resourceType: z.string().default(''),
 });
 
@@ -72,7 +82,7 @@ export const ScopeSchema = z.object({
     includedItems: z.array(BoundaryItemSchema).default([]),
     excludedItems: z.array(BoundaryItemSchema).default([]),
     /** Assessment lifespan, in years. */
-    lifespanYears: z.number().default(1),
+    lifespanYears: num(1),
 });
 
 // ─── Embodied emissions — hardware inventory ─────────────────────────────────
@@ -86,34 +96,34 @@ export const HardwareItemSchema = z.object({
     category: HardwareCategorySchema.default('server'),
     name: z.string().default(''),
     rackUnit: z.number().optional(),
-    quantity: z.number().default(0),
+    quantity: num(0),
     description: z.string().optional(),
     datacenterId: z.string().default(''),
     isSecondHand: z.boolean().default(false),
 
     // Embodied impact (used for the computation)
-    impactManufacturing: z.number().optional(),
+    impactManufacturing: numOpt(),
     /** Manufacturing + distribution + EOL impact of one unit (kg CO₂-eq per IT element); multiplied by quantity for the total. */
-    impactManufacturingDistributionEol: z.number().default(0),
+    impactManufacturingDistributionEol: num(0),
     resilioDbHash: z.string().optional(),
 
     // CPU
     cpuName: z.string().optional(),
-    cpuQuantity: z.number().default(0),
+    cpuQuantity: num(0),
     cpuLithography: z.number().optional(),
     cpuDieSize: z.number().optional(),
     cpuCores: z.number().optional(),
 
     // Memory
-    memoryQuantity: z.number().default(0),
-    memorySizeGb: z.number().default(0),
+    memoryQuantity: num(0),
+    memorySizeGb: num(0),
     // computed in store (quantity × size); not authoritative in exported JSON.
     memoryTotalGb: z.number().optional(),
 
     // Storage
     storageType: StorageTypeSchema.optional(),
-    storageQuantity: z.number().default(0),
-    storageSize: z.number().default(0),
+    storageQuantity: num(0),
+    storageSize: num(0),
     // computed in store (quantity × size); not authoritative in exported JSON.
     storageTotal: z.number().optional(),
     storageTechnology: StorageTechnologySchema.optional(),
@@ -121,7 +131,7 @@ export const HardwareItemSchema = z.object({
 
     // GPU
     gpuName: z.string().optional(),
-    gpuQuantity: z.number().default(0),
+    gpuQuantity: num(0),
     gpuLithography: z.number().optional(),
     gpuDieSize: z.number().optional(),
     gpuMemory: z.number().optional(),
@@ -137,7 +147,7 @@ export const HardwareItemSchema = z.object({
 /** The usage monitoring period (how long measured consumption covers). */
 export const MonitoringPeriodSchema = z.object({
     unit: MonitoringUnitSchema.default('day'),
-    value: z.number().default(1),
+    value: num(1),
     comment: z.string().default(''),
 });
 
@@ -149,13 +159,13 @@ export const DatacenterEnergySchema = z.object({
     location: z.string().default(''),
     locationComment: z.string().optional(),
     /** Carbon intensity of the grid mix (gCO₂/kWh). */
-    carbonIntensity: z.number().default(0),
+    carbonIntensity: num(0),
     carbonIntensityComment: z.string().optional(),
     /** Optional; the report must note whether PUE was included. */
-    pue: z.number().optional(),
+    pue: numOpt(),
     pueComment: z.string().optional(),
     /** Grid electricity consumed (kWh over the monitoring period). */
-    energyConsumption: z.number().default(0),
+    energyConsumption: num(0),
     energyComment: z.string().optional(),
 });
 
@@ -167,7 +177,7 @@ export const UnderlyingServiceSchema = z.object({
     name: z.string().default(''),
     usageDescription: z.string().default(''),
     /** Estimated emissions (kg CO₂-eq). */
-    co2EstimateKg: z.number().default(0),
+    co2EstimateKg: num(0),
 });
 
 // ─── Whole assessment ────────────────────────────────────────────────────────

@@ -56,10 +56,7 @@
                             <q-input
                                 type="number"
                                 class="full-width"
-                                :model-value="mitsi.monitoringPeriod.value"
-                                @update:model-value="
-                                    (v) => (mitsi.monitoringPeriod.value = toNum(v))
-                                "
+                                v-model.number="mitsi.monitoringPeriod.value"
                                 :rules="[positiveNumber(t('energyMonitorValueLabel'))]"
                                 dense
                                 outlined
@@ -69,10 +66,7 @@
                         <div class="col-8">
                             <q-input
                                 class="full-width"
-                                :model-value="mitsi.monitoringPeriod.comment"
-                                @update:model-value="
-                                    (v) => (mitsi.monitoringPeriod.comment = String(v ?? ''))
-                                "
+                                v-model="mitsi.monitoringPeriod.comment"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -155,8 +149,7 @@
                         <div class="col-1">
                             <q-input
                                 class="full-width"
-                                :model-value="e.comment"
-                                @update:model-value="(v) => (e.comment = String(v ?? ''))"
+                                v-model="e.comment"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -165,8 +158,7 @@
                         <div class="col-1">
                             <q-input
                                 class="full-width"
-                                :model-value="e.location"
-                                @update:model-value="(v) => (e.location = String(v ?? ''))"
+                                v-model="e.location"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -175,8 +167,7 @@
                         <div class="col-1">
                             <q-input
                                 class="full-width"
-                                :model-value="e.locationComment"
-                                @update:model-value="(v) => (e.locationComment = String(v ?? ''))"
+                                v-model="e.locationComment"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -186,8 +177,7 @@
                             <q-input
                                 type="number"
                                 class="full-width"
-                                :model-value="e.carbonIntensity"
-                                @update:model-value="(v) => (e.carbonIntensity = toNum(v))"
+                                v-model.number="e.carbonIntensity"
                                 :rules="[positiveNumber(t('energyDcColIntensity'))]"
                                 dense
                                 outlined
@@ -197,10 +187,7 @@
                         <div class="col-1">
                             <q-input
                                 class="full-width"
-                                :model-value="e.carbonIntensityComment"
-                                @update:model-value="
-                                    (v) => (e.carbonIntensityComment = String(v ?? ''))
-                                "
+                                v-model="e.carbonIntensityComment"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -210,8 +197,7 @@
                             <q-input
                                 type="number"
                                 class="full-width"
-                                :model-value="e.pue"
-                                @update:model-value="(v) => (e.pue = pueNum(v))"
+                                v-model.number="e.pue"
                                 :rules="[optionalNumber(t('energyDcColPue'))]"
                                 dense
                                 outlined
@@ -221,8 +207,7 @@
                         <div class="col-1">
                             <q-input
                                 class="full-width"
-                                :model-value="e.pueComment"
-                                @update:model-value="(v) => (e.pueComment = String(v ?? ''))"
+                                v-model="e.pueComment"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -232,8 +217,7 @@
                             <q-input
                                 type="number"
                                 class="full-width"
-                                :model-value="e.energyConsumption"
-                                @update:model-value="(v) => (e.energyConsumption = toNum(v))"
+                                v-model.number="e.energyConsumption"
                                 :rules="[nonNegativeNumber(t('energyDcColKwh'))]"
                                 dense
                                 outlined
@@ -243,8 +227,7 @@
                         <div class="col-2">
                             <q-input
                                 class="full-width"
-                                :model-value="e.energyComment"
-                                @update:model-value="(v) => (e.energyComment = String(v ?? ''))"
+                                v-model="e.energyComment"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -273,12 +256,14 @@ import { useI18n } from 'vue-i18n';
 import { useMitsiStore } from 'src/stores/mitsi';
 import { nonNegativeNumber, optionalNumber, positiveNumber } from 'src/models/validation';
 import { MonitoringUnitSchema } from 'src/models/schema';
+import { normalizeKey } from 'src/utils/format';
 import type { DatacenterEnergy, MonitoringUnit } from 'src/models/mitsi';
 
 const mitsi = useMitsiStore();
 const { t } = useI18n();
 const $q = useQuasar();
 
+//PAS DANS COMPOSANR mettre dans store, pourquoi appele le store si on peut mettre ca directement la, pas besoin de watch ,centraliser le function pour creer le datacenter
 /** The page is display + input only: rows for each datacenter are gap-filled
  *  (blank row when none). Referential integrity is owned by the store's data
  *  boundary (parseState → sanitizeReferences) — the page never deletes or
@@ -293,22 +278,11 @@ watch(
 );
 
 const monitoringUnitOptions = MonitoringUnitSchema.options.map((unit) => ({
-    label: t(`energyMonitorUnit${unit.charAt(0).toUpperCase()}${unit.slice(1)}`),
+    label: t('energyMonitorUnit_' + normalizeKey(unit)),
     value: unit,
 }));
 
 // ── Display-only helpers (never written back to the store) ──────────────────
-function toNum(v: unknown): number {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
-}
-
-/** PUE is optional: an empty field is stored as `undefined`, not 0. */
-function pueNum(v: unknown): number | undefined {
-    if (v === '' || v === null || v === undefined) return undefined;
-    return toNum(v);
-}
-
 function dcLabel(datacenterId: string): string {
     return mitsi.scope.datacenters.find((dc) => dc.id === datacenterId)?.name || datacenterId;
 }
