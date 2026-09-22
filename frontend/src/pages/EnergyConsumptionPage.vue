@@ -45,6 +45,7 @@
                                         ) as MonitoringUnit)
                                 "
                                 :options="monitoringUnitOptions"
+                                :rules="[toValidationRule(MonitoringPeriodSchema.shape.unit)]"
                                 emit-value
                                 map-options
                                 dense
@@ -57,7 +58,7 @@
                                 type="number"
                                 class="full-width"
                                 v-model.number="mitsi.monitoringPeriod.value"
-                                :rules="[toValidationRule(formRules.monitoringPeriodValue)]"
+                                :rules="[toValidationRule(MonitoringPeriodSchema.shape.value)]"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -178,7 +179,9 @@
                                 type="number"
                                 class="full-width"
                                 v-model.number="e.carbonIntensity"
-                                :rules="[toValidationRule(formRules.carbonIntensity)]"
+                                :rules="[
+                                    toValidationRule(DatacenterEnergySchema.shape.carbonIntensity),
+                                ]"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -198,7 +201,7 @@
                                 type="number"
                                 class="full-width"
                                 v-model.number="e.pue"
-                                :rules="[toValidationRule(formRules.pue)]"
+                                :rules="[toValidationRule(DatacenterEnergySchema.shape.pue)]"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -218,7 +221,11 @@
                                 type="number"
                                 class="full-width"
                                 v-model.number="e.energyConsumption"
-                                :rules="[toValidationRule(formRules.energyConsumption)]"
+                                :rules="[
+                                    toValidationRule(
+                                        DatacenterEnergySchema.shape.energyConsumption,
+                                    ),
+                                ]"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -255,7 +262,11 @@ import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import { useMitsiStore } from 'src/stores/mitsi';
 import { useValidation } from 'src/composables/useValidation';
-import { formRules, MonitoringUnitSchema } from 'src/models/schema';
+import {
+    DatacenterEnergySchema,
+    MonitoringPeriodSchema,
+    MonitoringUnitSchema,
+} from 'src/models/schema';
 import { normalizeKey } from 'src/utils/format';
 import type { DatacenterEnergy, MonitoringUnit } from 'src/models/mitsi';
 

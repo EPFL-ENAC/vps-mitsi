@@ -12,7 +12,6 @@
  */
 import type { z } from 'zod';
 import {
-    formRules,
     HardwareCategorySchema,
     HardwareItemSchema,
     StorageCasingSchema,
@@ -42,7 +41,7 @@ export type InventoryColumnKind =
 
 export interface InventoryColumn {
     name: string;
-    field: string;
+    field: keyof HardwareItem | 'subtotal';
     label: string;
     group: GroupKey;
     /** Which visibility mode the column appears in. */
@@ -52,7 +51,7 @@ export interface InventoryColumn {
     /** Field feeds the calculation → show the ∑ badge. */
     calc?: boolean;
     sortable?: boolean;
-    /** Strict field schema from schema.formRules (rendered via toValidationRule). */
+    /** Canonical field schema (rendered via toValidationRule). */
     zod: z.ZodType | undefined;
     /** Options for enum selects (category + storage selects). */
     options?: SchemaOption[];
@@ -101,40 +100,6 @@ function storageTotal(row: HardwareItem): number {
     return (row.storageQuantity || 0) * (row.storageSize || 0);
 }
 
-// ── Rule derivation (in-file) ────────────────────────────────────────────────
-
-/** Field → strict rule from schema.formRules. Non-core fields carry no rule. */
-function zodFor(s: { field: string }): z.ZodType | undefined {
-    switch (s.field) {
-        case 'name':
-            return formRules.name;
-        case 'quantity':
-            return formRules.quantity;
-        case 'cpuQuantity':
-            return formRules.cpuQty;
-        case 'memoryQuantity':
-            return formRules.memoryQty;
-        case 'memorySizeGb':
-            return formRules.memorySize;
-        case 'gpuQuantity':
-            return formRules.gpuQty;
-        case 'impactManufacturing':
-            return formRules.impactManufacturing;
-        case 'impactManufacturingDistributionEol':
-            return formRules.impactManufacturingDistributionEol;
-        case 'category':
-            return formRules.category;
-        case 'datacenterId':
-            return formRules.datacenterId;
-        case 'storageQuantity':
-            return formRules.storageQuantity;
-        case 'storageSize':
-            return formRules.storageSize;
-        default:
-            return undefined;
-    }
-}
-
 /**
  * Per-kind minimum column width (px). Pinning min-width on both the header
  * (headerStyle) and the body cell (style) keeps each column's width stable as
@@ -161,7 +126,7 @@ interface EnumOptionSets {
 }
 
 interface Spec {
-    field: string;
+    field: keyof HardwareItem | 'subtotal';
     labelKey: string;
     mode: VisibilityMode;
     kind: InventoryColumnKind;
@@ -484,7 +449,10 @@ function makeColumns(t: (key: string) => string, opts: EnumOptionSets): Inventor
 
     return specs.map((s) => {
         const label = s.labelKey ? t(s.labelKey) : '';
-        const zod = zodFor(s); // category (enum) & datacenterId (datacenter) too; non-core → undefined (always valid)
+        const zod =
+            s.kind === 'derived' || s.kind === 'hidden' || s.field === 'subtotal'
+                ? undefined
+                : HardwareItemSchema.shape[s.field];
         const minWidth = KIND_MIN_WIDTH[s.kind];
         const column: InventoryColumn = {
             name: s.field,

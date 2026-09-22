@@ -15,12 +15,7 @@
                 <span class="text-caption text-grey-7 q-mr-sm">
                     {{ $t('mainTagline') }}
                 </span>
-                <q-btn
-                    unelevated
-                    color="primary"
-                    :label="$t('mainSave')"
-                    @click="mitsi.saveToStorage()"
-                />
+                <q-btn unelevated color="primary" :label="$t('mainSave')" @click="saveAssessment" />
             </q-toolbar>
         </q-header>
 
@@ -90,6 +85,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 
 import type { BlockKey, BlockStatus } from 'src/models/mitsi';
@@ -106,6 +102,13 @@ const { t } = useI18n();
 
 const leftDrawerOpen = ref(false);
 const mitsi = useMitsiStore();
+const $q = useQuasar();
+
+function saveAssessment(): void {
+    if (!mitsi.saveToStorage()) {
+        $q.notify({ type: 'negative', message: t('mainSaveFailed') });
+    }
+}
 
 const assessmentBlocks = computed<Record<BlockKey, BlockDef>>(() => {
     const status = mitsi.blockStatus;

@@ -11,6 +11,7 @@ import { computed, ref } from 'vue';
 
 import {
     emptyMitsiState,
+    newHardwareItem,
     MITSI_SCHEMA_VERSION,
     MITSI_STORAGE_KEY,
     type BlockKey,
@@ -24,14 +25,15 @@ import {
     type UnderlyingService,
 } from 'src/models/mitsi';
 import {
-    BoundaryItemSchema,
+    BoundaryItemDraftSchema,
     DatacenterEnergySchema,
-    DatacenterSchema,
-    energyRowCompletenessSchema,
+    DatacenterEnergyDraftSchema,
+    DatacenterDraftSchema,
     HardwareCategorySchema,
-    hardwareRowCompletenessSchema,
-    MitsiStateSchema,
-    scopeCompletenessSchema,
+    HardwareItemSchema,
+    MitsiStateDraftSchema,
+    MonitoringPeriodSchema,
+    ScopeSchema,
 } from 'src/models/schema';
 import { rowSubtotal } from 'src/utils/format';
 
@@ -62,9 +64,7 @@ export const useMitsiStore = defineStore('mitsi', () => {
     const exportedAt = ref<number | null>(null);
 
     // ── Getters ──────────────────────────────────────────────────────────────
-    const isScopeValid = computed<boolean>(
-        () => scopeCompletenessSchema.safeParse(scope.value).success,
-    );
+    const isScopeValid = computed<boolean>(() => ScopeSchema.safeParse(scope.value).success);
 
     /**
      * Whether a second-hand row is excluded from the embodied total — i.e. it is
@@ -208,12 +208,11 @@ export const useMitsiStore = defineStore('mitsi', () => {
     );
 
     /** True when a hardware row carries every field needed for the totals. */
-    const hardwareRowValid = (h: HardwareItem): boolean =>
-        hardwareRowCompletenessSchema.safeParse(h).success;
+    const hardwareRowValid = (h: HardwareItem): boolean => HardwareItemSchema.safeParse(h).success;
 
     /** True when an energy record carries every field needed for the totals. */
     const energyRowValid = (e: DatacenterEnergy): boolean =>
-        energyRowCompletenessSchema.safeParse(e).success;
+        DatacenterEnergySchema.safeParse(e).success;
 
     /** Count of hardware rows missing a mandatory value (reuses hardwareRowValid). */
     const missingMandatoryHardware = computed<number>(
@@ -224,7 +223,10 @@ export const useMitsiStore = defineStore('mitsi', () => {
         () => hardware.value.length > 0 && hardware.value.every(hardwareRowValid),
     );
     const energyRowsComplete = computed<boolean>(
-        () => energy.value.length > 0 && energy.value.every(energyRowValid),
+        () =>
+            energy.value.length > 0 &&
+            energy.value.every(energyRowValid) &&
+            MonitoringPeriodSchema.safeParse(monitoringPeriod.value).success,
     );
 
     /** Per-block completion, reflecting mandatory-field completion, not row presence. */
@@ -239,7 +241,7 @@ export const useMitsiStore = defineStore('mitsi', () => {
         energy:
             energy.value.length === 0
                 ? 'not_started'
-                : energyRowsComplete.value && monitoringPeriod.value.value > 0 && isScopeValid.value
+                : energyRowsComplete.value && isScopeValid.value
                   ? 'complete'
                   : 'partial',
         results:
@@ -254,9 +256,16 @@ export const useMitsiStore = defineStore('mitsi', () => {
         if (state) applyState(state);
     }
 
-    function saveToStorage(): void {
-        LocalStorage.set(MITSI_STORAGE_KEY, buildState());
-        savedAt.value = Date.now();
+    function saveToStorage(): boolean {
+        const parsed = MitsiStateDraftSchema.safeParse(buildState());
+        if (!parsed.success) return false;
+        try {
+            LocalStorage.set(MITSI_STORAGE_KEY, parsed.data);
+            savedAt.value = Date.now();
+            return true;
+        } catch {
+            return false;
+        }
     }
 
     function reset(): void {
@@ -275,16 +284,19 @@ export const useMitsiStore = defineStore('mitsi', () => {
 
     // ── Import / export (versioned JSON) ─────────────────────────────────────
     function exportJson(): string {
+        const state = MitsiStateDraftSchema.parse(buildState());
+        const json = JSON.stringify(state, null, 2);
         exportedAt.value = Date.now();
-        return JSON.stringify(buildState(), null, 2);
+        return json;
     }
 
     function importJson(json: string): boolean {
         try {
             const state = parseState(JSON.parse(json) as unknown);
             if (!state) return false;
+            LocalStorage.set(MITSI_STORAGE_KEY, state);
             applyState(state);
-            saveToStorage();
+            savedAt.value = Date.now();
             return true;
         } catch {
             return false;
@@ -312,22 +324,26 @@ export const useMitsiStore = defineStore('mitsi', () => {
     function ensureEnergyRows(): void {
         for (const dc of scope.value.datacenters) {
             if (!energy.value.some((e) => e.datacenterId === dc.id)) {
-                energy.value.push(DatacenterEnergySchema.parse({ datacenterId: dc.id }));
+                energy.value.push(DatacenterEnergyDraftSchema.parse({ datacenterId: dc.id }));
             }
         }
     }
 
     // ── Centralized row creation ────────────────────────────────────────────
+    function addHardwareItem(): void {
+        hardware.value.push(newHardwareItem());
+    }
+
     /** Creates a new datacenter (fresh uuid) plus its mandatory energy record
      *  (spec auto-fill — each new DC gets an energy row). */
     function addDatacenter(): void {
-        scope.value.datacenters.push(DatacenterSchema.parse({ id: crypto.randomUUID() }));
+        scope.value.datacenters.push(DatacenterDraftSchema.parse({ id: crypto.randomUUID() }));
         ensureEnergyRows();
     }
 
     /** Creates a blank included/excluded boundary row (fresh uuid). */
     function addBoundaryItem(which: 'included' | 'excluded'): void {
-        const item = BoundaryItemSchema.parse({ id: crypto.randomUUID() });
+        const item = BoundaryItemDraftSchema.parse({ id: crypto.randomUUID() });
         if (which === 'included') scope.value.includedItems.push(item);
         else scope.value.excludedItems.push(item);
     }
@@ -347,9 +363,21 @@ export const useMitsiStore = defineStore('mitsi', () => {
     }
 
     function parseState(raw: unknown): MitsiState | null {
-        const parsed = MitsiStateSchema.safeParse(raw);
+        const parsed = MitsiStateDraftSchema.safeParse(raw);
         if (!parsed.success) return null;
-        return parsed.data; // orphan-reference filtering happens in the schema transform
+        const state = parsed.data;
+        const dcIds = new Set(state.scope.datacenters.map((dc) => dc.id));
+        // An empty reference is an unfinished draft. Only filter real orphans,
+        // and only when loading: saving must not silently remove edited rows.
+        return {
+            ...state,
+            hardware: state.hardware.filter(
+                (row) => row.datacenterId === '' || dcIds.has(row.datacenterId),
+            ),
+            energy: state.energy.filter(
+                (row) => row.datacenterId === '' || dcIds.has(row.datacenterId),
+            ),
+        };
     }
 
     function applyState(state: MitsiState): void {
@@ -395,5 +423,6 @@ export const useMitsiStore = defineStore('mitsi', () => {
         ensureEnergyRows,
         addDatacenter,
         addBoundaryItem,
+        addHardwareItem,
     };
 });

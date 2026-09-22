@@ -20,6 +20,8 @@ export default {
     // --- Main layout (header, nav rail, footer) ---
     mainMenuAriaLabel: 'Menu',
     mainTagline: 'IT service carbon impact assessment',
+    mainSaveFailed:
+        'Could not save the assessment. Check invalid fields and available browser storage, then try again.',
     mainSave: 'Save',
     mainNavWelcome: 'Welcome',
     mainNavScope: 'Scope of the assessment',

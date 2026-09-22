@@ -8,8 +8,8 @@
  * importing from `src/models/mitsi` exactly as before.
  */
 import {
-    HardwareItemSchema,
-    MitsiStateSchema,
+    HardwareItemDraftSchema,
+    MitsiStateDraftSchema,
     type HardwareItem,
     type MitsiState,
 } from 'src/models/schema';
@@ -47,7 +47,7 @@ export type BlockKey = 'scope' | 'inventory' | 'energy' | 'results';
  * so every field falls back to its default.
  */
 export function emptyMitsiState(): MitsiState {
-    return MitsiStateSchema.parse({});
+    return MitsiStateDraftSchema.parse({});
 }
 
 /**
@@ -56,6 +56,6 @@ export function emptyMitsiState(): MitsiState {
  * each new row is uniquely identified before it is ever persisted.
  */
 export function newHardwareItem(): HardwareItem {
-    const base = HardwareItemSchema.parse({});
+    const base = HardwareItemDraftSchema.parse({});
     return { ...base, id: crypto.randomUUID() };
 }
