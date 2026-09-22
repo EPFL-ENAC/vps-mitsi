@@ -1,110 +1,220 @@
 <template>
     <q-layout view="hHh LpR lFf">
-        <AppHeader />
+        <q-header elevated class="bg-white text-dark">
+            <q-toolbar>
+                <q-btn
+                    flat
+                    dense
+                    round
+                    icon="menu"
+                    :aria-label="$t('mainMenuAriaLabel')"
+                    @click="leftDrawerOpen = !leftDrawerOpen"
+                />
+                <q-toolbar-title class="text-weight-medium">MITSI</q-toolbar-title>
+                <q-space />
+                <span class="text-caption text-grey-7 q-mr-sm">
+                    {{ $t('mainTagline') }}
+                </span>
+                <q-btn
+                    unelevated
+                    color="primary"
+                    :label="$t('mainSave')"
+                    @click="mitsi.saveToStorage()"
+                />
+            </q-toolbar>
+        </q-header>
 
-        <q-drawer v-model="leftDrawerOpen" :breakpoint="0" :width="314" bordered />
+        <q-drawer v-model="leftDrawerOpen" show-if-above :width="280" bordered>
+            <q-list padding>
+                <q-item clickable v-ripple to="/" exact>
+                    <q-item-section avatar>
+                        <q-icon name="home" />
+                    </q-item-section>
+                    <q-item-section>{{ $t('mainNavWelcome') }}</q-item-section>
+                </q-item>
+
+                <q-separator spaced />
+
+                <q-item
+                    v-for="(block, key) in assessmentBlocks"
+                    :key="key"
+                    clickable
+                    v-ripple
+                    :to="block.to"
+                >
+                    <q-item-section avatar>
+                        <q-icon :name="block.icon" />
+                    </q-item-section>
+                    <q-item-section>{{ $t(block.labelKey) }}</q-item-section>
+                    <q-item-section side>
+                        <span
+                            class="completion-dot"
+                            :class="`completion-dot--${block.status}`"
+                            :title="$t(completionLabelKey(block.status))"
+                        />
+                    </q-item-section>
+                </q-item>
+            </q-list>
+        </q-drawer>
 
         <q-page-container>
-            <q-page class="leman-page text-white">
-                <div class="layout-content">
-                    <div class="page-shell">
-                        <router-view />
-                    </div>
-                </div>
-            </q-page>
+            <router-view />
         </q-page-container>
 
-        <AppFooter />
+        <q-footer bordered class="bg-white text-dark">
+            <q-toolbar class="q-px-md">
+                <span class="text-caption text-grey-7">{{ savedText }}</span>
+                <span v-if="exportedText" class="text-caption text-grey-6 q-ml-sm">
+                    · {{ exportedText }}
+                </span>
+                <q-space />
+                <span class="text-caption text-grey-8">
+                    {{ $t('mainFooterEmbodied', { value: embodiedText }) }}
+                </span>
+                <q-space />
+                <span class="text-caption text-grey-8">
+                    {{ $t('mainFooterOperational', { value: operationalText }) }}
+                </span>
+                <q-space />
+                <span class="text-caption text-grey-8">
+                    {{ $t('mainFooterTotal', { value: totalLifespanText }) }}
+                </span>
+                <q-space />
+                <span class="text-caption text-grey-7">
+                    {{ $t('mainFooterPerFu', { value: perFunctionalUnitText }) }}
+                </span>
+            </q-toolbar>
+        </q-footer>
     </q-layout>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import AppHeader from 'src/components/navigation/AppHeader.vue';
-import AppFooter from 'src/components/navigation/AppFooter.vue';
-import { useInactivityTimer } from 'src/composables/useInactivityTimer';
+import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+import type { BlockKey, BlockStatus } from 'src/models/mitsi';
+import { useMitsiStore } from 'src/stores/mitsi';
+
+interface BlockDef {
+    labelKey: string;
+    to: string;
+    icon: string;
+    status: BlockStatus;
+}
+
+const { t } = useI18n();
 
 const leftDrawerOpen = ref(false);
-const router = useRouter();
-const route = useRoute();
+const mitsi = useMitsiStore();
 
-const { onInactivityThresholdReached } = useInactivityTimer({
-    timeoutMs: 60_000,
+const assessmentBlocks = computed<Record<BlockKey, BlockDef>>(() => {
+    const status = mitsi.blockStatus;
+    return {
+        scope: {
+            labelKey: 'mainNavScope',
+            to: '/scope',
+            icon: 'scope',
+            status: status.scope,
+        },
+        inventory: {
+            labelKey: 'mainNavInventory',
+            to: '/inventory',
+            icon: 'dns',
+            status: status.inventory,
+        },
+        energy: {
+            labelKey: 'mainNavEnergy',
+            to: '/energy',
+            icon: 'bolt',
+            status: status.energy,
+        },
+        results: {
+            labelKey: 'mainNavResults',
+            to: '/results',
+            icon: 'insights',
+            status: status.results,
+        },
+    };
 });
 
-onInactivityThresholdReached(() => {
-    if (route.path !== '/') {
-        void router.push('/');
+function completionLabelKey(status: BlockStatus): string {
+    switch (status) {
+        case 'complete':
+            return 'mainStatusComplete';
+        case 'partial':
+            return 'mainStatusPartial';
+        default:
+            return 'mainStatusNotStarted';
     }
+}
+
+/** Embodied emissions in tonnes, or a dash until the scope is valid. */
+const embodiedText = computed<string>(() =>
+    mitsi.isScopeValid
+        ? `${(mitsi.totalEmbodied / 1000).toFixed(1)} ${t('mainUnitTonnes')}`
+        : t('mainNotApplicable'),
+);
+
+/** Operational emissions in tonnes, or a dash until the scope is valid. */
+const operationalText = computed<string>(() =>
+    mitsi.isScopeValid
+        ? `${(mitsi.totalOperational / 1000).toFixed(1)} ${t('mainUnitTonnes')}`
+        : t('mainNotApplicable'),
+);
+
+/** Total over the lifespan in tonnes of CO2-eq, or a dash until the scope is valid. */
+const totalLifespanText = computed<string>(() =>
+    mitsi.isScopeValid
+        ? `${(mitsi.totalLifespan / 1000).toFixed(1)} ${t('mainUnitTonnesCo2e')}`
+        : t('mainNotApplicable'),
+);
+
+/** Per-functional-unit emissions in grams of CO2-eq, or a dash when not computable. */
+const perFunctionalUnitText = computed<string>(() => {
+    const v = mitsi.perFunctionalUnit;
+    return v !== null
+        ? `${(v * 1000).toFixed(2)} ${t('mainUnitGramsCo2e')}`
+        : t('mainNotApplicable');
 });
+
+const savedText = computed<string>(() =>
+    mitsi.savedAt
+        ? t('mainFooterSavedAt', { timeAgo: formatTimeAgo(mitsi.savedAt) })
+        : t('mainFooterDraftSaved'),
+);
+const exportedText = computed<string | null>(() =>
+    mitsi.exportedAt
+        ? t('mainFooterExportedAt', { timeAgo: formatTimeAgo(mitsi.exportedAt) })
+        : null,
+);
+
+function formatTimeAgo(ts: number): string {
+    const diffSec = Math.round((Date.now() - ts) / 1000);
+    if (diffSec < 60) return t('mainTimeAgoJustNow');
+    const mins = Math.round(diffSec / 60);
+    if (mins < 60) return t('mainTimeAgoMinutes', { n: mins });
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return t('mainTimeAgoHours', { n: hrs });
+    return t('mainTimeAgoDays', { n: Math.round(hrs / 24) });
+}
 </script>
 
-<style scoped lang="scss">
-.leman-page {
-    background:
-        radial-gradient(circle at top center, rgba(0, 210, 255, 0.14), transparent 38%),
-        linear-gradient(180deg, #073640 0%, #03161b 55%, #00090c 100%);
-
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
+<style scoped>
+.completion-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid #c2cbd6;
 }
 
-.layout-content {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
+.completion-dot--partial {
+    border-color: #8a5a00;
+    background: linear-gradient(90deg, #8a5a00 50%, transparent 50%);
 }
 
-.page-shell {
-    width: 100%;
-    max-width: 1600px;
-    margin: 0 auto;
-    padding: 4rem;
-    flex: 1;
-}
-
-.app-footer {
-    width: 100%;
-    padding: 32px 24px 40px;
-}
-
-.footer-logos {
-    max-width: 1080px;
-    margin: 0 auto;
-    padding-top: 24px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 28px;
-    flex-wrap: wrap;
-}
-
-.footer-logo {
-    height: 28px;
-    width: auto;
-    object-fit: contain;
-    opacity: 0.9;
-}
-
-@media (max-width: 640px) {
-    .page-shell {
-        padding: 36px 16px 24px;
-    }
-
-    .app-footer {
-        padding: 24px 16px 32px;
-    }
-
-    .footer-logos {
-        gap: 20px;
-        padding-top: 20px;
-    }
-
-    .footer-logo {
-        height: 22px;
-    }
+.completion-dot--complete {
+    border-color: #0b7a55;
+    background: #0b7a55;
 }
 </style>

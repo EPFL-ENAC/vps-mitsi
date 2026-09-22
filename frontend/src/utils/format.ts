@@ -1,58 +1,36 @@
-export function formatNumber(
-    value: number | undefined,
-    locale: string | undefined = undefined,
-    fallback: string = '-',
-): string {
-    if (value === undefined) {
-        return fallback;
-    }
+/** kg CO₂-eq, en-US formatting with comma thousands separator, 2 decimals ("48,852.77"). */
+export function formatKg(n: number): string {
+    return new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(n);
+}
 
-    const numberFormatter = new Intl.NumberFormat(locale, {
-        maximumFractionDigits: 1,
+/** Normalizes a schema enum value into an i18n key suffix: every run of
+ *  non-alphanumeric characters becomes a single underscore. e.g. 'compute_server'
+ *  → 'compute_server', '2.5 inch' → '2_5_inch', 'HDD' → 'HDD'. */
+export function normalizeKey(v: string): string {
+    return v.replace(/[^A-Za-z0-9]+/g, '_');
+}
+
+/** Assembled functional-unit sentence, per-language word order driven from i18n. */
+export function buildFunctionalUnitSentence(
+    t: (key: string, params?: Record<string, unknown>) => string,
+    fu: { usageDuration: number; resourceCount: number; resourceType: string },
+    timeUnitLabel: string,
+): string {
+    return t('scopeFuSentence', {
+        duration: fu.usageDuration,
+        unit: timeUnitLabel,
+        count: fu.resourceCount,
+        type: fu.resourceType,
     });
-    return numberFormatter.format(value);
 }
 
-export function formatDate(date: Date, locale: string | undefined = undefined): string {
-    const dateFormatter = new Intl.DateTimeFormat(locale, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
-    return dateFormatter.format(date);
-}
-
-export function formatTime(
-    timestamp: number | undefined,
-    locale: string | undefined,
-    fallback: string = '-',
-): string {
-    if (timestamp === undefined) {
-        return fallback;
-    }
-
-    return new Intl.DateTimeFormat(locale, {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-        timeZone: 'Europe/Zurich',
-    }).format(new Date(timestamp * 1000));
-}
-
-export function formatDateShort(
-    timestamp: number | undefined,
-    locale: string | undefined,
-    fallback: string = '-',
-): string {
-    if (timestamp === undefined) {
-        return fallback;
-    }
-
-    return new Intl.DateTimeFormat(locale, {
-        day: '2-digit',
-        month: '2-digit',
-        timeZone: 'Europe/Zurich',
-    }).format(new Date(timestamp * 1000));
+/** Embodied emissions of one row: quantity × per-unit impact. */
+export function rowSubtotal(row: {
+    quantity: number;
+    impactManufacturingDistributionEol: number;
+}): number {
+    return row.quantity * row.impactManufacturingDistributionEol;
 }

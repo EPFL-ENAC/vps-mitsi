@@ -21,25 +21,9 @@ declare module 'vue-i18n' {
 }
 /* eslint-enable @typescript-eslint/no-empty-object-type */
 
-function getInitialLocale(): MessageLanguages {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem('app-locale') : null;
-    if (stored && (stored === 'en' || stored === 'fr' || stored === 'de' || stored === 'it')) {
-        return stored;
-    }
-
-    if (typeof navigator !== 'undefined') {
-        const browserLang = navigator.language.toLowerCase();
-        if (browserLang.startsWith('fr')) return 'fr';
-        if (browserLang.startsWith('de')) return 'de';
-        if (browserLang.startsWith('it')) return 'it';
-    }
-
-    return 'en';
-}
-
 export default defineBoot(({ app }) => {
     const i18n = createI18n<{ message: MessageSchema }, MessageLanguages>({
-        locale: getInitialLocale(),
+        locale: 'en',
         legacy: false,
         messages,
     });

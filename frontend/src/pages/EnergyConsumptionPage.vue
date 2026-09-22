@@ -1,0 +1,317 @@
+<template>
+    <div class="q-pa-md">
+        <div class="text-h4 q-mb-sm">{{ $t('energyPageTitle') }}</div>
+        <p class="text-grey-7 q-mb-md">{{ $t('energyPageHint') }}</p>
+        <!-- Scope gating hint -->
+        <q-banner v-if="!mitsi.isScopeValid" inline-actions class="bg-warning text-white q-mb-md">
+            {{ $t('energyNoScopeHint') }}
+        </q-banner>
+
+        <!-- Usage monitoring period -->
+        <q-card flat bordered class="energy-zone q-mb-md">
+            <q-expansion-item default-opened>
+                <template #header>
+                    <q-item-section class="energy-zone-title">
+                        <q-item-label>{{ $t('energyMonitorTitle') }}</q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                        <span class="energy-badge energy-badge--calc"
+                            >∑<q-tooltip>{{ $t('scopeBadgeCalcTooltip') }}</q-tooltip></span
+                        >
+                    </q-item-section>
+                </template>
+                <q-separator />
+                <q-card-section>
+                    <div class="row items-center q-col-gutter-x-sm q-py-xs">
+                        <div class="col-2">
+                            <div class="energy-th">{{ $t('energyMonitorUnitLabel') }}</div>
+                        </div>
+                        <div class="col-2">
+                            <div class="energy-th">{{ $t('energyMonitorValueLabel') }}</div>
+                        </div>
+                        <div class="col-8">
+                            <div class="energy-th">{{ $t('energyMonitorCommentLabel') }}</div>
+                        </div>
+                    </div>
+                    <div class="row items-center q-col-gutter-x-sm q-py-xs">
+                        <div class="col-2">
+                            <q-select
+                                class="full-width"
+                                :model-value="mitsi.monitoringPeriod.unit"
+                                @update:model-value="
+                                    (v) =>
+                                        (mitsi.monitoringPeriod.unit = String(
+                                            v ?? '',
+                                        ) as MonitoringUnit)
+                                "
+                                :options="monitoringUnitOptions"
+                                emit-value
+                                map-options
+                                dense
+                                outlined
+                                hide-bottom-space
+                            />
+                        </div>
+                        <div class="col-2">
+                            <q-input
+                                type="number"
+                                class="full-width"
+                                v-model.number="mitsi.monitoringPeriod.value"
+                                :rules="[toValidationRule(formRules.monitoringPeriodValue)]"
+                                dense
+                                outlined
+                                hide-bottom-space
+                            />
+                        </div>
+                        <div class="col-8">
+                            <q-input
+                                class="full-width"
+                                v-model="mitsi.monitoringPeriod.comment"
+                                dense
+                                outlined
+                                hide-bottom-space
+                            />
+                        </div>
+                    </div>
+                </q-card-section>
+            </q-expansion-item>
+        </q-card>
+
+        <q-banner
+            v-if="!mitsi.scope.datacenters.length"
+            inline-actions
+            class="bg-info text-white q-mb-md"
+        >
+            {{ $t('energyNoDatacentersHint') }}
+        </q-banner>
+
+        <!-- Datacenters' information -->
+        <q-card flat bordered class="energy-zone q-mb-md">
+            <q-expansion-item default-opened>
+                <template #header>
+                    <q-item-section class="energy-zone-title">
+                        <q-item-label
+                            >{{ $t('energyDcTitle')
+                            }}<q-tooltip>{{
+                                $t('energyDcColumnsTooltip')
+                            }}</q-tooltip></q-item-label
+                        >
+                    </q-item-section>
+                    <q-item-section side>
+                        <span class="energy-badge energy-badge--calc"
+                            >∑<q-tooltip>{{ $t('scopeBadgeCalcTooltip') }}</q-tooltip></span
+                        >
+                    </q-item-section>
+                </template>
+                <q-separator />
+                <q-card-section>
+                    <div class="row items-center q-col-gutter-x-sm q-py-xs">
+                        <div class="col-1">
+                            <div class="energy-th">{{ $t('energyDcColName') }}</div>
+                        </div>
+                        <div class="col-1">
+                            <div class="energy-th">{{ $t('energyDcColNameComment') }}</div>
+                        </div>
+                        <div class="col-1">
+                            <div class="energy-th">{{ $t('energyDcColLocation') }}</div>
+                        </div>
+                        <div class="col-1">
+                            <div class="energy-th">{{ $t('energyDcColLocationComment') }}</div>
+                        </div>
+                        <div class="col-1">
+                            <div class="energy-th">{{ $t('energyDcColIntensity') }}</div>
+                        </div>
+                        <div class="col-1">
+                            <div class="energy-th">{{ $t('energyDcColIntensityComment') }}</div>
+                        </div>
+                        <div class="col-1">
+                            <div class="energy-th">{{ $t('energyDcColPue') }}</div>
+                        </div>
+                        <div class="col-1">
+                            <div class="energy-th">{{ $t('energyDcColPueComment') }}</div>
+                        </div>
+                        <div class="col-1">
+                            <div class="energy-th">{{ $t('energyDcColKwh') }}</div>
+                        </div>
+                        <div class="col-2">
+                            <div class="energy-th">{{ $t('energyDcColKwhComment') }}</div>
+                        </div>
+                        <div class="col-1" />
+                    </div>
+                    <div
+                        v-for="e in mitsi.energy"
+                        :key="e.datacenterId"
+                        class="row items-center q-col-gutter-x-sm q-py-xs"
+                    >
+                        <div class="col-1">
+                            <div class="text-grey-8 ellipsis">{{ dcLabel(e.datacenterId) }}</div>
+                        </div>
+                        <div class="col-1">
+                            <q-input
+                                class="full-width"
+                                v-model="e.comment"
+                                dense
+                                outlined
+                                hide-bottom-space
+                            />
+                        </div>
+                        <div class="col-1">
+                            <q-input
+                                class="full-width"
+                                v-model="e.location"
+                                dense
+                                outlined
+                                hide-bottom-space
+                            />
+                        </div>
+                        <div class="col-1">
+                            <q-input
+                                class="full-width"
+                                v-model="e.locationComment"
+                                dense
+                                outlined
+                                hide-bottom-space
+                            />
+                        </div>
+                        <div class="col-1">
+                            <q-input
+                                type="number"
+                                class="full-width"
+                                v-model.number="e.carbonIntensity"
+                                :rules="[toValidationRule(formRules.carbonIntensity)]"
+                                dense
+                                outlined
+                                hide-bottom-space
+                            />
+                        </div>
+                        <div class="col-1">
+                            <q-input
+                                class="full-width"
+                                v-model="e.carbonIntensityComment"
+                                dense
+                                outlined
+                                hide-bottom-space
+                            />
+                        </div>
+                        <div class="col-1">
+                            <q-input
+                                type="number"
+                                class="full-width"
+                                v-model.number="e.pue"
+                                :rules="[toValidationRule(formRules.pue)]"
+                                dense
+                                outlined
+                                hide-bottom-space
+                            />
+                        </div>
+                        <div class="col-1">
+                            <q-input
+                                class="full-width"
+                                v-model="e.pueComment"
+                                dense
+                                outlined
+                                hide-bottom-space
+                            />
+                        </div>
+                        <div class="col-1">
+                            <q-input
+                                type="number"
+                                class="full-width"
+                                v-model.number="e.energyConsumption"
+                                :rules="[toValidationRule(formRules.energyConsumption)]"
+                                dense
+                                outlined
+                                hide-bottom-space
+                            />
+                        </div>
+                        <div class="col-2">
+                            <q-input
+                                class="full-width"
+                                v-model="e.energyComment"
+                                dense
+                                outlined
+                                hide-bottom-space
+                            />
+                        </div>
+                        <div class="col-1 text-right">
+                            <q-btn
+                                flat
+                                dense
+                                icon="delete"
+                                :aria-label="$t('energyDcDeleteRow')"
+                                @click="deleteEnergyRow(e)"
+                            />
+                        </div>
+                    </div>
+                </q-card-section>
+            </q-expansion-item>
+        </q-card>
+    </div>
+</template>
+
+<script setup lang="ts">
+import { onMounted } from 'vue';
+import { useQuasar } from 'quasar';
+import { useI18n } from 'vue-i18n';
+import { useMitsiStore } from 'src/stores/mitsi';
+import { useValidation } from 'src/composables/useValidation';
+import { formRules, MonitoringUnitSchema } from 'src/models/schema';
+import { normalizeKey } from 'src/utils/format';
+import type { DatacenterEnergy, MonitoringUnit } from 'src/models/mitsi';
+
+const mitsi = useMitsiStore();
+const { t } = useI18n();
+const $q = useQuasar();
+const { toValidationRule } = useValidation();
+
+// Gap-fill safety net; intentionally deleted records are re-created on revisit —
+// energy records follow datacenters (spec auto-fill).
+onMounted(() => mitsi.ensureEnergyRows());
+
+const monitoringUnitOptions = MonitoringUnitSchema.options.map((unit) => ({
+    label: t('energyMonitorUnit_' + normalizeKey(unit)),
+    value: unit,
+}));
+
+// ── Display-only helpers (never written back to the store) ──────────────────
+function dcLabel(datacenterId: string): string {
+    return mitsi.scope.datacenters.find((dc) => dc.id === datacenterId)?.name || datacenterId;
+}
+
+function deleteEnergyRow(row: DatacenterEnergy): void {
+    $q.dialog({
+        title: t('energyDeleteRowConfirmTitle'),
+        message: t('energyDeleteRowConfirmMessage', { name: dcLabel(row.datacenterId) }),
+        cancel: true,
+        persistent: true,
+    }).onOk(() => {
+        const i = mitsi.energy.findIndex((e) => e.datacenterId === row.datacenterId);
+        if (i !== -1) mitsi.energy.splice(i, 1);
+    });
+}
+</script>
+
+<style scoped>
+.energy-zone-title {
+    font-weight: 600;
+}
+.energy-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+.energy-badge--calc {
+    background: #fff0f1;
+    color: #c1001a;
+    font-weight: 600;
+}
+.energy-th {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgba(0, 0, 0, 0.6);
+}
+</style>

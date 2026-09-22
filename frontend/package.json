@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@quasar/extras": "^1.16.4",
+    "echarts": "^6.1.0",
     "lefthook": "^2.1.4",
     "maplibre-gl": "^5.23.0",
     "pinia": "^3.0.1",
@@ -23,7 +24,8 @@
     "quasar": "^2.16.0",
     "vue": "^3.5.22",
     "vue-i18n": "^11.0.0",
-    "vue-router": "^5.0.0"
+    "vue-router": "^5.0.0",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.14.0",
