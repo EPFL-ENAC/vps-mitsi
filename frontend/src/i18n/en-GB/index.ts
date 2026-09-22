@@ -272,10 +272,24 @@ export default {
     resultsUnitKg: 'kg CO₂',
     resultsUnitG: 'g CO₂',
     resultsHostedIn: 'Hosted in: {dcs}',
-    // --- Validation messages ---
-    validationRequired: '{label} is required.',
-    validationNotANumber: '{label} must be a number.',
-    validationNonNegative: '{label} must be zero or a positive number.',
-    validationPositive: '{label} must be greater than zero.',
-    validationPositiveInteger: '{label} must be a whole number greater than zero.',
+    // --- Validation messages (Zod → Quasar; see composables/useValidation.ts) ---
+    validation: {
+        invalid_type: {
+            number: 'Must be a number.',
+            int: 'Must be a whole number.',
+            string: 'This field is required.',
+        },
+        too_small: {
+            number: {
+                inclusive: 'Must be at least {minimum}.',
+                exclusive: 'Must be greater than {minimum}.',
+            },
+            string: {
+                inclusive: 'Must not be empty.',
+            },
+        },
+        too_big: {
+            number: 'Must be no more than {maximum}.',
+        },
+    },
 };

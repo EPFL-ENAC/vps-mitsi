@@ -27,8 +27,11 @@ import {
     BoundaryItemSchema,
     DatacenterEnergySchema,
     DatacenterSchema,
+    energyRowCompletenessSchema,
     HardwareCategorySchema,
+    hardwareRowCompletenessSchema,
     MitsiStateSchema,
+    scopeCompletenessSchema,
 } from 'src/models/schema';
 import { rowSubtotal } from 'src/utils/format';
 
@@ -59,18 +62,9 @@ export const useMitsiStore = defineStore('mitsi', () => {
     const exportedAt = ref<number | null>(null);
 
     // ── Getters ──────────────────────────────────────────────────────────────
-    // u mena dla etogo est uje zod nado prosto brat otttuda a ne delat nowiy metod
-    const isScopeValid = computed<boolean>(() => {
-        const s = scope.value;
-        const has = (v: string) => v.trim().length > 0;
-        return (
-            has(s.organizationName) &&
-            has(s.serviceName) &&
-            has(s.function) &&
-            s.lifespanYears > 0 &&
-            s.datacenters.length > 0
-        );
-    });
+    const isScopeValid = computed<boolean>(
+        () => scopeCompletenessSchema.safeParse(scope.value).success,
+    );
 
     /**
      * Whether a second-hand row is excluded from the embodied total — i.e. it is
@@ -213,18 +207,13 @@ export const useMitsiStore = defineStore('mitsi', () => {
         resourcesInService.value > 0 ? totalLifespan.value / resourcesInService.value : null,
     );
 
-    // u mena dla etogo est uje zod nado prosto brat otttuda a ne delat nowiy metod
     /** True when a hardware row carries every field needed for the totals. */
     const hardwareRowValid = (h: HardwareItem): boolean =>
-        h.name.trim().length > 0 &&
-        h.category.length > 0 &&
-        h.quantity > 0 &&
-        h.datacenterId.trim().length > 0 &&
-        h.impactManufacturingDistributionEol >= 0;
+        hardwareRowCompletenessSchema.safeParse(h).success;
 
     /** True when an energy record carries every field needed for the totals. */
     const energyRowValid = (e: DatacenterEnergy): boolean =>
-        e.datacenterId.trim().length > 0 && e.carbonIntensity > 0 && e.energyConsumption >= 0;
+        energyRowCompletenessSchema.safeParse(e).success;
 
     /** Count of hardware rows missing a mandatory value (reuses hardwareRowValid). */
     const missingMandatoryHardware = computed<number>(

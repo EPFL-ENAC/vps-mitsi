@@ -169,6 +169,77 @@ export const DatacenterEnergySchema = z.object({
     energyComment: z.string().optional(),
 });
 
+// ─── Strict field rules (form validation) ────────────────────────────────────
+// Draft ≠ completion: persisted parsing stays tolerant (every field defaults),
+// but the FORM must be strict. `formRules` maps each validated field to the
+// rule the UI enforces via useValidation().toValidationRule. The completeness
+// schemas below reuse the same strict feel so the store's block status agrees
+// with what the forms demand.
+
+/** Strict per-field rules used to drive Quasar form validation. */
+export const formRules = {
+    // integers (0 allowed)
+    quantity: z.number().int().min(0),
+    gpuQty: z.number().int().min(0),
+    cpuQty: z.number().int().min(0),
+    memoryQty: z.number().int().min(0),
+    memorySize: z.number().int().min(0),
+    storageQuantity: z.number().int().min(0),
+    storageSize: z.number().int().min(0),
+    // non-negative numbers
+    impactManufacturingDistributionEol: z.number().min(0),
+    impactManufacturing: z.number().min(0),
+    energyConsumption: z.number().min(0),
+    // optional numeric — empty input is valid (PUE optional)
+    pue: z.number().min(0).optional(),
+    // durations / counts (report counts may be zero)
+    lifespanYears: z.number().min(0),
+    usageDuration: z.number().min(0),
+    resourceCount: z.number().int().min(1),
+    // strictly positive
+    carbonIntensity: z.number().positive(),
+    monitoringPeriodValue: z.number().min(1),
+    // required strings
+    name: z.string().min(1),
+    organizationName: z.string().min(1),
+    assessors: z.string().min(1),
+    serviceName: z.string().min(1),
+    function: z.string().min(1),
+    category: HardwareCategorySchema, // enum select must hold an exact value
+    datacenterId: z.string().min(1), // mandatory datacenter reference
+    abbr: z.string().min(1),
+    dcName: z.string().min(1),
+    type: z.string().min(1),
+    purpose: z.string().min(1),
+    reason: z.string().min(1),
+    comment: z.string().min(1),
+} as const satisfies Record<string, z.ZodType>;
+
+/** Scope completeness (must mirror the old isScopeValid predicate). */
+export const scopeCompletenessSchema = z.object({
+    organizationName: z.string().min(1),
+    serviceName: z.string().min(1),
+    function: z.string().min(1),
+    lifespanYears: z.number().min(1),
+    datacenters: z.array(z.unknown()).min(1),
+});
+
+/** Hardware-row completeness (must mirror the old hardwareRowValid predicate). */
+export const hardwareRowCompletenessSchema = z.object({
+    name: z.string().min(1),
+    category: z.string().min(1),
+    quantity: z.number().min(1),
+    datacenterId: z.string().min(1),
+    impactManufacturingDistributionEol: z.number().min(0),
+});
+
+/** Energy-row completeness (must mirror the old energyRowValid predicate). */
+export const energyRowCompletenessSchema = z.object({
+    datacenterId: z.string().min(1),
+    carbonIntensity: z.number().positive(),
+    energyConsumption: z.number().min(0),
+});
+
 // ─── Underlying services ─────────────────────────────────────────────────────
 
 export const UnderlyingServiceSchema = z.object({

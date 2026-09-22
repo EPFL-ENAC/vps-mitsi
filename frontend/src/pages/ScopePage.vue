@@ -30,7 +30,7 @@
                             <q-input
                                 v-model="mitsi.scope.organizationName"
                                 :label="$t('scopeOrganizationLabel')"
-                                :rules="[required(t('scopeOrganizationLabel'))]"
+                                :rules="[toValidationRule(formRules.organizationName)]"
                                 dense
                                 outlined
                             />
@@ -39,7 +39,7 @@
                             <q-input
                                 v-model="mitsi.scope.assessors"
                                 :label="$t('scopeAssessorsLabel')"
-                                :rules="[required(t('scopeAssessorsLabel'))]"
+                                :rules="[toValidationRule(formRules.assessors)]"
                                 dense
                                 outlined
                             />
@@ -48,7 +48,7 @@
                             <q-input
                                 v-model="mitsi.scope.serviceName"
                                 :label="$t('scopeServiceNameLabel')"
-                                :rules="[required(t('scopeServiceNameLabel'))]"
+                                :rules="[toValidationRule(formRules.serviceName)]"
                                 dense
                                 outlined
                             >
@@ -82,7 +82,7 @@
                                 type="textarea"
                                 v-model="mitsi.scope.function"
                                 :label="$t('scopeFunctionLabel')"
-                                :rules="[required(t('scopeFunctionLabel'))]"
+                                :rules="[toValidationRule(formRules.function)]"
                                 outlined
                             >
                                 <q-tooltip>{{ $t('scopeFunctionTooltip') }}</q-tooltip>
@@ -99,7 +99,7 @@
                                     type="number"
                                     class="scope-fu-input"
                                     v-model.number="mitsi.scope.functionalUnit.usageDuration"
-                                    :rules="[positiveNumber(t('scopeFuDuration'))]"
+                                    :rules="[toValidationRule(formRules.usageDuration)]"
                                     dense
                                     outlined
                                     hide-bottom-space
@@ -127,7 +127,7 @@
                                     type="number"
                                     class="scope-fu-input"
                                     v-model.number="mitsi.scope.functionalUnit.resourceCount"
-                                    :rules="[positiveInteger(t('scopeFuResourceCount'))]"
+                                    :rules="[toValidationRule(formRules.resourceCount)]"
                                     dense
                                     outlined
                                     hide-bottom-space
@@ -211,7 +211,7 @@
                             <q-input
                                 class="full-width"
                                 v-model="dc.abbreviation"
-                                :rules="[required(t('scopeDcColAbbreviation'))]"
+                                :rules="[toValidationRule(formRules.abbr)]"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -221,7 +221,7 @@
                             <q-input
                                 class="full-width"
                                 v-model="dc.name"
-                                :rules="[required(t('scopeDcColName'))]"
+                                :rules="[toValidationRule(formRules.dcName)]"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -292,7 +292,7 @@
                             <q-input
                                 v-model="item.type"
                                 :placeholder="$t('scopeBndColType')"
-                                :rules="[required(t('scopeBndColType'))]"
+                                :rules="[toValidationRule(formRules.type)]"
                                 dense
                                 outlined
                             />
@@ -301,7 +301,7 @@
                             <q-input
                                 v-model="item.purpose"
                                 :placeholder="$t('scopeBndColPurpose')"
-                                :rules="[required(t('scopeBndColPurpose'))]"
+                                :rules="[toValidationRule(formRules.purpose)]"
                                 dense
                                 outlined
                             />
@@ -310,7 +310,7 @@
                             <q-input
                                 v-model="item.reason"
                                 :placeholder="$t('scopeBndColReasonInclusion')"
-                                :rules="[required(t('scopeBndColReasonInclusion'))]"
+                                :rules="[toValidationRule(formRules.reason)]"
                                 dense
                                 outlined
                             />
@@ -346,7 +346,7 @@
                             <q-input
                                 v-model="item.type"
                                 :placeholder="$t('scopeBndColType')"
-                                :rules="[required(t('scopeBndColType'))]"
+                                :rules="[toValidationRule(formRules.type)]"
                                 dense
                                 outlined
                             />
@@ -355,7 +355,7 @@
                             <q-input
                                 v-model="item.purpose"
                                 :placeholder="$t('scopeBndColPurpose')"
-                                :rules="[required(t('scopeBndColPurpose'))]"
+                                :rules="[toValidationRule(formRules.purpose)]"
                                 dense
                                 outlined
                             />
@@ -364,7 +364,7 @@
                             <q-input
                                 v-model="item.reason"
                                 :placeholder="$t('scopeBndColReasonExclusion')"
-                                :rules="[required(t('scopeBndColReasonExclusion'))]"
+                                :rules="[toValidationRule(formRules.reason)]"
                                 dense
                                 outlined
                             />
@@ -404,7 +404,7 @@
                         v-model.number="mitsi.scope.lifespanYears"
                         :label="$t('scopeLifespanLabel')"
                         :suffix="$t('scopeLifespanYears')"
-                        :rules="[positiveNumber(t('scopeLifespanLabel'))]"
+                        :rules="[toValidationRule(formRules.lifespanYears)]"
                         dense
                         outlined
                     />
@@ -421,13 +421,14 @@ import { useQuasar } from 'quasar';
 
 import type { Datacenter } from 'src/models/mitsi';
 import { useMitsiStore } from 'src/stores/mitsi';
-import { positiveInteger, positiveNumber, required } from 'src/models/validation';
-import { TimeUnitSchema } from 'src/models/schema';
+import { useValidation } from 'src/composables/useValidation';
+import { formRules, TimeUnitSchema } from 'src/models/schema';
 import { normalizeKey } from 'src/utils/format';
 
 const { t } = useI18n();
 const $q = useQuasar();
 const mitsi = useMitsiStore();
+const { toValidationRule } = useValidation();
 
 const timeUnitOptions = computed(() =>
     TimeUnitSchema.options.map((unit) => ({

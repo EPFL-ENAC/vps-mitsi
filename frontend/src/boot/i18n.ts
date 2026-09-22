@@ -2,7 +2,6 @@ import { defineBoot } from '#q-app/wrappers';
 import { createI18n } from 'vue-i18n';
 
 import messages from 'src/i18n';
-import { setValidationTranslator } from 'src/models/validation';
 
 export type MessageLanguages = keyof typeof messages;
 // Type-define 'en' as the master schema for the resource
@@ -30,8 +29,6 @@ export default defineBoot(({ app }) => {
     });
 
     app.use(i18n);
-
-    setValidationTranslator((key, params) => i18n.global.t(key, params ?? {}));
 
     if (typeof window !== 'undefined') {
         (window as { i18nGlobal?: unknown }).i18nGlobal = i18n.global;

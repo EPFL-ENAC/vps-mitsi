@@ -57,7 +57,7 @@
                                 type="number"
                                 class="full-width"
                                 v-model.number="mitsi.monitoringPeriod.value"
-                                :rules="[positiveNumber(t('energyMonitorValueLabel'))]"
+                                :rules="[toValidationRule(formRules.monitoringPeriodValue)]"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -178,7 +178,7 @@
                                 type="number"
                                 class="full-width"
                                 v-model.number="e.carbonIntensity"
-                                :rules="[positiveNumber(t('energyDcColIntensity'))]"
+                                :rules="[toValidationRule(formRules.carbonIntensity)]"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -198,7 +198,7 @@
                                 type="number"
                                 class="full-width"
                                 v-model.number="e.pue"
-                                :rules="[optionalNumber(t('energyDcColPue'))]"
+                                :rules="[toValidationRule(formRules.pue)]"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -218,7 +218,7 @@
                                 type="number"
                                 class="full-width"
                                 v-model.number="e.energyConsumption"
-                                :rules="[nonNegativeNumber(t('energyDcColKwh'))]"
+                                :rules="[toValidationRule(formRules.energyConsumption)]"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -254,14 +254,15 @@ import { onMounted } from 'vue';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import { useMitsiStore } from 'src/stores/mitsi';
-import { nonNegativeNumber, optionalNumber, positiveNumber } from 'src/models/validation';
-import { MonitoringUnitSchema } from 'src/models/schema';
+import { useValidation } from 'src/composables/useValidation';
+import { formRules, MonitoringUnitSchema } from 'src/models/schema';
 import { normalizeKey } from 'src/utils/format';
 import type { DatacenterEnergy, MonitoringUnit } from 'src/models/mitsi';
 
 const mitsi = useMitsiStore();
 const { t } = useI18n();
 const $q = useQuasar();
+const { toValidationRule } = useValidation();
 
 // Gap-fill safety net; intentionally deleted records are re-created on revisit —
 // energy records follow datacenters (spec auto-fill).

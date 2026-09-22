@@ -10,7 +10,9 @@
  * The page renders whatever this module returns; it holds no column list of
  * its own.
  */
+import type { z } from 'zod';
 import {
+    formRules,
     HardwareCategorySchema,
     HardwareItemSchema,
     StorageCasingSchema,
@@ -18,8 +20,6 @@ import {
     StorageTypeSchema,
     type HardwareItem,
 } from 'src/models/schema';
-import type { ValidationRule } from 'src/models/validation';
-import { nonNegativeNumber, optionalNumber, required } from 'src/models/validation';
 import { normalizeKey, rowSubtotal } from 'src/utils/format';
 
 /** A single `{ label, value }` choice for a schema-driven select. */
@@ -52,8 +52,8 @@ export interface InventoryColumn {
     /** Field feeds the calculation → show the ∑ badge. */
     calc?: boolean;
     sortable?: boolean;
-    /** Quasar `:rules` — derived in-file from kind + mode. */
-    rules: ValidationRule[];
+    /** Strict field schema from schema.formRules (rendered via toValidationRule). */
+    zod: z.ZodType | undefined;
     /** Options for enum selects (category + storage selects). */
     options?: SchemaOption[];
     /** Display value for derived columns (never written to the store).
@@ -103,17 +103,37 @@ function storageTotal(row: HardwareItem): number {
 
 // ── Rule derivation (in-file) ────────────────────────────────────────────────
 
-/** number + simple → nonNegativeNumber; number + normal/advanced → optionalNumber. */
-function numRules(mode: VisibilityMode, label: string): ValidationRule[] {
-    return mode === 'simple' ? [nonNegativeNumber(label)] : [optionalNumber(label)];
+/** Field → strict rule from schema.formRules. Non-core fields carry no rule. */
+function zodFor(s: { field: string }): z.ZodType | undefined {
+    switch (s.field) {
+        case 'name':
+            return formRules.name;
+        case 'quantity':
+            return formRules.quantity;
+        case 'cpuQuantity':
+            return formRules.cpuQty;
+        case 'memoryQuantity':
+            return formRules.memoryQty;
+        case 'memorySizeGb':
+            return formRules.memorySize;
+        case 'gpuQuantity':
+            return formRules.gpuQty;
+        case 'impactManufacturing':
+            return formRules.impactManufacturing;
+        case 'impactManufacturingDistributionEol':
+            return formRules.impactManufacturingDistributionEol;
+        case 'category':
+            return formRules.category;
+        case 'datacenterId':
+            return formRules.datacenterId;
+        case 'storageQuantity':
+            return formRules.storageQuantity;
+        case 'storageSize':
+            return formRules.storageSize;
+        default:
+            return undefined;
+    }
 }
-
-/** text + simple → required; otherwise no rule. */
-function textRules(mode: VisibilityMode, label: string): ValidationRule[] {
-    return mode === 'simple' ? [required(label)] : [];
-}
-
-const NO_RULES: ValidationRule[] = [];
 
 /**
  * Per-kind minimum column width (px). Pinning min-width on both the header
@@ -464,12 +484,7 @@ function makeColumns(t: (key: string) => string, opts: EnumOptionSets): Inventor
 
     return specs.map((s) => {
         const label = s.labelKey ? t(s.labelKey) : '';
-        const rules =
-            s.kind === 'number'
-                ? numRules(s.mode, label)
-                : s.kind === 'text'
-                  ? textRules(s.mode, label)
-                  : NO_RULES;
+        const zod = zodFor(s); // category (enum) & datacenterId (datacenter) too; non-core → undefined (always valid)
         const minWidth = KIND_MIN_WIDTH[s.kind];
         const column: InventoryColumn = {
             name: s.field,
@@ -479,7 +494,7 @@ function makeColumns(t: (key: string) => string, opts: EnumOptionSets): Inventor
             mode: s.mode,
             kind: s.kind,
             align: s.align ?? 'left',
-            rules,
+            zod,
             style: `min-width: ${minWidth}`,
             headerStyle: `min-width: ${minWidth}`,
         };

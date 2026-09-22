@@ -134,7 +134,7 @@
                                 v-else
                                 type="number"
                                 v-model.number="props.row.impactManufacturingDistributionEol"
-                                :rules="col.rules"
+                                :rules="[toValidationRule(col.zod)]"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -161,7 +161,7 @@
                                 :options="col.options"
                                 emit-value
                                 map-options
-                                :rules="col.rules"
+                                :rules="[toValidationRule(col.zod)]"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -176,7 +176,7 @@
                                 :options="col.options"
                                 emit-value
                                 map-options
-                                :rules="col.rules"
+                                :rules="[toValidationRule(col.zod)]"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -196,7 +196,7 @@
                             <q-input
                                 type="number"
                                 v-model.number="props.row[col.field]"
-                                :rules="col.rules"
+                                :rules="[toValidationRule(col.zod)]"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -207,7 +207,7 @@
                         <template v-else-if="col.kind === 'text'">
                             <q-input
                                 v-model="props.row[col.field]"
-                                :rules="col.rules"
+                                :rules="[toValidationRule(col.zod)]"
                                 dense
                                 outlined
                                 hide-bottom-space
@@ -249,10 +249,12 @@ import {
 } from 'src/models/inventory-columns';
 import { formatKg } from 'src/utils/format';
 import { useMitsiStore } from 'src/stores/mitsi';
+import { useValidation } from 'src/composables/useValidation';
 
 const { t } = useI18n();
 const $q = useQuasar();
 const mitsi = useMitsiStore();
+const { toValidationRule } = useValidation();
 
 // ── Local UI state (never persisted) ─────────────────────────────────────────
 const mode = ref<VisibilityMode>('normal');
@@ -296,7 +298,7 @@ interface ActionsColumn {
     mode: VisibilityMode;
     kind: 'derived';
     align: 'right';
-    rules: never[];
+    zod: undefined;
 }
 const actionsColumn: ActionsColumn = {
     name: 'actions',
@@ -306,7 +308,7 @@ const actionsColumn: ActionsColumn = {
     mode: 'simple',
     kind: 'derived',
     align: 'right',
-    rules: [],
+    zod: undefined,
 };
 
 const visibleColumns = computed<(InventoryColumn | ActionsColumn)[]>(() => [
