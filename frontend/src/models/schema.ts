@@ -183,24 +183,38 @@ export const UnderlyingServiceSchema = z.object({
 // ─── Whole assessment ────────────────────────────────────────────────────────
 
 /** The single source of truth for the whole assessment state. */
-export const MitsiStateSchema = z.object({
-    schemaVersion: z
-        .number()
-        .int()
-        .finite()
-        .max(MITSI_SCHEMA_VERSION)
-        .default(MITSI_SCHEMA_VERSION),
-    // factory (not object) — each parse gets a fresh instance.
-    scope: ScopeSchema.default(() => ScopeSchema.parse({})),
-    hardware: z.array(HardwareItemSchema).default([]),
-    monitoringPeriod: MonitoringPeriodSchema.default(() => MonitoringPeriodSchema.parse({})),
-    energy: z.array(DatacenterEnergySchema).default([]),
-    /** Whether embodied emissions of second-hand hardware are accounted for. */
-    includeSecondHandEmbodied: z.boolean().default(false),
-    /** Whether underlying-service emissions are added to the total. */
-    includeUnderlyingServices: z.boolean().default(false),
-    underlyingServices: z.array(UnderlyingServiceSchema).default([]),
-});
+export const MitsiStateSchema = z
+    .object({
+        schemaVersion: z
+            .number()
+            .int()
+            .finite()
+            .max(MITSI_SCHEMA_VERSION)
+            .default(MITSI_SCHEMA_VERSION),
+        // factory (not object) — each parse gets a fresh instance.
+        scope: ScopeSchema.default(() => ScopeSchema.parse({})),
+        hardware: z.array(HardwareItemSchema).default([]),
+        monitoringPeriod: MonitoringPeriodSchema.default(() => MonitoringPeriodSchema.parse({})),
+        energy: z.array(DatacenterEnergySchema).default([]),
+        /** Whether embodied emissions of second-hand hardware are accounted for. */
+        includeSecondHandEmbodied: z.boolean().default(false),
+        /** Whether underlying-service emissions are added to the total. */
+        includeUnderlyingServices: z.boolean().default(false),
+        underlyingServices: z.array(UnderlyingServiceSchema).default([]),
+    })
+    // Referential integrity at the data boundary: the schema validates each
+    // record's shape, but a hand-edited/foreign file may reference datacenters
+    // the same file does not define. The UI can never create such rows
+    // (deleteDatacenterGuard blocks deletion while referenced), so drop orphan
+    // rows once here — everything downstream sees a consistent state.
+    .transform((state) => {
+        const dcIds = new Set(state.scope.datacenters.map((dc) => dc.id));
+        return {
+            ...state,
+            hardware: state.hardware.filter((h) => dcIds.has(h.datacenterId)),
+            energy: state.energy.filter((e) => dcIds.has(e.datacenterId)),
+        };
+    });
 
 // ─── Derived types (same names as before so no other file changes) ──────────
 

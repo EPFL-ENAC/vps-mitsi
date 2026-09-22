@@ -24,10 +24,13 @@ import {
     type UnderlyingService,
 } from 'src/models/mitsi';
 import {
+    BoundaryItemSchema,
     DatacenterEnergySchema,
-    MitsiStateSchema,
+    DatacenterSchema,
     HardwareCategorySchema,
+    MitsiStateSchema,
 } from 'src/models/schema';
+import { rowSubtotal } from 'src/utils/format';
 
 /**
  * Counts of each time unit per year, matching the "Counts of time unit for a
@@ -76,13 +79,6 @@ export const useMitsiStore = defineStore('mitsi', () => {
      */
     function isSecondHandExcluded(row: HardwareItem): boolean {
         return row.isSecondHand && !includeSecondHandEmbodied.value;
-    }
-
-    //mettre les petit trucs qui ne prend rien depuis le store donc mieux de mettre dans composant (rowSubtotal(),)
-
-    /** Embodied emissions of one row: quantity × per-unit impact. */
-    function rowSubtotal(row: HardwareItem): number {
-        return row.quantity * row.impactManufacturingDistributionEol;
     }
 
     /** Embodied emissions (kg CO2-eq), honouring the second-hand setting. */
@@ -332,6 +328,21 @@ export const useMitsiStore = defineStore('mitsi', () => {
         }
     }
 
+    // ── Centralized row creation ────────────────────────────────────────────
+    /** Creates a new datacenter (fresh uuid) plus its mandatory energy record
+     *  (spec auto-fill — each new DC gets an energy row). */
+    function addDatacenter(): void {
+        scope.value.datacenters.push(DatacenterSchema.parse({ id: crypto.randomUUID() }));
+        ensureEnergyRows();
+    }
+
+    /** Creates a blank included/excluded boundary row (fresh uuid). */
+    function addBoundaryItem(which: 'included' | 'excluded'): void {
+        const item = BoundaryItemSchema.parse({ id: crypto.randomUUID() });
+        if (which === 'included') scope.value.includedItems.push(item);
+        else scope.value.excludedItems.push(item);
+    }
+
     // ── Internal helpers ─────────────────────────────────────────────────────
     function buildState(): MitsiState {
         return {
@@ -349,21 +360,7 @@ export const useMitsiStore = defineStore('mitsi', () => {
     function parseState(raw: unknown): MitsiState | null {
         const parsed = MitsiStateSchema.safeParse(raw);
         if (!parsed.success) return null;
-        return sanitizeReferences(parsed.data);
-    }
-
-    /** Referential integrity at the data boundary: the schema validates each
-     *  record's shape, but a hand-edited/foreign file may reference datacenters
-     *  the same file does not define. The UI can never create such rows
-     *  (deleteDatacenterGuard blocks deletion while referenced), so sanitize
-     *  once here — everything downstream sees a consistent state. */
-    function sanitizeReferences(state: MitsiState): MitsiState {
-        const ids = new Set(state.scope.datacenters.map((dc) => dc.id));
-        return {
-            ...state,
-            hardware: state.hardware.filter((h) => ids.has(h.datacenterId)), // dans zod on peut faire .refine plutot que faire une fonction dans store! faire dans zod .refine
-            energy: state.energy.filter((e) => ids.has(e.datacenterId)),
-        };
+        return parsed.data; // orphan-reference filtering happens in the schema transform
     }
 
     function applyState(state: MitsiState): void {
@@ -388,7 +385,6 @@ export const useMitsiStore = defineStore('mitsi', () => {
         exportedAt,
         isScopeValid,
         isSecondHandExcluded,
-        rowSubtotal,
         totalEmbodied,
         secondHandExcludedCount,
         totalOperational,
@@ -408,5 +404,7 @@ export const useMitsiStore = defineStore('mitsi', () => {
         importJson,
         deleteDatacenterGuard,
         ensureEnergyRows,
+        addDatacenter,
+        addBoundaryItem,
     };
 });

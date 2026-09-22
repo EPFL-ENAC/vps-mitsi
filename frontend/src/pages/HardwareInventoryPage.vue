@@ -274,7 +274,7 @@ function isNotCounted(row: HardwareItem): boolean {
 // ── Columns from the registry (single source of truth) ──────────────────────
 // Full registry: every non-hidden column, whatever the active mode. Cumulative
 // (rank-based) visibility is applied below so Advanced keeps the simpler modes.
-const built = computed(() => buildInventoryColumns(t, mode.value, mitsi.rowSubtotal));
+const built = computed(() => buildInventoryColumns(t, mode.value));
 
 // Options for the datacenter select come from the store's datacenters.
 const datacenterOptions = computed<{ label: string; value: string }[]>(() =>

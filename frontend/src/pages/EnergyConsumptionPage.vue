@@ -250,7 +250,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from 'vue';
+import { onMounted } from 'vue';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import { useMitsiStore } from 'src/stores/mitsi';
@@ -263,19 +263,9 @@ const mitsi = useMitsiStore();
 const { t } = useI18n();
 const $q = useQuasar();
 
-//PAS DANS COMPOSANR mettre dans store, pourquoi appele le store si on peut mettre ca directement la, pas besoin de watch ,centraliser le function pour creer le datacenter
-/** The page is display + input only: rows for each datacenter are gap-filled
- *  (blank row when none). Referential integrity is owned by the store's data
- *  boundary (parseState → sanitizeReferences) — the page never deletes or
- *  filters orphan rows. */
+// Gap-fill safety net; intentionally deleted records are re-created on revisit —
+// energy records follow datacenters (spec auto-fill).
 onMounted(() => mitsi.ensureEnergyRows());
-watch(
-    () => mitsi.scope.datacenters.length,
-    (newCount, oldCount) => {
-        // Gap-fill only — never removes rows on datacenter deletion.
-        if (newCount > oldCount) mitsi.ensureEnergyRows();
-    },
-);
 
 const monitoringUnitOptions = MonitoringUnitSchema.options.map((unit) => ({
     label: t('energyMonitorUnit_' + normalizeKey(unit)),

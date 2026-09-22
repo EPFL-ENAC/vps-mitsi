@@ -26,3 +26,11 @@ export function buildFunctionalUnitSentence(
         type: fu.resourceType,
     });
 }
+
+/** Embodied emissions of one row: quantity × per-unit impact. */
+export function rowSubtotal(row: {
+    quantity: number;
+    impactManufacturingDistributionEol: number;
+}): number {
+    return row.quantity * row.impactManufacturingDistributionEol;
+}

@@ -20,7 +20,7 @@ import {
 } from 'src/models/schema';
 import type { ValidationRule } from 'src/models/validation';
 import { nonNegativeNumber, optionalNumber, required } from 'src/models/validation';
-import { normalizeKey } from 'src/utils/format';
+import { normalizeKey, rowSubtotal } from 'src/utils/format';
 
 /** A single `{ label, value }` choice for a schema-driven select. */
 export interface SchemaOption {
@@ -158,11 +158,7 @@ interface Spec {
  * `id` gets a `hidden` entry purely so the schema-drift guard below sees every
  * `HardwareItemSchema.shape` key represented.
  */
-function makeColumns(
-    t: (key: string) => string,
-    opts: EnumOptionSets,
-    rowSubtotal: (row: HardwareItem) => number,
-): InventoryColumn[] {
+function makeColumns(t: (key: string) => string, opts: EnumOptionSets): InventoryColumn[] {
     const specs: Spec[] = [
         // ── General ──────────────────────────────────────────────────────────
         { field: 'id', labelKey: '', mode: 'advanced', kind: 'hidden', group: 'general' },
@@ -530,7 +526,6 @@ function warnOnMissingSchemaFields(registry: InventoryColumn[]): void {
 export function buildInventoryColumns(
     t: (key: string) => string,
     mode: VisibilityMode,
-    rowSubtotal: (row: HardwareItem) => number,
 ): { groups: InventoryGroup[]; columns: InventoryColumn[] } {
     void mode; // visibility filtering is applied by the page (rank-based).
     const options: EnumOptionSets = {
@@ -551,7 +546,7 @@ export function buildInventoryColumns(
             value: v,
         })),
     };
-    const all = makeColumns(t, options, rowSubtotal);
+    const all = makeColumns(t, options);
     warnOnMissingSchemaFields(all);
 
     const visible = all.filter((c) => c.kind !== 'hidden');

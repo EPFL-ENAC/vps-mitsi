@@ -442,12 +442,7 @@ const resourceTypeOptions = computed(() => [
 ]);
 
 function addDatacenter(): void {
-    mitsi.scope.datacenters.push({
-        id: crypto.randomUUID(),
-        abbreviation: '',
-        name: '',
-        comment: '',
-    });
+    mitsi.addDatacenter();
 }
 
 function usedByCell(dc: Datacenter): string {
@@ -485,11 +480,8 @@ function removeDatacenter(dc: Datacenter): void {
     });
 }
 
-//maybe to change, add function in store not here if we even use store so why just dont put it all there to centrelize
 function addItem(which: 'included' | 'excluded'): void {
-    const item = { id: crypto.randomUUID(), type: '', purpose: '', reason: '' };
-    if (which === 'included') mitsi.scope.includedItems.push(item);
-    else mitsi.scope.excludedItems.push(item);
+    mitsi.addBoundaryItem(which);
 }
 
 function removeItem(which: 'included' | 'excluded', id: string): void {
