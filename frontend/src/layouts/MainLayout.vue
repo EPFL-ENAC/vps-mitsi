@@ -7,14 +7,20 @@
                     dense
                     round
                     icon="menu"
-                    aria-label="Menu"
+                    :aria-label="$t('mainMenuAriaLabel')"
                     @click="leftDrawerOpen = !leftDrawerOpen"
                 />
                 <q-toolbar-title class="text-weight-medium">MITSI</q-toolbar-title>
                 <q-space />
                 <span class="text-caption text-grey-7 q-mr-sm">
-                    IT service carbon impact assessment
+                    {{ $t('mainTagline') }}
                 </span>
+                <q-btn
+                    unelevated
+                    color="primary"
+                    :label="$t('mainSave')"
+                    @click="mitsi.saveToStorage()"
+                />
             </q-toolbar>
         </q-header>
 
@@ -24,7 +30,7 @@
                     <q-item-section avatar>
                         <q-icon name="home" />
                     </q-item-section>
-                    <q-item-section>{{ blocks.welcome.label }}</q-item-section>
+                    <q-item-section>{{ $t('mainNavWelcome') }}</q-item-section>
                 </q-item>
 
                 <q-separator spaced />
@@ -39,12 +45,12 @@
                     <q-item-section avatar>
                         <q-icon :name="block.icon" />
                     </q-item-section>
-                    <q-item-section>{{ block.label }}</q-item-section>
+                    <q-item-section>{{ $t(block.labelKey) }}</q-item-section>
                     <q-item-section side>
                         <span
                             class="completion-dot"
                             :class="`completion-dot--${block.status}`"
-                            :title="completionLabel(block.status)"
+                            :title="$t(completionLabelKey(block.status))"
                         />
                     </q-item-section>
                 </q-item>
@@ -57,11 +63,26 @@
 
         <q-footer bordered class="bg-white text-dark">
             <q-toolbar class="q-px-md">
-                <span class="text-caption text-grey-7">Draft saved in this browser</span>
+                <span class="text-caption text-grey-7">{{ savedText }}</span>
+                <span v-if="exportedText" class="text-caption text-grey-6 q-ml-sm">
+                    · {{ exportedText }}
+                </span>
                 <q-space />
-                <span class="text-caption text-grey-8">Total: — tCO₂e</span>
+                <span class="text-caption text-grey-8">
+                    {{ $t('mainFooterEmbodied', { value: embodiedText }) }}
+                </span>
                 <q-space />
-                <span class="text-caption text-grey-7">Per functional unit: — gCO₂e</span>
+                <span class="text-caption text-grey-8">
+                    {{ $t('mainFooterOperational', { value: operationalText }) }}
+                </span>
+                <q-space />
+                <span class="text-caption text-grey-8">
+                    {{ $t('mainFooterTotal', { value: totalLifespanText }) }}
+                </span>
+                <q-space />
+                <span class="text-caption text-grey-7">
+                    {{ $t('mainFooterPerFu', { value: perFunctionalUnitText }) }}
+                </span>
             </q-toolbar>
         </q-footer>
     </q-layout>
@@ -69,61 +90,112 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-type BlockStatus = 'complete' | 'partial' | 'not_started';
-type BlockKey = 'scope' | 'inventory' | 'energy' | 'results';
+import type { BlockKey, BlockStatus } from 'src/models/mitsi';
+import { useMitsiStore } from 'src/stores/mitsi';
 
 interface BlockDef {
-    label: string;
+    labelKey: string;
     to: string;
     icon: string;
     status: BlockStatus;
 }
 
+const { t } = useI18n();
+
 const leftDrawerOpen = ref(false);
+const mitsi = useMitsiStore();
 
-const blocks = computed<Record<'welcome', { label: string }>>(() => ({
-    welcome: { label: 'Welcome' },
-}));
+const assessmentBlocks = computed<Record<BlockKey, BlockDef>>(() => {
+    const status = mitsi.blockStatus;
+    return {
+        scope: {
+            labelKey: 'mainNavScope',
+            to: '/scope',
+            icon: 'scope',
+            status: status.scope,
+        },
+        inventory: {
+            labelKey: 'mainNavInventory',
+            to: '/inventory',
+            icon: 'dns',
+            status: status.inventory,
+        },
+        energy: {
+            labelKey: 'mainNavEnergy',
+            to: '/energy',
+            icon: 'bolt',
+            status: status.energy,
+        },
+        results: {
+            labelKey: 'mainNavResults',
+            to: '/results',
+            icon: 'insights',
+            status: status.results,
+        },
+    };
+});
 
-// NOTE: completion states are placeholders for the foundation.
-// They will be derived from the assessment store once the blocks are built.
-const assessmentBlocks = computed<Record<BlockKey, BlockDef>>(() => ({
-    scope: {
-        label: 'Scope of the assessment',
-        to: '/scope',
-        icon: 'scope',
-        status: 'not_started',
-    },
-    inventory: {
-        label: 'Hardware inventory',
-        to: '/inventory',
-        icon: 'dns',
-        status: 'not_started',
-    },
-    energy: {
-        label: 'Energy consumption',
-        to: '/energy',
-        icon: 'bolt',
-        status: 'not_started',
-    },
-    results: {
-        label: 'Results',
-        to: '/results',
-        icon: 'insights',
-        status: 'not_started',
-    },
-}));
-
-function completionLabel(status: BlockStatus): string {
+function completionLabelKey(status: BlockStatus): string {
     switch (status) {
         case 'complete':
-            return 'Complete';
+            return 'mainStatusComplete';
         case 'partial':
-            return 'In progress';
+            return 'mainStatusPartial';
         default:
-            return 'Not started';
+            return 'mainStatusNotStarted';
     }
+}
+
+/** Embodied emissions in tonnes, or a dash until the scope is valid. */
+const embodiedText = computed<string>(() =>
+    mitsi.isScopeValid
+        ? `${(mitsi.totalEmbodied / 1000).toFixed(1)} ${t('mainUnitTonnes')}`
+        : t('mainNotApplicable'),
+);
+
+/** Operational emissions in tonnes, or a dash until the scope is valid. */
+const operationalText = computed<string>(() =>
+    mitsi.isScopeValid
+        ? `${(mitsi.totalOperational / 1000).toFixed(1)} ${t('mainUnitTonnes')}`
+        : t('mainNotApplicable'),
+);
+
+/** Total over the lifespan in tonnes of CO2-eq, or a dash until the scope is valid. */
+const totalLifespanText = computed<string>(() =>
+    mitsi.isScopeValid
+        ? `${(mitsi.totalLifespan / 1000).toFixed(1)} ${t('mainUnitTonnesCo2e')}`
+        : t('mainNotApplicable'),
+);
+
+/** Per-functional-unit emissions in grams of CO2-eq, or a dash when not computable. */
+const perFunctionalUnitText = computed<string>(() => {
+    const v = mitsi.perFunctionalUnit;
+    return v !== null
+        ? `${(v * 1000).toFixed(2)} ${t('mainUnitGramsCo2e')}`
+        : t('mainNotApplicable');
+});
+
+const savedText = computed<string>(() =>
+    mitsi.savedAt
+        ? t('mainFooterSavedAt', { timeAgo: formatTimeAgo(mitsi.savedAt) })
+        : t('mainFooterDraftSaved'),
+);
+const exportedText = computed<string | null>(() =>
+    mitsi.exportedAt
+        ? t('mainFooterExportedAt', { timeAgo: formatTimeAgo(mitsi.exportedAt) })
+        : null,
+);
+
+function formatTimeAgo(ts: number): string {
+    const diffSec = Math.round((Date.now() - ts) / 1000);
+    if (diffSec < 60) return t('mainTimeAgoJustNow');
+    const mins = Math.round(diffSec / 60);
+    if (mins < 60) return t('mainTimeAgoMinutes', { n: mins });
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return t('mainTimeAgoHours', { n: hrs });
+    return t('mainTimeAgoDays', { n: Math.round(hrs / 24) });
 }
 </script>
 

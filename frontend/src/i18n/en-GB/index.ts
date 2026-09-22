@@ -1,172 +1,295 @@
 export default {
-    // --- Common ---
-    backToHome: 'Home',
-    back: 'Back',
-    live: 'LIVE',
-    question: 'QUESTION',
-
-    lemanLive: 'Live from Lake Geneva',
-    lastMeasurement: 'Latest measurement at {time}',
-
-    // --- 404 ---
-    notFoundMessage: 'Oops, nothing here...',
-    goHome: 'Back to home',
-
-    // --- Header ---
-    headerAirTemp: 'AIR',
-    headerWaterTemp: 'WATER',
-    headerWind: 'WIND',
-    headerWave: 'WAVE',
-
-    // --- Home page ---
-    homeEyebrow: 'WELCOME',
-    homeTitle: 'Lake Geneva, live, before your eyes.',
-    homeSubtitle:
-        'Dive to 100 metres, track plankton hour by hour, and observe the link between air and water with real-time data from the LéXPLORE scientific platform.',
-
-    // --- Home nav cards ---
-    homeLiveLabel: 'LIVE',
-    homeLiveTitle: 'More LIVE data',
-    homeLiveSubtitle:
-        'Water temperature at all depths, location of zooplankton, and microalgae, measured live.',
-    homeDiscoveryLabel: 'DISCOVERY',
-    homeDiscoveryTitle: 'The last 10 days of Lake Geneva',
-    homeDiscoverySubtitle: 'How the water, air, and waves have moved over the last 10 days.',
-    homeGamesLabel: 'GAMES',
-    homeGamesTitle: 'Become a Léxplorer',
-    homeGamesSubtitle: 'The Plankton Adventure and Hot-or-Cold: two games to understand the lake.',
-
-    // --- Live Data Picker ---
-    livePickerEyebrow: '01 · LIVE',
-    livePickerTitle: 'Test other live data!',
-    livePickerSubtitle:
-        'Choose what you want to observe in the lake. All values are currently being measured by the LéXPLORE platform.',
-
-    // --- Live Data nav ---
-    liveNavTempDepth: 'Temperature at depth',
-    liveNavTempDepthShort: 'Air → 100m',
-    liveNavZooDepth: 'Zooplankton depth',
-    liveNavZooDepthShort: 'Day/night migration',
-    liveNavAlgaeConc: 'Microalgae concentration',
-
-    // --- Temperature Over Depth (Live) ---
-    tempDepthEyebrow: '01 · LIVE - Temperature at depth',
-    tempDepthTitle: 'The deeper you go, the colder the water gets.',
-    tempDepthAir: 'Air',
-    tempDepthLoading: 'Preparing the temperature depth plot. This may take a few seconds...',
-    tempDepthQ1: 'Do you notice a temperature difference between the air and the water?',
-    tempDepthQ2: 'Is it colder at 10 m or at 60 m?',
-
-    // --- Zooplankton Depth (Live) ---
-    zooDepthEyebrow: '01 · LIVE - Zooplankton depth',
-    zooDepthTitle: 'It rises at night, it descends by day.',
-    zooDepthSubtitle:
-        'Animal plankton migrates every day, moving from the bottom to hide from fish, toward the surface at night to feed on microalgae.',
-    zooDepthLoading: 'Preparing the zooplankton depth plot. This may take a few seconds...',
-    zooDepthQ1: 'At what depth do you see the plankton right now?',
-
-    // --- Algae Concentration (Live) ---
-    algaeConcEyebrow: '01 · LIVE - Microalgae concentration',
-    algaeConcTitle: 'Microscopic algae.',
-    algaeConcSubtitle:
-        'Microalgae, or phytoplankton, need sunlight to grow. They are the first link in the food chain, but when they are too numerous, the lake water turns green and cloudy.',
-    algaeConcLoading: 'Preparing the microalgae concentration plot. This may take a few seconds...',
-    algaeConcQ1: 'At what depth is the plankton concentration highest?',
-
-    // --- Changes Picker ---
-    changesPickerEyebrow: '02 · CHANGES',
-    changesPickerTitle: 'Changes in Lake Geneva',
-    changesPickerSubtitle: 'Choose what you want to observe in the lake.',
-
-    // --- Changes nav ---
-    changesNavWindTitle: 'The effect of wind on the lake',
-    changesNavWindShort: 'Wind',
-    changesNavWindSubtitle:
-        'Discover how wind influences water movement at the surface of Lake Geneva.',
-    changesNavGrowthTitle: 'Is it growing?',
-    changesNavGrowthShort: 'Growth',
-    changesNavGrowthSubtitle:
-        'Observe how life in the lake evolves and if certain organisms are developing.',
-
-    // --- Wind Change Page ---
-    windChangeEyebrow: '02 · Discovery',
-    windChangeTitle: 'The effect of wind on the lake.',
-    windChangeTrackTemperature: 'Air and water temperatures (°C)',
-    windChangeTrackAirTemp: 'Air',
-    windChangeTrackWaterTemp: 'Water',
-    windChangeTrackWindDirection: 'Wind direction',
-    windChangeTrackWindSpeed: 'Wind speed (km/h)',
-    windChangeTrackPrecipitation: 'Precipitation (mm/h)',
-    windChangeTrackWaveHeight: 'Wave height (m)',
-    windChangeQ1: 'How do gusts of wind affect the surface of the lake?',
-    windChangeQ2: 'Is the air warmer or colder than the water?',
-
-    // --- Chlorophyll Change Page ---
-    chloroChangeEyebrow: '02 · Discovery',
-    chloroChangeTitle: 'Light and chlorophyll in the lake.',
-    chloroChangeTrackIrradiance: 'Solar energy (W/m²)',
-    chloroChangeTrackTemperature: 'Air and water temperatures (°C)',
-    chloroChangeTrackAirTemp: 'Air',
-    chloroChangeTrackWaterTemp: 'Water',
-    chloroChangeTrackChlorophyll: 'Average Chlorophyll A (0–20 m)',
-    chloroChangeQ1: 'Does warmer weather lead to more algae?',
-
-    // --- Game Picker ---
-    gamePickerEyebrow: '03 · GAMES',
-    gamePickerTitle: 'Games about life in Lake Geneva',
-    gamePickerSubtitle:
-        'Choose what you want to observe in the lake. All values are currently being measured by the LéXPLORE platform.',
-
-    // --- Game nav ---
-    gameNavPlanctonTitle: 'Plankton Adventure',
-    gameNavPlanctonShort: 'Day/night migration',
-    gameNavPlanctonSubtitle:
-        'Follow the zooplankton as it moves up and down in the lake, hour by hour.',
-    gameNavTempTitle: 'Hot or Cold?',
-    gameNavTempShort: 'Lake seasons',
-    gameNavTempSubtitle: '3 months of temperature by depth. Find the zone that never warms up.',
-
-    // --- Temperature Game ---
-    tempGameEyebrow: '02 · Hot or Cold?',
-    tempGameTitle: "Lake Geneva's temperature by depth over the past year",
-    tempGameSubtitle: 'Slide across the grid to explore.',
-    tempGameProfileKicker: 'At cursor → temperature by depth',
-    tempGameLoading: 'Preparing the temperature plot. This may take a few seconds...',
-    tempGameQ1: 'To what depth does solar energy warm the water in Lake Geneva?',
-    tempGameQ2: 'At what depth does the water always stay colder than 10°C?',
-
-    // --- Plankton Game ---
-    planctonGameEyebrow: '01 · Plankton Adventure',
-    planctonGameTitle: 'Observe Zooplankton migration over the last 2 days.',
-    planctonGameSubtitle: 'Observe the movement of zooplankton throughout the day.',
-    planctonGameLoading: 'Preparing the plankton migration plot. This may take a few seconds...',
-    planctonGameQ1: 'Do you think animal plankton likes light?',
-
-    // --- Plots ---
-    plotDepthProfileAria: 'Depth profile graph',
-    plotPlanktonAria: 'Zooplankton depth',
-    plotSurface: 'Surface',
-    plotNoHeatmapData: 'No heatmap data available',
-    plotDepthLabel: 'Depth',
-    plotTemperatureLabel: 'Temperature',
-
-    // --- PlotAppendix ---
-    plotMeasuredOn: 'Measured on',
-    plotLocation: 'Lake Geneva',
-
-    // --- QrCode ---
-    qrLabel: 'Find out more',
-
-    // --- Format fallbacks ---
-    na: 'N/A',
-
-    // --- Institutions ---
-    instEawag: 'Eawag',
-    instUnil: 'UNIL',
-    instEpfl: 'EPFL',
-
-    // --- PlanktonAdventurePlot depth labels ---
-    planktonDepthSurface: 'Surface',
-
-    sliderInfoText: 'Move the red slider to explore the lake at different times.',
+    // --- Welcome page ---
+    welcomeEyebrow: 'Assessment workflow · LCA of an IT service',
+    welcomeTitle: 'Assess the carbon footprint of your IT service',
+    welcomeGoalLabel: 'Goals and means',
+    welcomeGoalText:
+        'MITSI is LCA-based and keeps track of carbon emissions into two specific sections: operational emissions, where all emissions occurring during the use phase are accounted, and embodied emissions, where emissions occurring in all the other stages (manufacturing, distribution and end-of-life) are gathered. The total emissions are computed for the whole IT service lifetime and is then converted into something more accessible for end-users: the amount of emissions in relation with the use of the assessed IT service for a defined period of time (for example, 1 hour of computation on a GPU cluster).',
+    welcomeLcaLabel: 'About LCA',
+    welcomeLcaText:
+        'Life Cycle Assessment (LCA) is the methodology used here to estimate the environmental impacts of an IT service across its whole life cycle.',
+    welcomeGuideLabel: 'How to proceed',
+    welcomeGuideText:
+        'To ensure that the assessment is carried out correctly, the “Scope of the assessment“ block must be completed first. Once completed, the other blocks can be edited. Other than that, there are no restrictions in the application regarding the order in which data is entered. The assessment must be carried out in the following order:',
+    welcomeStepScope: 'Scope of the assessment',
+    welcomeStepScopeHint: '(mandatory in order to unlock the other blocks)',
+    welcomeStepInventory: 'Hardware inventory',
+    welcomeStepEnergy: 'Energy consumption',
+    welcomeFootnote:
+        'Your draft is stored only in this browser. Export a JSON file to keep a copy or transfer it to another machine.',
+    // --- Main layout (header, nav rail, footer) ---
+    mainMenuAriaLabel: 'Menu',
+    mainTagline: 'IT service carbon impact assessment',
+    mainSave: 'Save',
+    mainNavWelcome: 'Welcome',
+    mainNavScope: 'Scope of the assessment',
+    mainNavInventory: 'Hardware inventory',
+    mainNavEnergy: 'Energy consumption',
+    mainNavResults: 'Results',
+    mainStatusComplete: 'Complete',
+    mainStatusPartial: 'In progress',
+    mainStatusNotStarted: 'Not started',
+    mainFooterEmbodied: 'Embodied {value}',
+    mainFooterOperational: 'Operational {value}',
+    mainFooterTotal: 'Total, lifespan {value}',
+    mainFooterPerFu: 'Per functional unit: {value}',
+    mainFooterSavedAt: 'Saved {timeAgo}',
+    mainFooterDraftSaved: 'Draft saved in this browser',
+    mainFooterExportedAt: 'Exported {timeAgo}',
+    mainTimeAgoJustNow: 'just now',
+    mainTimeAgoMinutes: '{n} min ago',
+    mainTimeAgoHours: '{n} h ago',
+    mainTimeAgoDays: '{n} d ago',
+    mainUnitTonnes: 't',
+    mainUnitTonnesCo2e: 'tCO₂e',
+    mainUnitGramsCo2e: 'gCO₂e',
+    mainNotApplicable: '—',
+    // --- Scope page ---
+    scopePageTitle: 'Scope of the assessment',
+    scopePageHint:
+        'Complete this block first — it defines the datacenters and the functional unit the rest of the assessment refers to.',
+    scopeBlockFirstHint: 'Complete this block first',
+    scopeReportOnly: 'Report only',
+    scopeUsedInCalculation: 'used in calculation',
+    scopeBadgeCalcTooltip: 'This field feeds the calculation',
+    scopeBadgeReportTooltip: 'No field in this zone affects a number',
+    // General (report-only zone)
+    scopeGeneralTitle: 'General',
+    scopeOrganizationLabel: 'Name of the organization',
+    scopeAssessorsLabel: 'People working on the evaluation',
+    scopeServiceNameLabel: 'Name of the IT service',
+    scopeServiceNameTooltip: 'For example: HPC service',
+    // Function
+    scopeFunctionTitle: 'Function',
+    scopeFunctionLabel: 'Function',
+    scopeFunctionTooltip: 'For example: Computing service using GPU nodes (H100)',
+    scopeFunctionalUnitLabel: 'Functional unit',
+    scopeFuBefore: 'Usage of',
+    scopeFuMiddle: 'of the service with',
+    scopeFuDuration: 'Usage duration',
+    scopeFuResourceCount: 'Number of resources',
+    scopeFuSentence: 'Usage of {duration} {unit} of the service with {count} {type}',
+    scopeTimeUnit_second: 'second',
+    scopeTimeUnit_minute: 'minute',
+    scopeTimeUnit_hour: 'hour',
+    scopeTimeUnit_day: 'day',
+    scopeTimeUnit_week: 'week',
+    scopeTimeUnit_month: 'month',
+    scopeTimeUnit_year: 'year',
+    scopeResourceTypeCpu: 'CPU',
+    scopeResourceTypeGpu: 'GPU',
+    scopeFuTimeUnitTooltip: "e.g. hours — 'for 2 hours with 2 CPUs'",
+    scopeFuDurationTooltip: "e.g. 2 — 'for 2 hours with 2 CPUs'",
+    scopeFuResourceCountTooltip: 'e.g. 2 CPUs — one usage uses 2 resources',
+    scopeFuResourceTypeTooltip: 'e.g. CPUs — the resource type of one usage',
+    // Boundaries — datacenters
+    scopeBoundariesDcTitle: 'Boundaries — datacenters',
+    scopeDcColAbbreviation: 'Abbreviation',
+    scopeDcColName: 'Full name',
+    scopeDcColComment: 'Comment',
+    scopeDcColumnsTooltip:
+        'Identify each datacenter of the service boundary — abbreviation, full name, comment. Lines can be added, edited and deleted; deletion is blocked while the datacenter is referenced.',
+    scopeDcColUsedBy: 'Used by',
+    scopeDcAdd: '+ Add',
+    scopeDcDelete: 'Delete',
+    scopeDcUsedByNone: '—',
+    scopeDcInvRows: '1 inventory row | {n} inventory rows',
+    scopeDcEngRecords: '1 energy record | {n} energy records',
+    scopeDcUsedByCounts: '{inv} · {eng}',
+    scopeDcDeleteConfirmTitle: 'Delete datacenter',
+    scopeDcDeleteConfirmMessage:
+        'Delete {name}? This datacenter is not referenced by any hardware or energy row.',
+    scopeDcDeleteBlockedTitle: 'Cannot delete datacenter',
+    scopeDcDeleteBlocked:
+        '{name} cannot be deleted. It is referenced by {inv} and {eng}. Reassign or remove those first.',
+    // Boundaries — included & excluded
+    scopeBoundariesInclExclTitle: 'Boundaries — included & excluded',
+    scopeBndIncludedTitle: 'Included in the IT service (accounted for)',
+    scopeBndExcludedTitle: 'Excluded from the IT service (not accounted for)',
+    scopeBndColType: 'Type',
+    scopeBndColPurpose: 'Purpose',
+    scopeBndColReasonInclusion: 'Reason of inclusion',
+    scopeBndColReasonExclusion: 'Reason of exclusion',
+    scopeBndColumnsTooltip:
+        'Document what is included in / excluded from the IT service — type, purpose, reason.',
+    scopeBndAdd: '+ Add',
+    scopeBndDelete: 'Delete',
+    // Lifespan
+    scopeLifespanTitle: 'Lifespan',
+    scopeLifespanLabel: 'Service lifespan',
+    scopeLifespanYears: 'years',
+    // --- Hardware inventory page ---
+    inventoryPageTitle: 'Embodied emissions — hardware inventory',
+    inventoryPageHint:
+        'List every IT element of the service: compute servers, storage bays, network devices and spare parts. Three editing modes control which columns are shown.',
+    inventoryNoScopeHint:
+        'Complete the “Scope of the assessment” block first to unlock the fields.',
+    inventoryStats: '{rows} items · {elements} elements · {total} kgCO₂e',
+    inventoryWarningBar:
+        '⚠ {n} rows are missing a mandatory value. Rows without an impact figure count as 0 kgCO₂e and are listed as incomplete in the report — they are not treated as carbon-free.',
+    inventoryFooter: 'Total embodied — {n} second-hand element(s) excluded',
+    inventoryModeSimple: 'Simple',
+    inventoryModeNormal: 'Normal',
+    inventoryModeAdvanced: 'Advanced',
+    inventoryModeHint:
+        'Switching modes only hides or shows columns — it never deletes data. Hidden values stay in the file and in the report.',
+    inventoryAddRow: '+ Add row',
+    inventoryDeleteRow: 'Delete',
+    inventoryDeleteConfirmTitle: 'Delete row',
+    inventoryDeleteConfirmMessage:
+        'Delete {name}? This removes the hardware row from the inventory.',
+    inventoryNotCounted: 'not counted',
+    inventoryNoDatacentersHint:
+        'No datacenters defined yet — add them in the “Scope of the assessment” block first.',
+    // Column groups
+    inventoryGroupGeneral: 'General',
+    inventoryGroupImpact: 'Impact (∑)',
+    inventoryGroupCpu: 'CPU',
+    inventoryGroupMemory: 'Memory',
+    inventoryGroupStorage: 'Storage',
+    inventoryGroupGpu: 'GPU',
+    inventoryGroupNetworkPsu: 'Network & PSU',
+    // General columns
+    inventoryColCategory: 'Category',
+    inventoryColName: 'Name',
+    inventoryColRackUnit: 'Rack unit',
+    inventoryColQuantity: 'Quantity',
+    inventoryColDescription: 'Description',
+    inventoryColDatacenter: 'Datacenter',
+    inventoryColIsSecondHand: 'Reused HW',
+    // Impact columns
+    inventoryColImpactManufacturing: 'Impact manufacturing',
+    inventoryColImpactMde: 'Impact manufacturing + distribution + EOL',
+    inventoryColResilioDbHash: 'ResilioDB hash',
+    inventoryColSubtotal: 'Subtotal',
+    // CPU columns
+    inventoryColCpuName: 'CPU – name',
+    inventoryColCpuQuantity: 'CPU – quantity',
+    inventoryColCpuLithography: 'CPU – lithography',
+    inventoryColCpuDieSize: 'CPU – die size',
+    inventoryColCpuCores: 'CPU – cores',
+    // Memory columns
+    inventoryColMemoryQuantity: 'Memory – quantity',
+    inventoryColMemorySizeGb: 'Memory – size',
+    inventoryColMemoryTotal: 'Memory – total',
+    // Storage columns
+    inventoryColStorageType: 'Storage type',
+    inventoryColStorageQuantity: 'Storage – quantity',
+    inventoryColStorageSize: 'Storage – size',
+    inventoryColStorageTotal: 'Storage – total',
+    inventoryColStorageTechnology: 'Storage technology',
+    inventoryColStorageCasing: 'Storage casing',
+    // GPU columns
+    inventoryColGpuName: 'GPU – name',
+    inventoryColGpuQuantity: 'GPU – quantity',
+    inventoryColGpuLithography: 'GPU – lithography',
+    inventoryColGpuDieSize: 'GPU – die size',
+    inventoryColGpuMemory: 'GPU – memory',
+    // Network & PSU
+    inventoryColNetworkPorts: 'Network – quantity ports',
+    inventoryColPsuQuantity: 'PSU – quantity',
+    inventoryColPsuPower: 'PSU – power',
+    // Enum labels — category
+    inventoryCategory_server: 'Server',
+    inventoryCategory_compute_server: 'Compute server',
+    inventoryCategory_storage_bay: 'Storage bay',
+    inventoryCategory_network_device: 'Network device',
+    inventoryCategory_spare_part: 'Spare part',
+    // Enum labels — storage
+    inventoryStorageType_HDD: 'HDD',
+    inventoryStorageType_SSD: 'SSD',
+    inventoryStorageTechnology_SLC: 'SLC',
+    inventoryStorageTechnology_MLC: 'MLC',
+    inventoryStorageTechnology_TLC: 'TLC',
+    inventoryStorageTechnology_QLC: 'QLC',
+    inventoryStorageCasing_M2: 'M2',
+    inventoryStorageCasing_2_5_inch: '2.5 inch',
+    // --- Energy consumption page ---
+    energyPageTitle: 'Operational emissions — energy consumption',
+    energyPageHint:
+        'Describe how the IT service consumes electricity: the usage monitoring period and, per datacenter, the grid carbon intensity and the power consumed during that period. These figures drive the operational emissions.',
+    energyNoScopeHint: 'Complete the “Scope of the assessment” block first to unlock the fields.',
+    energyNoDatacentersHint:
+        'No datacenters defined yet — add them in the “Scope of the assessment” block first.',
+    // Usage monitoring period
+    energyMonitorTitle: 'Usage monitoring period',
+    energyMonitorUnitLabel: 'Unit',
+    energyMonitorValueLabel: 'Period value',
+    energyMonitorCommentLabel: 'Comment',
+    energyMonitorUnit_day: 'day',
+    energyMonitorUnit_week: 'week',
+    energyMonitorUnit_month: 'month',
+    energyMonitorUnit_year: 'year',
+    // Datacenters' information
+    energyDcTitle: 'Datacenters’ information',
+    energyDcColumnsTooltip:
+        'Per datacenter, record the grid carbon intensity (gCO₂/kWh), the optional PUE, and the electricity consumed (kWh) over the monitoring period. Delete removes the row from the grid.',
+    energyDcColName: 'Datacenter',
+    energyDcColNameComment: 'Datacenter comment',
+    energyDcColLocation: 'Location',
+    energyDcColLocationComment: 'Location comment',
+    energyDcColIntensity: 'Carbon intensity',
+    energyDcColIntensityComment: 'Intensity comment',
+    energyDcColPue: 'PUE',
+    energyDcColPueComment: 'PUE comment',
+    energyDcColKwh: 'Energy (kWh)',
+    energyDcColKwhComment: 'Energy comment',
+    energyDcDeleteRow: 'Delete row',
+    energyDeleteRowConfirmTitle: 'Delete energy row',
+    energyDeleteRowConfirmMessage:
+        'Delete the energy record for {name}? This clears the consumption data for that datacenter.',
+    // --- Results page ---
+    resultsPageTitle: 'Results',
+    resultsNoScopeHint: 'Complete the “Scope of the assessment” block first to unlock the results.',
+    resultsSummaryTitle: 'Summary',
+    resultsSummaryServiceName: 'Name of the IT service',
+    resultsSummaryFunction: 'Function',
+    resultsSummaryFunctionalUnit: 'Functional unit',
+    resultsSummaryLifespan: 'Lifespan',
+    resultsLifespanYears: '{n} years',
+    resultsEmbodiedTitle: 'Embodied emissions',
+    resultsSecondHandToggle: 'Embodied emissions of second-hand HW are accounted for',
+    resultsColName: 'Name',
+    resultsColDescription: 'Description',
+    resultsColNumber: 'Number',
+    resultsColCo2Unit: 'CO₂ estimation (kg CO₂-eq) for 1 IT element',
+    resultsColCo2Total: 'CO₂ cumulated (kg CO₂-eq)',
+    resultsCategoryTotal: 'Category total',
+    resultsTotalEmbodied: 'Total embodied',
+    resultsOperationalTitle: 'Operational emissions',
+    resultsColDcName: 'Datacenter',
+    resultsColCo2Period: 'CO₂ estimation (kg CO₂-eq) for the monitoring period',
+    resultsColCo2Lifespan: 'CO₂ estimation (kg CO₂-eq) for the whole lifespan',
+    resultsTotalOperational: 'Total operational emissions',
+    resultsTotalTitle: 'Total emissions',
+    resultsRowEmbodied: 'Embodied emissions',
+    resultsRowOperational: 'Operational emissions',
+    resultsRowTotal: 'Total emissions',
+    resultsFuTitle: 'Emissions related to the functional unit',
+    resultsFuNumber: 'Number of resources related to functional unit',
+    resultsFuLifespanNote:
+        'Usage of the specified resources during the whole lifespan of the IT service',
+    resultsUnitKg: 'kg CO₂',
+    resultsUnitG: 'g CO₂',
+    resultsHostedIn: 'Hosted in: {dcs}',
+    // --- Validation messages (Zod → Quasar; see composables/useValidation.ts) ---
+    validation: {
+        invalid_type: {
+            number: 'Must be a number.',
+            int: 'Must be a whole number.',
+            string: 'This field is required.',
+        },
+        too_small: {
+            number: {
+                inclusive: 'Must be at least {minimum}.',
+                exclusive: 'Must be greater than {minimum}.',
+            },
+            string: {
+                inclusive: 'Must not be empty.',
+            },
+        },
+        too_big: {
+            number: 'Must be no more than {maximum}.',
+        },
+    },
 };
