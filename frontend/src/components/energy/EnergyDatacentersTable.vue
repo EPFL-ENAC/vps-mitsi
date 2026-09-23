@@ -33,23 +33,37 @@
         <div class="col-1" />
     </div>
     <div
-        v-for="e in mitsi.energy"
-        :key="e.datacenterId"
+        v-for="dc in mitsi.datacenters"
+        :key="dc.id"
         class="row items-center q-col-gutter-x-sm q-py-xs"
     >
         <div class="col-1">
-            <div class="text-grey-8 ellipsis">{{ dcLabel(e.datacenterId) }}</div>
-        </div>
-        <div class="col-1">
-            <q-input class="full-width" v-model="e.comment" dense outlined hide-bottom-space />
-        </div>
-        <div class="col-1">
-            <q-input class="full-width" v-model="e.location" dense outlined hide-bottom-space />
+            <div class="text-grey-8 ellipsis">
+                {{ formatDatacenterName(dc) }}
+            </div>
         </div>
         <div class="col-1">
             <q-input
                 class="full-width"
-                v-model="e.locationComment"
+                v-model="dc.energy.comment"
+                dense
+                outlined
+                hide-bottom-space
+            />
+        </div>
+        <div class="col-1">
+            <q-input
+                class="full-width"
+                v-model="dc.energy.location"
+                dense
+                outlined
+                hide-bottom-space
+            />
+        </div>
+        <div class="col-1">
+            <q-input
+                class="full-width"
+                v-model="dc.energy.locationComment"
                 dense
                 outlined
                 hide-bottom-space
@@ -59,7 +73,7 @@
             <q-input
                 type="number"
                 class="full-width"
-                v-model.number="e.carbonIntensity"
+                v-model.number="dc.energy.carbonIntensity"
                 :rules="[toValidationRule(DatacenterEnergySchema.shape.carbonIntensity)]"
                 dense
                 outlined
@@ -69,7 +83,7 @@
         <div class="col-1">
             <q-input
                 class="full-width"
-                v-model="e.carbonIntensityComment"
+                v-model="dc.energy.carbonIntensityComment"
                 dense
                 outlined
                 hide-bottom-space
@@ -79,7 +93,7 @@
             <q-input
                 type="number"
                 class="full-width"
-                v-model.number="e.pue"
+                v-model.number="dc.energy.pue"
                 :rules="[toValidationRule(DatacenterEnergySchema.shape.pue)]"
                 dense
                 outlined
@@ -87,13 +101,19 @@
             />
         </div>
         <div class="col-1">
-            <q-input class="full-width" v-model="e.pueComment" dense outlined hide-bottom-space />
+            <q-input
+                class="full-width"
+                v-model="dc.energy.pueComment"
+                dense
+                outlined
+                hide-bottom-space
+            />
         </div>
         <div class="col-1">
             <q-input
                 type="number"
                 class="full-width"
-                v-model.number="e.energyConsumption"
+                v-model.number="dc.energy.energyConsumption"
                 :rules="[toValidationRule(DatacenterEnergySchema.shape.energyConsumption)]"
                 dense
                 outlined
@@ -103,7 +123,7 @@
         <div class="col-2">
             <q-input
                 class="full-width"
-                v-model="e.energyComment"
+                v-model="dc.energy.energyComment"
                 dense
                 outlined
                 hide-bottom-space
@@ -113,9 +133,9 @@
             <q-btn
                 flat
                 dense
-                icon="delete"
-                :aria-label="$t('energyDcDeleteRow')"
-                @click="deleteEnergyRow(e)"
+                icon="restart_alt"
+                :aria-label="$t('energyDcClear')"
+                @click="clearEnergy(dc)"
             />
         </div>
     </div>
@@ -125,30 +145,25 @@
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import { useMitsiStore } from 'src/stores/mitsi';
+import { formatDatacenterName } from 'src/utils/format';
 import { useValidation } from 'src/composables/useValidation';
 import { DatacenterEnergySchema } from 'src/models/schema';
-import type { DatacenterEnergy } from 'src/models/mitsi';
+import type { Datacenter } from 'src/models/mitsi';
 
 const mitsi = useMitsiStore();
 const { t } = useI18n();
 const $q = useQuasar();
 const { toValidationRule } = useValidation();
 
-// ── Display-only helpers (never written back to the store) ──────────────────
-function dcLabel(datacenterId: string): string {
-    return mitsi.scope.datacenters.find((dc) => dc.id === datacenterId)?.name || datacenterId;
-}
-
-function deleteEnergyRow(row: DatacenterEnergy): void {
+function clearEnergy(dc: Datacenter): void {
     $q.dialog({
-        title: t('energyDeleteRowConfirmTitle'),
-        message: t('energyDeleteRowConfirmMessage', { name: dcLabel(row.datacenterId) }),
+        title: t('energyClearConfirmTitle'),
+        message: t('energyClearConfirmMessage', {
+            name: formatDatacenterName(dc),
+        }),
         cancel: true,
         persistent: true,
-    }).onOk(() => {
-        const i = mitsi.energy.findIndex((e) => e.datacenterId === row.datacenterId);
-        if (i !== -1) mitsi.energy.splice(i, 1);
-    });
+    }).onOk(() => mitsi.clearDatacenterEnergy(dc.id));
 }
 </script>
 

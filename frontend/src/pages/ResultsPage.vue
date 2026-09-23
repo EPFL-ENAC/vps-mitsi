@@ -157,7 +157,9 @@
                                 </td>
                                 <td></td>
                                 <td class="text-right">
-                                    <strong>{{ formatKg(mitsi.totalOperational) }}</strong>
+                                    <strong>{{
+                                        formatOperationalResult(mitsi.totalOperational)
+                                    }}</strong>
                                 </td>
                             </tr>
                         </tbody>
@@ -194,14 +196,16 @@
                             </tr>
                             <tr>
                                 <td>{{ $t('resultsRowOperational') }}</td>
-                                <td class="text-right">{{ formatKg(mitsi.totalOperational) }}</td>
+                                <td class="text-right">
+                                    {{ formatOperationalResult(mitsi.totalOperational) }}
+                                </td>
                             </tr>
                             <tr class="results-total">
                                 <td>
                                     <strong>{{ $t('resultsRowTotal') }}</strong>
                                 </td>
                                 <td class="text-right">
-                                    <strong>{{ formatKg(mitsi.totalLifespan) }}</strong>
+                                    <strong>{{ formatCombinedResult(mitsi.totalLifespan) }}</strong>
                                 </td>
                             </tr>
                         </tbody>
@@ -256,10 +260,17 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { useMitsiStore } from 'src/stores/mitsi';
-import { buildFunctionalUnitSentence, formatKg, normalizeKey } from 'src/utils/format';
+import { useResultFormatting } from 'src/composables/useResultFormatting';
+import {
+    buildFunctionalUnitSentence,
+    formatDatacenterName,
+    formatKg,
+    normalizeKey,
+} from 'src/utils/format';
 
 const { t } = useI18n();
 const mitsi = useMitsiStore();
+const { formatOperationalResult, formatCombinedResult } = useResultFormatting();
 
 /** Time-unit label resolved with the same keys the ScopePage FU select uses. */
 const timeUnitLabel = computed(() =>
@@ -273,36 +284,35 @@ const fuSentence = computed(() =>
 
 /** Datacenter label 'abbreviation — name', falling back gracefully on missing parts. */
 function dcLabel(datacenterId: string): string {
-    const dc = mitsi.scope.datacenters.find((d) => d.id === datacenterId);
+    const dc = mitsi.datacenters.find((d) => d.id === datacenterId);
     if (!dc) return datacenterId;
-    return [dc.abbreviation, dc.name].filter(Boolean).join(' — ');
+    return formatDatacenterName(dc);
 }
 
-/** Where the service runs: DC labels with their energy-row locations appended. */
+/** Where the service runs: datacenter labels and locations. */
 const hostedInDcs = computed(() =>
-    mitsi.scope.datacenters
+    mitsi.datacenters
         .map((dc) => {
-            const location = mitsi.energy.find((e) => e.datacenterId === dc.id)?.location?.trim();
-            const label = dcLabel(dc.id);
+            const location = dc.energy.location.trim();
+            const label = formatDatacenterName(dc);
             return location ? `${label} (${location})` : label;
         })
         .join(', '),
 );
 
-/** '—' when not computable, else formatted kg. */
 const totalPerResourceText = computed(() =>
-    mitsi.totalPerResource !== null
-        ? `${formatKg(mitsi.totalPerResource)} ${t('resultsUnitKg')}`
-        : '—',
+    formatCombinedResult(
+        mitsi.totalPerResource,
+        (value) => `${formatKg(value)} ${t('resultsUnitKg')}`,
+    ),
 );
 
-/** kg and ×1000 g per functional unit, or '—' when not computable (4 decimals, Excel spec). */
 const perFunctionalUnitText = computed(() =>
-    mitsi.perFunctionalUnit !== null
-        ? `${mitsi.perFunctionalUnit.toFixed(4)} ${t('resultsUnitKg')} / ${(
-              mitsi.perFunctionalUnit * 1000
-          ).toFixed(4)} ${t('resultsUnitG')}`
-        : '—',
+    formatCombinedResult(
+        mitsi.perFunctionalUnit,
+        (value) =>
+            `${value.toFixed(4)} ${t('resultsUnitKg')} / ${(value * 1000).toFixed(4)} ${t('resultsUnitG')}`,
+    ),
 );
 </script>
 

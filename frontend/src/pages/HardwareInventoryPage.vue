@@ -51,7 +51,7 @@
 
         <!-- No datacenters hint -->
         <q-banner
-            v-if="mitsi.scope.datacenters.length === 0"
+            v-if="mitsi.datacenters.length === 0"
             inline-actions
             class="bg-grey-3 text-grey-8 q-mb-md"
         >

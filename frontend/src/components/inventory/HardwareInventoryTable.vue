@@ -170,7 +170,7 @@ import {
     type InventoryColumn,
     type VisibilityMode,
 } from 'src/models/inventory-columns';
-import { formatKg } from 'src/utils/format';
+import { formatDatacenterName, formatKg } from 'src/utils/format';
 import { useMitsiStore } from 'src/stores/mitsi';
 import { useValidation } from 'src/composables/useValidation';
 
@@ -199,11 +199,8 @@ const built = computed(() => buildInventoryColumns(t, props.mode));
 
 // Options for the datacenter select come from the store's datacenters.
 const datacenterOptions = computed<{ label: string; value: string }[]>(() =>
-    mitsi.scope.datacenters.map((dc) => ({
-        label:
-            dc.abbreviation && dc.name
-                ? `${dc.abbreviation} — ${dc.name}`
-                : dc.abbreviation || dc.name || dc.id,
+    mitsi.datacenters.map((dc) => ({
+        label: formatDatacenterName(dc),
         value: dc.id,
     })),
 );

@@ -16,12 +16,11 @@ import {
     MITSI_STORAGE_KEY,
     type BlockKey,
     type BlockStatus,
-    type DatacenterEnergy,
+    type Datacenter,
     type HardwareItem,
     type MitsiState,
     type MonitoringPeriod,
     type Scope,
-    type TimeUnit,
     type UnderlyingService,
 } from 'src/models/mitsi';
 import {
@@ -29,34 +28,47 @@ import {
     DatacenterEnergySchema,
     DatacenterEnergyDraftSchema,
     DatacenterDraftSchema,
+    DatacenterGeneralInfoSchema,
     HardwareCategorySchema,
     HardwareItemSchema,
     MitsiStateDraftSchema,
+    MitsiStateSchema,
     MonitoringPeriodSchema,
     ScopeSchema,
 } from 'src/models/schema';
-import { rowSubtotal } from 'src/utils/format';
+import {
+    calculateFunctionalUnitEmissions,
+    calculateOperationalEmissions,
+    countResources,
+    rowSubtotal,
+    sum,
+} from 'src/utils/math';
 
-/**
- * Counts of each time unit per year, matching the "Counts of time unit for a
- * year" table in the reference workbook exactly.
- */
-const COUNTS_PER_YEAR: Record<TimeUnit, number> = {
-    second: 31_536_000, // 365 * 24 * 60 * 60
-    minute: 525_600,
-    hour: 8_760,
-    day: 365,
-    week: 52,
-    month: 12,
-    year: 1,
+export type DatacenterDeletionBlock = { hardwareRowCount: number };
+
+export type RemoveDatacenterResult =
+    | { removed: true }
+    | { removed: false; reason: 'not_found' }
+    | { removed: false; reason: 'in_use'; usage: DatacenterDeletionBlock };
+
+export type DatacenterOperationalResult = {
+    datacenterId: string;
+    co2Period: number | null;
+    co2Lifespan: number | null;
+};
+
+export type EnergyCoverage = {
+    completeDatacenters: number;
+    totalDatacenters: number;
+    isComplete: boolean;
 };
 
 export const useMitsiStore = defineStore('mitsi', () => {
     const initial = emptyMitsiState();
     const scope = ref<Scope>(initial.scope);
     const hardware = ref<HardwareItem[]>([]);
-    const monitoringPeriod = ref<MonitoringPeriod>(initial.monitoringPeriod);
-    const energy = ref<DatacenterEnergy[]>([]);
+    const monitoringPeriod = ref<MonitoringPeriod>({ ...initial.monitoringPeriod });
+    const datacenters = ref<Datacenter[]>(initial.datacenters);
     const includeSecondHandEmbodied = ref(false);
     const includeUnderlyingServices = ref(false);
     const underlyingServices = ref<UnderlyingService[]>([]);
@@ -64,7 +76,14 @@ export const useMitsiStore = defineStore('mitsi', () => {
     const exportedAt = ref<number | null>(null);
 
     // ── Getters ──────────────────────────────────────────────────────────────
-    const isScopeValid = computed<boolean>(() => ScopeSchema.safeParse(scope.value).success);
+    const isScopeValid = computed<boolean>(
+        () =>
+            ScopeSchema.safeParse(scope.value).success &&
+            datacenters.value.length > 0 &&
+            datacenters.value.every(
+                (dc) => DatacenterGeneralInfoSchema.safeParse(dc.generalInfo).success,
+            ),
+    );
 
     /**
      * Whether a second-hand row is excluded from the embodied total — i.e. it is
@@ -77,10 +96,7 @@ export const useMitsiStore = defineStore('mitsi', () => {
 
     /** Embodied emissions (kg CO2-eq), honouring the second-hand setting. */
     const totalEmbodied = computed<number>(() =>
-        hardware.value.reduce((sum, h) => {
-            if (isSecondHandExcluded(h)) return sum;
-            return sum + rowSubtotal(h);
-        }, 0),
+        sum(hardware.value.filter((h) => !isSecondHandExcluded(h)).map(rowSubtotal)),
     );
 
     /** Count of hardware rows excluded because second-hand & not accounted. */
@@ -88,88 +104,104 @@ export const useMitsiStore = defineStore('mitsi', () => {
         () => hardware.value.filter(isSecondHandExcluded).length,
     );
 
-    /** Operational emissions over the whole lifespan (kg CO2-eq). */
-    const totalOperational = computed<number>(() => {
-        const monitoringPeriodYears =
-            monitoringPeriod.value.value / COUNTS_PER_YEAR[monitoringPeriod.value.unit];
-        if (monitoringPeriodYears <= 0) return 0;
-        const lifespanYears = scope.value.lifespanYears || 0;
-        const scaling = lifespanYears / monitoringPeriodYears;
-        return energy.value.reduce((sum, dc) => {
-            const pue = dc.pue && dc.pue > 0 ? dc.pue : 1;
-            const perKwh = (dc.carbonIntensity / 1000) * pue;
-            return sum + dc.energyConsumption * perKwh * scaling;
-        }, 0);
+    /**
+     * Direct v-model edits can be incomplete or invalid until saved. Canonical
+     * parsing checks calculation readiness and normalizes cleared optional PUE.
+     * Keep unready datacenters visible with unavailable estimates.
+     */
+    const operationalPerDc = computed<DatacenterOperationalResult[]>(() => {
+        const period = MonitoringPeriodSchema.safeParse(monitoringPeriod.value);
+        const lifespan = ScopeSchema.shape.lifespanYears.safeParse(scope.value.lifespanYears);
+        return datacenters.value.map((dc) => {
+            const energy = DatacenterEnergySchema.safeParse(dc.energy);
+            if (!energy.success || !period.success) {
+                return { datacenterId: dc.id, co2Period: null, co2Lifespan: null };
+            }
+            return {
+                datacenterId: dc.id,
+                ...calculateOperationalEmissions({
+                    energy: energy.data,
+                    monitoringPeriod: period.data,
+                    lifespanYears: lifespan.success ? lifespan.data : null,
+                }),
+            };
+        });
+    });
+
+    /** Sum available lifespan estimates; no measurements is different from zero. */
+    const totalOperational = computed<number | null>(() => {
+        const values = operationalPerDc.value
+            .map((dc) => dc.co2Lifespan)
+            .filter((value): value is number => value !== null);
+        return values.length ? sum(values) : null;
+    });
+
+    const energyCoverage = computed<EnergyCoverage>(() => {
+        const completeDatacenters = operationalPerDc.value.filter(
+            (dc) => dc.co2Lifespan !== null,
+        ).length;
+        const totalDatacenters = datacenters.value.length;
+        return {
+            completeDatacenters,
+            totalDatacenters,
+            isComplete:
+                isScopeValid.value &&
+                totalDatacenters > 0 &&
+                completeDatacenters === totalDatacenters,
+        };
     });
 
     /** Underlying services emissions over the lifespan (kg CO2-eq). */
     const totalUnderlying = computed<number>(() =>
         includeUnderlyingServices.value
-            ? underlyingServices.value.reduce((s, u) => s + (u.co2EstimateKg || 0), 0)
+            ? sum(underlyingServices.value.map((service) => service.co2EstimateKg || 0))
             : 0,
     );
 
-    const totalLifespan = computed<number>(
-        () => totalEmbodied.value + totalOperational.value + totalUnderlying.value,
+    const hasEmbodiedContribution = computed(() =>
+        hardware.value.some(
+            (row) =>
+                HardwareItemSchema.shape.quantity.safeParse(row.quantity).success &&
+                HardwareItemSchema.shape.impactManufacturingDistributionEol.safeParse(
+                    row.impactManufacturingDistributionEol,
+                ).success,
+        ),
     );
 
-    /**
-     * Fleet of the resource type selected in the functional unit, derived
-     * from the inventory over accounted rows (second-hand excluded) —
-     * Excel '4.Hardware inventory'!D7×X7 (44 × 4 = 176). 'CPU' selection →
-     * CPU fleet (quantity × cpuQuantity); any other value → GPU fleet.
-     */
-    const resourcesInService = computed<number>(() => {
-        const cpu = scope.value.functionalUnit.resourceType.trim().toLowerCase() === 'cpu';
-        return hardware.value.reduce(
-            (sum, h) =>
-                isSecondHandExcluded(h)
-                    ? sum
-                    : sum + h.quantity * (cpu ? h.cpuQuantity : h.gpuQuantity),
-            0,
-        );
+    const totalLifespan = computed<number | null>(() => {
+        const hasUnderlying =
+            includeUnderlyingServices.value && underlyingServices.value.length > 0;
+        if (!hasEmbodiedContribution.value && totalOperational.value === null && !hasUnderlying)
+            return null;
+        const total = totalEmbodied.value + (totalOperational.value ?? 0) + totalUnderlying.value;
+        return Number.isFinite(total) ? total : null;
     });
 
-    /** Amount per functional unit (kg CO2-eq per usage). Null when not computable. */
+    /** Count only accounted hardware, honoring the second-hand setting. */
+    const resourcesInService = computed<number>(() =>
+        countResources(
+            hardware.value.filter((row) => !isSecondHandExcluded(row)),
+            scope.value.functionalUnit.resourceType,
+        ),
+    );
+
+    /** Validate draft inputs before calling the pure functional-unit calculation. */
     const perFunctionalUnit = computed<number | null>(() => {
-        const s = scope.value;
-        // Guard against missing/zero inputs that would yield a meaningless,
-        // infinite or negative per-functional-unit figure.
-        if (resourcesInService.value <= 0) return null;
-        if (s.functionalUnit.usageDuration <= 0) return null;
-        if (s.functionalUnit.resourceCount <= 0) return null;
-        if (s.lifespanYears <= 0) return null;
-        if (totalLifespan.value <= 0) return null;
+        const functionalUnit = ScopeSchema.shape.functionalUnit.safeParse(
+            scope.value.functionalUnit,
+        );
+        const lifespan = ScopeSchema.shape.lifespanYears.safeParse(scope.value.lifespanYears);
+        const resources = resourcesInService.value;
+        const total = totalLifespan.value;
+        if (!functionalUnit.success || !lifespan.success || total === null) return null;
+        if (!Number.isFinite(resources) || resources <= 0 || functionalUnit.data.usageDuration <= 0)
+            return null;
 
-        // one functional unit consumes usageDuration × resourceCount resource-hours.
-        const uses =
-            (s.lifespanYears *
-                COUNTS_PER_YEAR[s.functionalUnit.timeUnit] *
-                resourcesInService.value) /
-            (s.functionalUnit.usageDuration * s.functionalUnit.resourceCount);
-        if (uses <= 0) return null;
-        return totalLifespan.value / uses;
-    });
-
-    /** Per-datacenter operational emissions: CO₂ (kg) over the monitoring period
-     *  and over the whole lifespan — mirrors totalOperational's math exactly so
-     *  that sum(co2Lifespan) === totalOperational. */
-    const operationalPerDc = computed<
-        { datacenterId: string; co2Period: number; co2Lifespan: number }[]
-    >(() => {
-        const monitoringPeriodYears =
-            monitoringPeriod.value.value / COUNTS_PER_YEAR[monitoringPeriod.value.unit];
-        const lifespanYears = scope.value.lifespanYears || 0;
-        const scaling = monitoringPeriodYears > 0 ? lifespanYears / monitoringPeriodYears : 0;
-        return energy.value.map((dc) => {
-            const pue = dc.pue && dc.pue > 0 ? dc.pue : 1;
-            const perKwh = (dc.carbonIntensity / 1000) * pue;
-            const co2Period = dc.energyConsumption * perKwh;
-            return {
-                datacenterId: dc.datacenterId,
-                co2Period,
-                co2Lifespan: co2Period * scaling,
-            };
+        return calculateFunctionalUnitEmissions({
+            totalEmissions: total,
+            lifespanYears: lifespan.data,
+            resourcesInService: resources,
+            functionalUnit: functionalUnit.data,
         });
     });
 
@@ -195,7 +227,9 @@ export const useMitsiStore = defineStore('mitsi', () => {
                 return {
                     category,
                     rows,
-                    categoryTotal: rows.reduce((s, r) => (r.excluded ? s : s + r.co2RowTotal), 0),
+                    categoryTotal: sum(
+                        rows.filter((row) => !row.excluded).map((row) => row.co2RowTotal),
+                    ),
                 };
             })
             .filter((g) => g.rows.length > 0),
@@ -204,15 +238,15 @@ export const useMitsiStore = defineStore('mitsi', () => {
     /** kg CO2-eq per ONE resource of the FU fleet over the whole lifespan
      *  (Excel Results: total ÷ resourcesInService). */
     const totalPerResource = computed<number | null>(() =>
-        resourcesInService.value > 0 ? totalLifespan.value / resourcesInService.value : null,
+        totalLifespan.value !== null &&
+        Number.isFinite(resourcesInService.value) &&
+        resourcesInService.value > 0
+            ? totalLifespan.value / resourcesInService.value
+            : null,
     );
 
     /** True when a hardware row carries every field needed for the totals. */
     const hardwareRowValid = (h: HardwareItem): boolean => HardwareItemSchema.safeParse(h).success;
-
-    /** True when an energy record carries every field needed for the totals. */
-    const energyRowValid = (e: DatacenterEnergy): boolean =>
-        DatacenterEnergySchema.safeParse(e).success;
 
     /** Count of hardware rows missing a mandatory value (reuses hardwareRowValid). */
     const missingMandatoryHardware = computed<number>(
@@ -222,12 +256,28 @@ export const useMitsiStore = defineStore('mitsi', () => {
     const hardwareRowsComplete = computed<boolean>(
         () => hardware.value.length > 0 && hardware.value.every(hardwareRowValid),
     );
-    const energyRowsComplete = computed<boolean>(
-        () =>
-            energy.value.length > 0 &&
-            energy.value.every(energyRowValid) &&
-            MonitoringPeriodSchema.safeParse(monitoringPeriod.value).success,
+    const resultsComplete = computed(
+        () => isScopeValid.value && hardwareRowsComplete.value && energyCoverage.value.isComplete,
     );
+    const resultsPartial = computed(() => totalLifespan.value !== null && !resultsComplete.value);
+
+    /** Empty cleared inputs count as untouched; an explicit numeric zero counts as entered. */
+    const energyStarted = computed(() => {
+        const period = monitoringPeriod.value;
+        return (
+            period.unit !== initial.monitoringPeriod.unit ||
+            period.value !== initial.monitoringPeriod.value ||
+            period.comment.trim() !== '' ||
+            datacenters.value.some((dc) =>
+                Object.values(dc.energy).some(
+                    (value) =>
+                        value !== null &&
+                        value !== undefined &&
+                        (typeof value !== 'string' || value.trim() !== ''),
+                ),
+            )
+        );
+    });
 
     /** Per-block completion, reflecting mandatory-field completion, not row presence. */
     const blockStatus = computed<Record<BlockKey, BlockStatus>>(() => ({
@@ -238,16 +288,16 @@ export const useMitsiStore = defineStore('mitsi', () => {
                 : hardwareRowsComplete.value && isScopeValid.value
                   ? 'complete'
                   : 'partial',
-        energy:
-            energy.value.length === 0
-                ? 'not_started'
-                : energyRowsComplete.value && isScopeValid.value
-                  ? 'complete'
-                  : 'partial',
-        results:
-            isScopeValid.value && (hardwareRowsComplete.value || energyRowsComplete.value)
-                ? 'complete'
-                : 'not_started',
+        energy: energyCoverage.value.isComplete
+            ? 'complete'
+            : energyStarted.value
+              ? 'partial'
+              : 'not_started',
+        results: resultsComplete.value
+            ? 'complete'
+            : totalLifespan.value !== null
+              ? 'partial'
+              : 'not_started',
     }));
 
     // ── Persistence (client-side, Quasar LocalStorage) ───────────────────────
@@ -273,7 +323,7 @@ export const useMitsiStore = defineStore('mitsi', () => {
         scope.value = blank.scope;
         hardware.value = [];
         monitoringPeriod.value = blank.monitoringPeriod;
-        energy.value = [];
+        datacenters.value = [];
         includeSecondHandEmbodied.value = false;
         includeUnderlyingServices.value = false;
         underlyingServices.value = [];
@@ -303,42 +353,36 @@ export const useMitsiStore = defineStore('mitsi', () => {
         }
     }
 
-    // ── Referential integrity ────────────────────────────────────────────────
-    function deleteDatacenterGuard(datacenterId: string): {
-        hardwareRowCount: number;
-        energyRecordCount: number;
-    } | null {
-        const hardwareRowCount = hardware.value.filter(
-            (h) => h.datacenterId === datacenterId,
-        ).length;
-        const energyRecordCount = energy.value.filter(
-            (e) => e.datacenterId === datacenterId,
-        ).length;
-        if (hardwareRowCount === 0 && energyRecordCount === 0) return null;
-        return { hardwareRowCount, energyRecordCount };
+    // ── Datacenter lifecycle ─────────────────────────────────────────────────
+    function getDatacenterDeletionBlock(id: string): DatacenterDeletionBlock | null {
+        const hardwareRowCount = hardware.value.filter((row) => row.datacenterId === id).length;
+        return hardwareRowCount > 0 ? { hardwareRowCount } : null;
     }
 
-    /** Energy records follow Scope: create a blank record for each datacenter
-     *  that has none yet (schema defaults). Gap-fill only — runs on mount and
-     *  on datacenter count increase; deleted rows are not re-added by sync. */
-    function ensureEnergyRows(): void {
-        for (const dc of scope.value.datacenters) {
-            if (!energy.value.some((e) => e.datacenterId === dc.id)) {
-                energy.value.push(DatacenterEnergyDraftSchema.parse({ datacenterId: dc.id }));
-            }
-        }
+    function removeDatacenter(id: string): RemoveDatacenterResult {
+        const index = datacenters.value.findIndex((dc) => dc.id === id);
+        if (index === -1) return { removed: false, reason: 'not_found' };
+        const usage = getDatacenterDeletionBlock(id);
+        if (usage) return { removed: false, reason: 'in_use', usage };
+        datacenters.value.splice(index, 1);
+        return { removed: true };
     }
 
-    // ── Centralized row creation ────────────────────────────────────────────
+    function clearDatacenterEnergy(id: string): boolean {
+        const dc = datacenters.value.find((dc) => dc.id === id);
+        if (!dc) return false;
+        dc.energy = DatacenterEnergyDraftSchema.parse({});
+        return true;
+    }
+
+    function addDatacenter(): string {
+        const dc = DatacenterDraftSchema.parse({ id: crypto.randomUUID() });
+        datacenters.value.push(dc);
+        return dc.id;
+    }
+
     function addHardwareItem(): void {
         hardware.value.push(newHardwareItem());
-    }
-
-    /** Creates a new datacenter (fresh uuid) plus its mandatory energy record
-     *  (spec auto-fill — each new DC gets an energy row). */
-    function addDatacenter(): void {
-        scope.value.datacenters.push(DatacenterDraftSchema.parse({ id: crypto.randomUUID() }));
-        ensureEnergyRows();
     }
 
     /** Creates a blank included/excluded boundary row (fresh uuid). */
@@ -355,7 +399,7 @@ export const useMitsiStore = defineStore('mitsi', () => {
             scope: scope.value,
             hardware: hardware.value,
             monitoringPeriod: monitoringPeriod.value,
-            energy: energy.value,
+            datacenters: datacenters.value,
             includeSecondHandEmbodied: includeSecondHandEmbodied.value,
             includeUnderlyingServices: includeUnderlyingServices.value,
             underlyingServices: underlyingServices.value,
@@ -363,18 +407,17 @@ export const useMitsiStore = defineStore('mitsi', () => {
     }
 
     function parseState(raw: unknown): MitsiState | null {
+        // Creation defaults must not make unversioned or older persisted data look current.
+        if (!MitsiStateSchema.pick({ schemaVersion: true }).safeParse(raw).success) return null;
         const parsed = MitsiStateDraftSchema.safeParse(raw);
         if (!parsed.success) return null;
         const state = parsed.data;
-        const dcIds = new Set(state.scope.datacenters.map((dc) => dc.id));
+        const dcIds = new Set(state.datacenters.map((dc) => dc.id));
         // An empty reference is an unfinished draft. Only filter real orphans,
         // and only when loading: saving must not silently remove edited rows.
         return {
             ...state,
             hardware: state.hardware.filter(
-                (row) => row.datacenterId === '' || dcIds.has(row.datacenterId),
-            ),
-            energy: state.energy.filter(
                 (row) => row.datacenterId === '' || dcIds.has(row.datacenterId),
             ),
         };
@@ -384,7 +427,7 @@ export const useMitsiStore = defineStore('mitsi', () => {
         scope.value = state.scope;
         hardware.value = state.hardware;
         monitoringPeriod.value = state.monitoringPeriod;
-        energy.value = state.energy;
+        datacenters.value = state.datacenters;
         includeSecondHandEmbodied.value = state.includeSecondHandEmbodied;
         includeUnderlyingServices.value = state.includeUnderlyingServices;
         underlyingServices.value = state.underlyingServices;
@@ -394,7 +437,7 @@ export const useMitsiStore = defineStore('mitsi', () => {
         scope,
         hardware,
         monitoringPeriod,
-        energy,
+        datacenters,
         includeSecondHandEmbodied,
         includeUnderlyingServices,
         underlyingServices,
@@ -405,6 +448,8 @@ export const useMitsiStore = defineStore('mitsi', () => {
         totalEmbodied,
         secondHandExcludedCount,
         totalOperational,
+        energyCoverage,
+        resultsPartial,
         totalUnderlying,
         totalLifespan,
         resourcesInService,
@@ -419,8 +464,9 @@ export const useMitsiStore = defineStore('mitsi', () => {
         reset,
         exportJson,
         importJson,
-        deleteDatacenterGuard,
-        ensureEnergyRows,
+        getDatacenterDeletionBlock,
+        removeDatacenter,
+        clearDatacenterEnergy,
         addDatacenter,
         addBoundaryItem,
         addHardwareItem,

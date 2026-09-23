@@ -30,7 +30,7 @@
         </q-card>
 
         <q-banner
-            v-if="!mitsi.scope.datacenters.length"
+            v-if="!mitsi.datacenters.length"
             inline-actions
             class="bg-info text-white q-mb-md"
         >
@@ -68,16 +68,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
 import EnergyMonitoringPeriodForm from 'src/components/energy/EnergyMonitoringPeriodForm.vue';
 import EnergyDatacentersTable from 'src/components/energy/EnergyDatacentersTable.vue';
 import { useMitsiStore } from 'src/stores/mitsi';
 
 const mitsi = useMitsiStore();
-
-// Gap-fill safety net; intentionally deleted records are re-created on revisit —
-// energy records follow datacenters (spec auto-fill).
-onMounted(() => mitsi.ensureEnergyRows());
 </script>
 
 <style scoped>

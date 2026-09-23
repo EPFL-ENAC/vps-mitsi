@@ -19,7 +19,8 @@ import {
     StorageTypeSchema,
     type HardwareItem,
 } from 'src/models/schema';
-import { normalizeKey, rowSubtotal } from 'src/utils/format';
+import { normalizeKey } from 'src/utils/format';
+import { rowSubtotal } from 'src/utils/math';
 
 /** A single `{ label, value }` choice for a schema-driven select. */
 export interface SchemaOption {

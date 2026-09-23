@@ -24,6 +24,7 @@ export type {
     MonitoringUnit,
     FunctionalUnit,
     Datacenter,
+    DatacenterGeneralInfo,
     BoundaryItem,
     Scope,
     HardwareItem,

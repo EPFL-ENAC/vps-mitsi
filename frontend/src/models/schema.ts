@@ -8,8 +8,8 @@
 import { z } from 'zod';
 
 /** Bumped whenever the persisted/exported JSON shape changes. */
-// v3: locationComment added (optional; spec: Location has its own comment).
-export const MITSI_SCHEMA_VERSION = 3;
+// v4: datacenters own their general information and energy data.
+export const MITSI_SCHEMA_VERSION = 4;
 
 /** Quasar clears numeric inputs to an empty string or null. */
 const emptyToUndefined = (value: unknown) => (value === '' || value === null ? undefined : value);
@@ -29,6 +29,14 @@ function draftNumber<S extends z.ZodNumber>(schema: S, defaultValue: z.output<S>
 /** Empty optional numbers are absent, including during whole-row validation. */
 function optionalNumber(schema = z.number()) {
     return z.preprocess(emptyToUndefined, schema.optional());
+}
+
+/** Empty numeric inputs are unanswered values, never zero measurements. */
+export function nullableNumber(schema: z.ZodNumber = z.number()) {
+    return z.preprocess(
+        (value) => (value === '' || value === undefined || value === null ? null : value),
+        schema.nullable(),
+    );
 }
 
 // ─── Shared enums ────────────────────────────────────────────────────────────
@@ -59,10 +67,8 @@ export const FunctionalUnitSchema = z.object({
     resourceType: z.string(),
 });
 
-/** A datacenter used as a boundary of the IT service (referenced by other zones). */
-export const DatacenterSchema = z.object({
-    // UI must generate a uuid when creating a row; '' is only a parse fallback.
-    id: z.string(),
+/** Datacenter information whose completion belongs to the Scope block. */
+export const DatacenterGeneralInfoSchema = z.object({
     abbreviation: z.string().min(1),
     name: z.string().min(1),
     comment: z.string(),
@@ -84,7 +90,6 @@ export const ScopeSchema = z.object({
     serviceName: z.string().min(1),
     function: z.string().min(1),
     functionalUnit: FunctionalUnitSchema,
-    datacenters: z.array(DatacenterSchema).min(1),
     includedItems: z.array(BoundaryItemSchema),
     excludedItems: z.array(BoundaryItemSchema),
     /** Assessment lifespan, in years. */
@@ -157,22 +162,26 @@ export const MonitoringPeriodSchema = z.object({
     comment: z.string(),
 });
 
-/** Per-datacenter energy record used for the operational emissions computation. */
+/** Energy information owned by a datacenter. */
 export const DatacenterEnergySchema = z.object({
-    datacenterId: z.string().min(1),
     comment: z.string(),
-    /** Location of datacenter*/
     location: z.string(),
-    locationComment: z.string().optional(),
+    locationComment: z.string(),
     /** Carbon intensity of the grid mix (gCO₂/kWh). */
     carbonIntensity: z.number().positive(),
-    carbonIntensityComment: z.string().optional(),
+    carbonIntensityComment: z.string(),
     /** Optional; the report must note whether PUE was included. */
-    pue: optionalNumber(z.number().min(0)),
-    pueComment: z.string().optional(),
+    pue: nullableNumber(z.number().min(0)),
+    pueComment: z.string(),
     /** Grid electricity consumed (kWh over the monitoring period). */
     energyConsumption: z.number().min(0),
-    energyComment: z.string().optional(),
+    energyComment: z.string(),
+});
+
+export const DatacenterSchema = z.object({
+    id: z.string().min(1),
+    generalInfo: DatacenterGeneralInfoSchema,
+    energy: DatacenterEnergySchema,
 });
 
 // ─── Underlying services ─────────────────────────────────────────────────────
@@ -190,11 +199,11 @@ export const UnderlyingServiceSchema = z.object({
 
 /** Canonical whole-assessment validation; no default values or data filtering. */
 export const MitsiStateSchema = z.object({
-    schemaVersion: z.number().int().finite().max(MITSI_SCHEMA_VERSION),
+    schemaVersion: z.literal(MITSI_SCHEMA_VERSION),
     scope: ScopeSchema,
     hardware: z.array(HardwareItemSchema),
     monitoringPeriod: MonitoringPeriodSchema,
-    energy: z.array(DatacenterEnergySchema),
+    datacenters: z.array(DatacenterSchema).min(1),
     /** Whether embodied emissions of second-hand hardware are accounted for. */
     includeSecondHandEmbodied: z.boolean(),
     /** Whether underlying-service emissions are added to the total. */
@@ -213,11 +222,10 @@ export const FunctionalUnitDraftSchema = FunctionalUnitSchema.extend({
     resourceType: draftField(FunctionalUnitSchema.shape.resourceType, ''),
 });
 
-export const DatacenterDraftSchema = DatacenterSchema.extend({
-    id: draftField(DatacenterSchema.shape.id, ''),
-    abbreviation: draftField(DatacenterSchema.shape.abbreviation, ''),
-    name: draftField(DatacenterSchema.shape.name, ''),
-    comment: draftField(DatacenterSchema.shape.comment, ''),
+export const DatacenterGeneralInfoDraftSchema = DatacenterGeneralInfoSchema.extend({
+    abbreviation: draftField(DatacenterGeneralInfoSchema.shape.abbreviation, ''),
+    name: draftField(DatacenterGeneralInfoSchema.shape.name, ''),
+    comment: DatacenterGeneralInfoSchema.shape.comment.default(''),
 });
 
 export const BoundaryItemDraftSchema = BoundaryItemSchema.extend({
@@ -233,8 +241,6 @@ export const ScopeDraftSchema = ScopeSchema.extend({
     serviceName: draftField(ScopeSchema.shape.serviceName, ''),
     function: draftField(ScopeSchema.shape.function, ''),
     functionalUnit: FunctionalUnitDraftSchema.default(() => FunctionalUnitDraftSchema.parse({})),
-    // The empty array is the draft placeholder for the required datacenter list.
-    datacenters: z.array(DatacenterDraftSchema).default(() => []),
     includedItems: z.array(BoundaryItemDraftSchema).default(() => []),
     excludedItems: z.array(BoundaryItemDraftSchema).default(() => []),
     lifespanYears: draftNumber(ScopeSchema.shape.lifespanYears, 1),
@@ -267,11 +273,22 @@ export const MonitoringPeriodDraftSchema = MonitoringPeriodSchema.extend({
 });
 
 export const DatacenterEnergyDraftSchema = DatacenterEnergySchema.extend({
-    datacenterId: draftField(DatacenterEnergySchema.shape.datacenterId, ''),
-    comment: draftField(DatacenterEnergySchema.shape.comment, ''),
-    location: draftField(DatacenterEnergySchema.shape.location, ''),
-    carbonIntensity: draftNumber(DatacenterEnergySchema.shape.carbonIntensity, 0),
-    energyConsumption: draftNumber(DatacenterEnergySchema.shape.energyConsumption, 0),
+    comment: DatacenterEnergySchema.shape.comment.default(''),
+    location: DatacenterEnergySchema.shape.location.default(''),
+    locationComment: DatacenterEnergySchema.shape.locationComment.default(''),
+    carbonIntensity: nullableNumber(DatacenterEnergySchema.shape.carbonIntensity).default(null),
+    carbonIntensityComment: DatacenterEnergySchema.shape.carbonIntensityComment.default(''),
+    pue: DatacenterEnergySchema.shape.pue.default(null),
+    pueComment: DatacenterEnergySchema.shape.pueComment.default(''),
+    energyConsumption: nullableNumber(DatacenterEnergySchema.shape.energyConsumption).default(null),
+    energyComment: DatacenterEnergySchema.shape.energyComment.default(''),
+});
+
+export const DatacenterDraftSchema = DatacenterSchema.extend({
+    generalInfo: DatacenterGeneralInfoDraftSchema.default(() =>
+        DatacenterGeneralInfoDraftSchema.parse({}),
+    ),
+    energy: DatacenterEnergyDraftSchema.default(() => DatacenterEnergyDraftSchema.parse({})),
 });
 
 export const UnderlyingServiceDraftSchema = UnderlyingServiceSchema.extend({
@@ -289,7 +306,7 @@ export const MitsiStateDraftSchema = MitsiStateSchema.extend({
     monitoringPeriod: MonitoringPeriodDraftSchema.default(() =>
         MonitoringPeriodDraftSchema.parse({}),
     ),
-    energy: z.array(DatacenterEnergyDraftSchema).default(() => []),
+    datacenters: z.array(DatacenterDraftSchema).default(() => []),
     includeSecondHandEmbodied: draftField(MitsiStateSchema.shape.includeSecondHandEmbodied, false),
     includeUnderlyingServices: draftField(MitsiStateSchema.shape.includeUnderlyingServices, false),
     underlyingServices: z.array(UnderlyingServiceDraftSchema).default(() => []),
@@ -304,6 +321,7 @@ export type StorageTechnology = z.infer<typeof StorageTechnologySchema>;
 export type StorageCasing = z.infer<typeof StorageCasingSchema>;
 export type MonitoringUnit = z.infer<typeof MonitoringUnitSchema>;
 export type FunctionalUnit = z.infer<typeof FunctionalUnitDraftSchema>;
+export type DatacenterGeneralInfo = z.infer<typeof DatacenterGeneralInfoDraftSchema>;
 export type Datacenter = z.infer<typeof DatacenterDraftSchema>;
 export type BoundaryItem = z.infer<typeof BoundaryItemDraftSchema>;
 export type Scope = z.infer<typeof ScopeDraftSchema>;

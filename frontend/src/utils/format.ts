@@ -1,5 +1,14 @@
+import type { Datacenter } from 'src/models/mitsi';
+
+/** Show both names when available, with the ID as the unfinished-draft fallback. */
+export function formatDatacenterName(dc: Pick<Datacenter, 'id' | 'generalInfo'>): string {
+    const { abbreviation, name } = dc.generalInfo;
+    return abbreviation && name ? `${abbreviation} — ${name}` : abbreviation || name || dc.id;
+}
+
 /** kg CO₂-eq, en-US formatting with comma thousands separator, 2 decimals ("48,852.77"). */
-export function formatKg(n: number): string {
+export function formatKg(n: number | null): string {
+    if (n === null) return '—';
     return new Intl.NumberFormat('en-US', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
@@ -25,12 +34,4 @@ export function buildFunctionalUnitSentence(
         count: fu.resourceCount,
         type: fu.resourceType,
     });
-}
-
-/** Embodied emissions of one row: quantity × per-unit impact. */
-export function rowSubtotal(row: {
-    quantity: number;
-    impactManufacturingDistributionEol: number;
-}): number {
-    return row.quantity * row.impactManufacturingDistributionEol;
 }

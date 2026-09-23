@@ -8,6 +8,7 @@ import { buildInventoryColumns } from '../src/models/inventory-columns.ts';
 import {
     DatacenterEnergySchema,
     HardwareItemSchema,
+    FunctionalUnitSchema,
     MonitoringPeriodSchema,
     ScopeSchema,
 } from '../src/models/schema.ts';
@@ -54,4 +55,32 @@ test('inventory uses canonical fields directly and skips derived values', () => 
             column.kind === 'derived' ? undefined : HardwareItemSchema.shape[column.field],
         );
     }
+});
+
+test('numeric field rules reject negative values before submission', async () => {
+    const { toValidationRule } = await validationRules();
+    const fields = [
+        FunctionalUnitSchema.shape.usageDuration,
+        FunctionalUnitSchema.shape.resourceCount,
+        ScopeSchema.shape.lifespanYears,
+        MonitoringPeriodSchema.shape.value,
+        DatacenterEnergySchema.shape.carbonIntensity,
+        DatacenterEnergySchema.shape.energyConsumption,
+        DatacenterEnergySchema.shape.pue,
+        ...[
+            'quantity',
+            'impactManufacturing',
+            'impactManufacturingDistributionEol',
+            'cpuQuantity',
+            'memoryQuantity',
+            'memorySizeGb',
+            'storageQuantity',
+            'storageSize',
+            'gpuQuantity',
+        ].map((field) => HardwareItemSchema.shape[field]),
+    ];
+    for (const schema of fields) {
+        assert.equal(typeof toValidationRule(schema)(-1), 'string');
+    }
+    assert.equal(toValidationRule(DatacenterEnergySchema.shape.energyConsumption)(0), true);
 });

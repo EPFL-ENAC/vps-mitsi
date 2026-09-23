@@ -16,15 +16,15 @@
         <div class="col-1" />
     </div>
     <div
-        v-for="dc in mitsi.scope.datacenters"
+        v-for="dc in mitsi.datacenters"
         :key="dc.id"
         class="row items-center q-col-gutter-x-sm q-py-xs"
     >
         <div class="col-3">
             <q-input
                 class="full-width"
-                v-model="dc.abbreviation"
-                :rules="[toValidationRule(DatacenterSchema.shape.abbreviation)]"
+                v-model="dc.generalInfo.abbreviation"
+                :rules="[toValidationRule(DatacenterGeneralInfoSchema.shape.abbreviation)]"
                 dense
                 outlined
                 hide-bottom-space
@@ -33,15 +33,21 @@
         <div class="col-3">
             <q-input
                 class="full-width"
-                v-model="dc.name"
-                :rules="[toValidationRule(DatacenterSchema.shape.name)]"
+                v-model="dc.generalInfo.name"
+                :rules="[toValidationRule(DatacenterGeneralInfoSchema.shape.name)]"
                 dense
                 outlined
                 hide-bottom-space
             />
         </div>
         <div class="col-3">
-            <q-input class="full-width" v-model="dc.comment" dense outlined hide-bottom-space />
+            <q-input
+                class="full-width"
+                v-model="dc.generalInfo.comment"
+                dense
+                outlined
+                hide-bottom-space
+            />
         </div>
         <div class="col-2 text-right text-grey-7">
             {{ usedByCell(dc) }}
@@ -63,9 +69,10 @@ import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 
 import type { Datacenter } from 'src/models/mitsi';
-import { DatacenterSchema } from 'src/models/schema';
+import { DatacenterGeneralInfoSchema } from 'src/models/schema';
 import { useMitsiStore } from 'src/stores/mitsi';
 import { useValidation } from 'src/composables/useValidation';
+import { formatDatacenterName } from 'src/utils/format';
 
 const { t } = useI18n();
 const $q = useQuasar();
@@ -77,27 +84,26 @@ function addDatacenter(): void {
 }
 
 function usedByCell(dc: Datacenter): string {
-    const guard = mitsi.deleteDatacenterGuard(dc.id);
-    if (!guard) return t('scopeDcUsedByNone');
-    return t('scopeDcUsedByCounts', {
-        inv: t('scopeDcInvRows', guard.hardwareRowCount),
-        eng: t('scopeDcEngRecords', guard.energyRecordCount),
+    const guard = mitsi.getDatacenterDeletionBlock(dc.id);
+    return guard ? t('scopeDcInvRows', guard.hardwareRowCount) : t('scopeDcUsedByNone');
+}
+
+function showDeletionBlocked(name: string, hardwareRowCount: number): void {
+    $q.dialog({
+        title: t('scopeDcDeleteBlockedTitle'),
+        message: t('scopeDcDeleteBlocked', {
+            name,
+            inv: t('scopeDcInvRows', hardwareRowCount),
+        }),
+        ok: true,
     });
 }
 
 function removeDatacenter(dc: Datacenter): void {
-    const guard = mitsi.deleteDatacenterGuard(dc.id);
-    const name = dc.abbreviation || dc.name || t('scopeDcColAbbreviation');
+    const name = formatDatacenterName(dc);
+    const guard = mitsi.getDatacenterDeletionBlock(dc.id);
     if (guard) {
-        $q.dialog({
-            title: t('scopeDcDeleteBlockedTitle'),
-            message: t('scopeDcDeleteBlocked', {
-                name,
-                inv: t('scopeDcInvRows', guard.hardwareRowCount),
-                eng: t('scopeDcEngRecords', guard.energyRecordCount),
-            }),
-            ok: true,
-        });
+        showDeletionBlocked(name, guard.hardwareRowCount);
         return;
     }
     $q.dialog({
@@ -106,8 +112,10 @@ function removeDatacenter(dc: Datacenter): void {
         cancel: true,
         persistent: true,
     }).onOk(() => {
-        const i = mitsi.scope.datacenters.findIndex((d) => d.id === dc.id);
-        if (i >= 0) mitsi.scope.datacenters.splice(i, 1);
+        const result = mitsi.removeDatacenter(dc.id);
+        if (!result.removed && result.reason === 'in_use') {
+            showDeletionBlocked(name, result.usage.hardwareRowCount);
+        }
     });
 }
 </script>
