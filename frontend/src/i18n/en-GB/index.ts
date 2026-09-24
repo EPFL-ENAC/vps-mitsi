@@ -20,6 +20,8 @@ export default {
     // --- Main layout (header, nav rail, footer) ---
     mainMenuAriaLabel: 'Menu',
     mainTagline: 'IT service carbon impact assessment',
+    mainSaveFailed:
+        'Could not save the assessment. Check invalid fields and available browser storage, then try again.',
     mainSave: 'Save',
     mainNavWelcome: 'Welcome',
     mainNavScope: 'Scope of the assessment',
@@ -88,20 +90,17 @@ export default {
     scopeDcColName: 'Full name',
     scopeDcColComment: 'Comment',
     scopeDcColumnsTooltip:
-        'Identify each datacenter of the service boundary — abbreviation, full name, comment. Lines can be added, edited and deleted; deletion is blocked while the datacenter is referenced.',
+        'Identify each datacenter of the service boundary — abbreviation, full name, comment. Lines can be added, edited and deleted; deletion is blocked while hardware references the datacenter.',
     scopeDcColUsedBy: 'Used by',
     scopeDcAdd: '+ Add',
     scopeDcDelete: 'Delete',
     scopeDcUsedByNone: '—',
     scopeDcInvRows: '1 inventory row | {n} inventory rows',
-    scopeDcEngRecords: '1 energy record | {n} energy records',
-    scopeDcUsedByCounts: '{inv} · {eng}',
     scopeDcDeleteConfirmTitle: 'Delete datacenter',
-    scopeDcDeleteConfirmMessage:
-        'Delete {name}? This datacenter is not referenced by any hardware or energy row.',
+    scopeDcDeleteConfirmMessage: 'Delete {name} and all its energy information?',
     scopeDcDeleteBlockedTitle: 'Cannot delete datacenter',
     scopeDcDeleteBlocked:
-        '{name} cannot be deleted. It is referenced by {inv} and {eng}. Reassign or remove those first.',
+        '{name} cannot be deleted. It is referenced by {inv}. Reassign or remove those first.',
     // Boundaries — included & excluded
     scopeBoundariesInclExclTitle: 'Boundaries — included & excluded',
     scopeBndIncludedTitle: 'Included in the IT service (accounted for)',
@@ -223,7 +222,7 @@ export default {
     // Datacenters' information
     energyDcTitle: 'Datacenters’ information',
     energyDcColumnsTooltip:
-        'Per datacenter, record the grid carbon intensity (gCO₂/kWh), the optional PUE, and the electricity consumed (kWh) over the monitoring period. Delete removes the row from the grid.',
+        'Per datacenter, record the grid carbon intensity (gCO₂/kWh), the optional PUE, and the electricity consumed (kWh) over the monitoring period. Clear resets the energy information and keeps the datacenter in the table.',
     energyDcColName: 'Datacenter',
     energyDcColNameComment: 'Datacenter comment',
     energyDcColLocation: 'Location',
@@ -234,10 +233,10 @@ export default {
     energyDcColPueComment: 'PUE comment',
     energyDcColKwh: 'Energy (kWh)',
     energyDcColKwhComment: 'Energy comment',
-    energyDcDeleteRow: 'Delete row',
-    energyDeleteRowConfirmTitle: 'Delete energy row',
-    energyDeleteRowConfirmMessage:
-        'Delete the energy record for {name}? This clears the consumption data for that datacenter.',
+    energyDcClear: 'Clear energy information',
+    energyClearConfirmTitle: 'Clear energy information',
+    energyClearConfirmMessage:
+        'Clear all energy information for {name}? The datacenter will remain in the table.',
     // --- Results page ---
     resultsPageTitle: 'Results',
     resultsNoScopeHint: 'Complete the “Scope of the assessment” block first to unlock the results.',
@@ -256,6 +255,8 @@ export default {
     resultsColCo2Total: 'CO₂ cumulated (kg CO₂-eq)',
     resultsCategoryTotal: 'Category total',
     resultsTotalEmbodied: 'Total embodied',
+    resultsPartial: 'Partial',
+    resultsEnergyCoverage: 'Partial — {complete} of {total} datacenters',
     resultsOperationalTitle: 'Operational emissions',
     resultsColDcName: 'Datacenter',
     resultsColCo2Period: 'CO₂ estimation (kg CO₂-eq) for the monitoring period',

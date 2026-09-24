@@ -30,7 +30,7 @@
                             <q-input
                                 v-model="mitsi.scope.organizationName"
                                 :label="$t('scopeOrganizationLabel')"
-                                :rules="[toValidationRule(formRules.organizationName)]"
+                                :rules="[toValidationRule(ScopeSchema.shape.organizationName)]"
                                 dense
                                 outlined
                             />
@@ -39,7 +39,7 @@
                             <q-input
                                 v-model="mitsi.scope.assessors"
                                 :label="$t('scopeAssessorsLabel')"
-                                :rules="[toValidationRule(formRules.assessors)]"
+                                :rules="[toValidationRule(ScopeSchema.shape.assessors)]"
                                 dense
                                 outlined
                             />
@@ -48,7 +48,7 @@
                             <q-input
                                 v-model="mitsi.scope.serviceName"
                                 :label="$t('scopeServiceNameLabel')"
-                                :rules="[toValidationRule(formRules.serviceName)]"
+                                :rules="[toValidationRule(ScopeSchema.shape.serviceName)]"
                                 dense
                                 outlined
                             >
@@ -82,7 +82,7 @@
                                 type="textarea"
                                 v-model="mitsi.scope.function"
                                 :label="$t('scopeFunctionLabel')"
-                                :rules="[toValidationRule(formRules.function)]"
+                                :rules="[toValidationRule(ScopeSchema.shape.function)]"
                                 outlined
                             >
                                 <q-tooltip>{{ $t('scopeFunctionTooltip') }}</q-tooltip>
@@ -99,7 +99,9 @@
                                     type="number"
                                     class="scope-fu-input"
                                     v-model.number="mitsi.scope.functionalUnit.usageDuration"
-                                    :rules="[toValidationRule(formRules.usageDuration)]"
+                                    :rules="[
+                                        toValidationRule(FunctionalUnitSchema.shape.usageDuration),
+                                    ]"
                                     dense
                                     outlined
                                     hide-bottom-space
@@ -113,9 +115,11 @@
                                         (v) => (mitsi.scope.functionalUnit.timeUnit = v)
                                     "
                                     :options="timeUnitOptions"
+                                    :rules="[toValidationRule(FunctionalUnitSchema.shape.timeUnit)]"
                                     emit-value
                                     map-options
                                     dense
+                                    hide-bottom-space
                                     outlined
                                 >
                                     <q-tooltip anchor="top middle" self="top middle">{{
@@ -127,7 +131,9 @@
                                     type="number"
                                     class="scope-fu-input"
                                     v-model.number="mitsi.scope.functionalUnit.resourceCount"
-                                    :rules="[toValidationRule(formRules.resourceCount)]"
+                                    :rules="[
+                                        toValidationRule(FunctionalUnitSchema.shape.resourceCount),
+                                    ]"
                                     dense
                                     outlined
                                     hide-bottom-space
@@ -180,75 +186,7 @@
                 </template>
                 <q-separator />
                 <q-card-section>
-                    <q-btn
-                        flat
-                        color="primary"
-                        class="q-mb-sm"
-                        :label="$t('scopeDcAdd')"
-                        @click="addDatacenter"
-                    />
-                    <div class="row items-center q-col-gutter-x-sm q-py-xs">
-                        <div class="col-3">
-                            <div class="scope-th">{{ $t('scopeDcColAbbreviation') }}</div>
-                        </div>
-                        <div class="col-3">
-                            <div class="scope-th">{{ $t('scopeDcColName') }}</div>
-                        </div>
-                        <div class="col-3">
-                            <div class="scope-th">{{ $t('scopeDcColComment') }}</div>
-                        </div>
-                        <div class="col-2">
-                            <div class="scope-th text-right">{{ $t('scopeDcColUsedBy') }}</div>
-                        </div>
-                        <div class="col-1" />
-                    </div>
-                    <div
-                        v-for="dc in mitsi.scope.datacenters"
-                        :key="dc.id"
-                        class="row items-center q-col-gutter-x-sm q-py-xs"
-                    >
-                        <div class="col-3">
-                            <q-input
-                                class="full-width"
-                                v-model="dc.abbreviation"
-                                :rules="[toValidationRule(formRules.abbr)]"
-                                dense
-                                outlined
-                                hide-bottom-space
-                            />
-                        </div>
-                        <div class="col-3">
-                            <q-input
-                                class="full-width"
-                                v-model="dc.name"
-                                :rules="[toValidationRule(formRules.dcName)]"
-                                dense
-                                outlined
-                                hide-bottom-space
-                            />
-                        </div>
-                        <div class="col-3">
-                            <q-input
-                                class="full-width"
-                                v-model="dc.comment"
-                                dense
-                                outlined
-                                hide-bottom-space
-                            />
-                        </div>
-                        <div class="col-2 text-right text-grey-7">
-                            {{ usedByCell(dc) }}
-                        </div>
-                        <div class="col-1 text-right">
-                            <q-btn
-                                flat
-                                dense
-                                icon="delete"
-                                :aria-label="$t('scopeDcDelete')"
-                                @click="removeDatacenter(dc)"
-                            />
-                        </div>
-                    </div>
+                    <ScopeDatacentersTable />
                 </q-card-section>
             </q-expansion-item>
         </q-card>
@@ -275,110 +213,12 @@
                 <q-separator />
                 <q-card-section>
                     <div class="text-subtitle1 q-mb-xs">{{ $t('scopeBndIncludedTitle') }}</div>
-                    <q-btn
-                        flat
-                        color="primary"
-                        dense
-                        class="q-mb-sm"
-                        :label="$t('scopeBndAdd')"
-                        @click="addItem('included')"
-                    />
-                    <div
-                        v-for="item in mitsi.scope.includedItems"
-                        :key="item.id"
-                        class="row items-start q-col-gutter-sm q-mb-sm"
-                    >
-                        <div class="col-3">
-                            <q-input
-                                v-model="item.type"
-                                :placeholder="$t('scopeBndColType')"
-                                :rules="[toValidationRule(formRules.type)]"
-                                dense
-                                outlined
-                            />
-                        </div>
-                        <div class="col-3">
-                            <q-input
-                                v-model="item.purpose"
-                                :placeholder="$t('scopeBndColPurpose')"
-                                :rules="[toValidationRule(formRules.purpose)]"
-                                dense
-                                outlined
-                            />
-                        </div>
-                        <div class="col-5">
-                            <q-input
-                                v-model="item.reason"
-                                :placeholder="$t('scopeBndColReasonInclusion')"
-                                :rules="[toValidationRule(formRules.reason)]"
-                                dense
-                                outlined
-                            />
-                        </div>
-                        <div class="col-1 text-right">
-                            <q-btn
-                                flat
-                                dense
-                                icon="delete"
-                                :aria-label="$t('scopeBndDelete')"
-                                @click="removeItem('included', item.id)"
-                            />
-                        </div>
-                    </div>
+                    <ScopeBoundaryItemsTable kind="included" />
 
                     <q-separator spaced />
 
                     <div class="text-subtitle1 q-mb-xs">{{ $t('scopeBndExcludedTitle') }}</div>
-                    <q-btn
-                        flat
-                        color="primary"
-                        dense
-                        class="q-mb-sm"
-                        :label="$t('scopeBndAdd')"
-                        @click="addItem('excluded')"
-                    />
-                    <div
-                        v-for="item in mitsi.scope.excludedItems"
-                        :key="item.id"
-                        class="row items-start q-col-gutter-sm q-mb-sm"
-                    >
-                        <div class="col-3">
-                            <q-input
-                                v-model="item.type"
-                                :placeholder="$t('scopeBndColType')"
-                                :rules="[toValidationRule(formRules.type)]"
-                                dense
-                                outlined
-                            />
-                        </div>
-                        <div class="col-3">
-                            <q-input
-                                v-model="item.purpose"
-                                :placeholder="$t('scopeBndColPurpose')"
-                                :rules="[toValidationRule(formRules.purpose)]"
-                                dense
-                                outlined
-                            />
-                        </div>
-                        <div class="col-5">
-                            <q-input
-                                v-model="item.reason"
-                                :placeholder="$t('scopeBndColReasonExclusion')"
-                                :rules="[toValidationRule(formRules.reason)]"
-                                dense
-                                outlined
-                            />
-                        </div>
-                        <div class="col-1 text-right">
-                            <q-btn
-                                flat
-                                dense
-                                icon="delete"
-                                :aria-label="$t('scopeBndDelete')"
-                                @click="removeItem('excluded', item.id)"
-                            />
-                        </div>
-                    </div>
+                    <ScopeBoundaryItemsTable kind="excluded" />
                 </q-card-section>
             </q-expansion-item>
         </q-card>
@@ -404,7 +244,7 @@
                         v-model.number="mitsi.scope.lifespanYears"
                         :label="$t('scopeLifespanLabel')"
                         :suffix="$t('scopeLifespanYears')"
-                        :rules="[toValidationRule(formRules.lifespanYears)]"
+                        :rules="[toValidationRule(ScopeSchema.shape.lifespanYears)]"
                         dense
                         outlined
                     />
@@ -417,16 +257,15 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useQuasar } from 'quasar';
 
-import type { Datacenter } from 'src/models/mitsi';
+import ScopeDatacentersTable from 'src/components/scope/ScopeDatacentersTable.vue';
+import ScopeBoundaryItemsTable from 'src/components/scope/ScopeBoundaryItemsTable.vue';
 import { useMitsiStore } from 'src/stores/mitsi';
 import { useValidation } from 'src/composables/useValidation';
-import { formRules, TimeUnitSchema } from 'src/models/schema';
+import { FunctionalUnitSchema, ScopeSchema, TimeUnitSchema } from 'src/models/schema';
 import { normalizeKey } from 'src/utils/format';
 
 const { t } = useI18n();
-const $q = useQuasar();
 const mitsi = useMitsiStore();
 const { toValidationRule } = useValidation();
 
@@ -441,55 +280,6 @@ const resourceTypeOptions = computed(() => [
     { label: t('scopeResourceTypeCpu'), value: 'CPU' },
     { label: t('scopeResourceTypeGpu'), value: 'GPU' },
 ]);
-
-function addDatacenter(): void {
-    mitsi.addDatacenter();
-}
-
-function usedByCell(dc: Datacenter): string {
-    const guard = mitsi.deleteDatacenterGuard(dc.id);
-    if (!guard) return t('scopeDcUsedByNone');
-    return t('scopeDcUsedByCounts', {
-        inv: t('scopeDcInvRows', guard.hardwareRowCount),
-        eng: t('scopeDcEngRecords', guard.energyRecordCount),
-    });
-}
-
-function removeDatacenter(dc: Datacenter): void {
-    const guard = mitsi.deleteDatacenterGuard(dc.id);
-    const name = dc.abbreviation || dc.name || t('scopeDcColAbbreviation');
-    if (guard) {
-        $q.dialog({
-            title: t('scopeDcDeleteBlockedTitle'),
-            message: t('scopeDcDeleteBlocked', {
-                name,
-                inv: t('scopeDcInvRows', guard.hardwareRowCount),
-                eng: t('scopeDcEngRecords', guard.energyRecordCount),
-            }),
-            ok: true,
-        });
-        return;
-    }
-    $q.dialog({
-        title: t('scopeDcDeleteConfirmTitle'),
-        message: t('scopeDcDeleteConfirmMessage', { name }),
-        cancel: true,
-        persistent: true,
-    }).onOk(() => {
-        const i = mitsi.scope.datacenters.findIndex((d) => d.id === dc.id);
-        if (i >= 0) mitsi.scope.datacenters.splice(i, 1);
-    });
-}
-
-function addItem(which: 'included' | 'excluded'): void {
-    mitsi.addBoundaryItem(which);
-}
-
-function removeItem(which: 'included' | 'excluded', id: string): void {
-    const list = which === 'included' ? mitsi.scope.includedItems : mitsi.scope.excludedItems;
-    const i = list.findIndex((it) => it.id === id);
-    if (i >= 0) list.splice(i, 1);
-}
 </script>
 
 <style scoped>
@@ -532,13 +322,5 @@ function removeItem(which: 'included' | 'excluded', id: string): void {
 
 .scope-lifespan {
     max-width: 220px;
-}
-
-.scope-th {
-    font-size: 12px;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    color: #78828f;
-    font-weight: 600;
 }
 </style>

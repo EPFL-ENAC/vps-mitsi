@@ -15,12 +15,7 @@
                 <span class="text-caption text-grey-7 q-mr-sm">
                     {{ $t('mainTagline') }}
                 </span>
-                <q-btn
-                    unelevated
-                    color="primary"
-                    :label="$t('mainSave')"
-                    @click="mitsi.saveToStorage()"
-                />
+                <q-btn unelevated color="primary" :label="$t('mainSave')" @click="saveAssessment" />
             </q-toolbar>
         </q-header>
 
@@ -62,24 +57,20 @@
         </q-page-container>
 
         <q-footer bordered class="bg-white text-dark">
-            <q-toolbar class="q-px-md">
+            <q-toolbar class="assessment-summary q-px-md">
                 <span class="text-caption text-grey-7">{{ savedText }}</span>
                 <span v-if="exportedText" class="text-caption text-grey-6 q-ml-sm">
                     · {{ exportedText }}
                 </span>
-                <q-space />
                 <span class="text-caption text-grey-8">
                     {{ $t('mainFooterEmbodied', { value: embodiedText }) }}
                 </span>
-                <q-space />
                 <span class="text-caption text-grey-8">
                     {{ $t('mainFooterOperational', { value: operationalText }) }}
                 </span>
-                <q-space />
                 <span class="text-caption text-grey-8">
                     {{ $t('mainFooterTotal', { value: totalLifespanText }) }}
                 </span>
-                <q-space />
                 <span class="text-caption text-grey-7">
                     {{ $t('mainFooterPerFu', { value: perFunctionalUnitText }) }}
                 </span>
@@ -90,10 +81,12 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 
 import type { BlockKey, BlockStatus } from 'src/models/mitsi';
 import { useMitsiStore } from 'src/stores/mitsi';
+import { useResultFormatting } from 'src/composables/useResultFormatting';
 
 interface BlockDef {
     labelKey: string;
@@ -106,6 +99,14 @@ const { t } = useI18n();
 
 const leftDrawerOpen = ref(false);
 const mitsi = useMitsiStore();
+const { formatOperationalResult, formatCombinedResult } = useResultFormatting();
+const $q = useQuasar();
+
+function saveAssessment(): void {
+    if (!mitsi.saveToStorage()) {
+        $q.notify({ type: 'negative', message: t('mainSaveFailed') });
+    }
+}
 
 const assessmentBlocks = computed<Record<BlockKey, BlockDef>>(() => {
     const status = mitsi.blockStatus;
@@ -158,24 +159,30 @@ const embodiedText = computed<string>(() =>
 /** Operational emissions in tonnes, or a dash until the scope is valid. */
 const operationalText = computed<string>(() =>
     mitsi.isScopeValid
-        ? `${(mitsi.totalOperational / 1000).toFixed(1)} ${t('mainUnitTonnes')}`
+        ? formatOperationalResult(
+              mitsi.totalOperational,
+              (value) => `${(value / 1000).toFixed(1)} ${t('mainUnitTonnes')}`,
+          )
         : t('mainNotApplicable'),
 );
 
 /** Total over the lifespan in tonnes of CO2-eq, or a dash until the scope is valid. */
 const totalLifespanText = computed<string>(() =>
     mitsi.isScopeValid
-        ? `${(mitsi.totalLifespan / 1000).toFixed(1)} ${t('mainUnitTonnesCo2e')}`
+        ? formatCombinedResult(
+              mitsi.totalLifespan,
+              (value) => `${(value / 1000).toFixed(1)} ${t('mainUnitTonnesCo2e')}`,
+          )
         : t('mainNotApplicable'),
 );
 
 /** Per-functional-unit emissions in grams of CO2-eq, or a dash when not computable. */
-const perFunctionalUnitText = computed<string>(() => {
-    const v = mitsi.perFunctionalUnit;
-    return v !== null
-        ? `${(v * 1000).toFixed(2)} ${t('mainUnitGramsCo2e')}`
-        : t('mainNotApplicable');
-});
+const perFunctionalUnitText = computed<string>(() =>
+    formatCombinedResult(
+        mitsi.perFunctionalUnit,
+        (value) => `${(value * 1000).toFixed(2)} ${t('mainUnitGramsCo2e')}`,
+    ),
+);
 
 const savedText = computed<string>(() =>
     mitsi.savedAt
@@ -200,6 +207,12 @@ function formatTimeAgo(ts: number): string {
 </script>
 
 <style scoped>
+.assessment-summary {
+    flex-wrap: wrap;
+    gap: 4px 24px;
+    padding-block: 8px;
+}
+
 .completion-dot {
     display: inline-block;
     width: 10px;
