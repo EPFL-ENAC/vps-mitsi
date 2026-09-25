@@ -273,6 +273,11 @@ export default {
     resultsUnitKg: 'kg CO₂',
     resultsUnitG: 'g CO₂',
     resultsHostedIn: 'Hosted in: {dcs}',
+    resultsChartTreemapByElement: 'Embodied emissions by element',
+    resultsChartTreemapByCategory: 'Embodied emissions by category',
+    resultsChartPieByDatacenter: 'Operational emissions by datacenter',
+    resultsChartSplitTitle: 'Emissions repartition',
+    resultsColPercent: '%',
     // --- Validation messages (Zod → Quasar; see composables/useValidation.ts) ---
     validation: {
         invalid_type: {
