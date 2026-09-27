@@ -1,7 +1,7 @@
 {
   "name": "vps-mitsi",
   "version": "0.0.1",
-  "description": "Web app for vps-mitsi exhibition around  data",
+  "description": "Assess the carbon footprint of IT services.",
   "productName": "vps-mitsi ",
   "author": "Cyprien Lengagne <cyprien.lengagne@epfl.ch>",
   "type": "module",
@@ -19,9 +19,7 @@
     "@quasar/extras": "^1.16.4",
     "echarts": "^6.1.0",
     "lefthook": "^2.1.4",
-    "maplibre-gl": "^5.23.0",
     "pinia": "^3.0.1",
-    "pinia-plugin-persistedstate": "^4.7.1",
     "quasar": "^2.16.0",
     "vue": "^3.5.22",
     "vue-i18n": "^11.0.0",

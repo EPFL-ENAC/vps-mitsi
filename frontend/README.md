@@ -1,6 +1,6 @@
 # vps-mitsi 
 
-Web app for vps-mitsi exhibition around  data
+Assess the carbon footprint of IT services.
 
 ## Install the dependencies
 

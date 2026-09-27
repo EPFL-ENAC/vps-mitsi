@@ -10,7 +10,12 @@
                     :aria-label="$t('mainMenuAriaLabel')"
                     @click="leftDrawerOpen = !leftDrawerOpen"
                 />
-                <q-toolbar-title class="text-weight-medium">MITSI</q-toolbar-title>
+                <q-toolbar-title class="header-title text-weight-medium">
+                    <span class="header-brand">
+                        <img :src="epflLogoUrl" alt="EPFL" class="header-epfl-logo" />
+                        <span>MITSI</span>
+                    </span>
+                </q-toolbar-title>
                 <q-space />
                 <span class="text-caption text-grey-7 q-mr-sm">
                     {{ $t('mainTagline') }}
@@ -96,6 +101,7 @@ interface BlockDef {
 }
 
 const { t } = useI18n();
+const epflLogoUrl = `${import.meta.env.BASE_URL}epfl.svg`;
 
 const leftDrawerOpen = ref(false);
 const mitsi = useMitsiStore();
@@ -207,6 +213,23 @@ function formatTimeAgo(ts: number): string {
 </script>
 
 <style scoped>
+.header-title {
+    flex-shrink: 0;
+    flex-basis: auto;
+}
+
+.header-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.header-epfl-logo {
+    height: 24px;
+    width: auto;
+    flex-shrink: 0;
+}
+
 .assessment-summary {
     flex-wrap: wrap;
     gap: 4px 24px;

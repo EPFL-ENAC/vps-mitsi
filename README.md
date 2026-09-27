@@ -1,5 +1,7 @@
 # vps-mitsi 
 
+Assess the carbon footprint of IT services. The app is deployed on GitHub Pages.
+
 ## Requirements
 
 - [npm](https://docs.npmjs.com/) Node.js package manager
@@ -9,15 +11,7 @@
 ## Deploying locally
 
 
-Clone the repository with submodules:
-
-```bash
-git clone
-cd tech4dev-hosm
-git submodule update --init
-```
-
-Setup your environment by running:
+From the cloned repository's root, install the frontend dependencies:
 
 ```bash
 make install
