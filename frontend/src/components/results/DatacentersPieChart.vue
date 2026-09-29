@@ -36,27 +36,18 @@ const props = withDefaults(
     { metric: 'lifespan' },
 );
 
-/** One wedge per datacenter with an available estimate.
- *  Null or non-positive values are filtered out.
- */
-function toDatacenterPieData(
-    rows: DatacenterOperationalResult[],
-    labelFor: (id: string) => string,
-    metric: 'period' | 'lifespan',
-): NonNullable<PieSeriesOption['data']> {
-    return rows
-        .map((r) => ({
-            name: labelFor(r.datacenterId),
-            value: r[metric === 'period' ? 'co2Period' : 'co2Lifespan'],
-        }))
-        .filter((d): d is { name: string; value: number } => d.value !== null && d.value > 0);
-}
-
 const { t } = useI18n();
 
-/** Ready slices only — the builder already filters null/zero values
+/** Ready slices only — null/non-positive values are filtered out
  *  (unready datacenters stay visible as "Partial" in the table). */
-const slices = computed(() => toDatacenterPieData(props.rows, props.labelFor, props.metric));
+const slices = computed(() =>
+    props.rows
+        .map((r) => ({
+            name: props.labelFor(r.datacenterId),
+            value: r[props.metric === 'period' ? 'co2Period' : 'co2Lifespan'],
+        }))
+        .filter((d): d is { name: string; value: number } => d.value !== null && d.value > 0),
+);
 
 /** Reactive option fed straight to vue-echarts; autoresize handles expand/collapse. */
 const chartOption = computed<ECOption>(() => ({

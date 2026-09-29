@@ -37,30 +37,26 @@ const props = withDefaults(
     {},
 );
 
-/** Split pie: exactly two wedges in v1 (Embodied vs Operational).
- * The optional `underlying` parameter appears only when supplied
- * and is reserved for v2 functionality.*/
-function toSplitPieData(
-    embodied: number,
-    operational: number | null,
-    labels: { embodied: string; operational: string; underlying?: string },
-    underlying?: number,
-): NonNullable<PieSeriesOption['data']> {
-    const data = [
-        { name: labels.embodied, value: embodied },
-        { name: labels.operational, value: operational ?? 0 },
-    ];
-    // v2: underlying-services wedge — only present when its contribution is supplied.
-    if (underlying !== undefined) {
-        data.push({ name: labels.underlying ?? 'Underlying services', value: underlying });
-    }
-    return data;
-}
-
 const { t } = useI18n();
 
+/** Split pie: exactly two wedges in v1 (Embodied vs Operational). The optional
+ *  underlying wedge appears only when supplied (v2, lead decision). */
+const data = computed(() => {
+    const wedges = [
+        { name: props.labels.embodied, value: props.embodied },
+        { name: props.labels.operational, value: props.operational ?? 0 },
+    ];
+    // v2: underlying-services wedge — only present when its contribution is supplied.
+    if (props.underlying !== undefined) {
+        wedges.push({
+            name: props.labels.underlying ?? 'Underlying services',
+            value: props.underlying,
+        });
+    }
+    return wedges;
+});
+
 const chartOption = computed<ECOption>(() => {
-    const data = toSplitPieData(props.embodied, props.operational, props.labels, props.underlying);
     // Wedges sum to 100% over the shown contributions (underlying omitted in v1).
     const denom = props.embodied + (props.operational ?? 0) + (props.underlying ?? 0) || 1;
     return {
@@ -78,7 +74,7 @@ const chartOption = computed<ECOption>(() => {
             {
                 type: 'pie',
                 color: [...OKABEITO],
-                data,
+                data: data.value,
                 radius: ['40%', '70%'],
                 label: { formatter: '{b}' },
             },
