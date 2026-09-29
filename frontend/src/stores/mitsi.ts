@@ -35,6 +35,7 @@ import {
     MitsiStateSchema,
     MonitoringPeriodSchema,
     ScopeSchema,
+    type HardwareCategory,
 } from 'src/models/schema';
 import {
     calculateFunctionalUnitEmissions,
@@ -62,6 +63,24 @@ export type EnergyCoverage = {
     totalDatacenters: number;
     isComplete: boolean;
 };
+
+/** One hardware row as returned by embodiedByCategory (Results tables + charts). */
+export interface EmbodiedRow {
+    id: string;
+    name: string;
+    description: string;
+    number: number;
+    co2PerUnit: number;
+    co2RowTotal: number;
+    excluded: boolean;
+}
+
+/** One category group: rows plus the accounted total. */
+export interface EmbodiedGroup {
+    category: HardwareCategory;
+    rows: EmbodiedRow[];
+    categoryTotal: number;
+}
 
 export const useMitsiStore = defineStore('mitsi', () => {
     const initial = emptyMitsiState();
@@ -210,7 +229,7 @@ export const useMitsiStore = defineStore('mitsi', () => {
      *  second-hand embodied emissions are not accounted are flagged `excluded`
      *  so the page can strike them through. Category values come from the schema
      *  enum at runtime — a new schema category automatically appears in Results. */
-    const embodiedByCategory = computed(() =>
+    const embodiedByCategory = computed<EmbodiedGroup[]>(() =>
         HardwareCategorySchema.options
             .map((category) => {
                 const rows = hardware.value

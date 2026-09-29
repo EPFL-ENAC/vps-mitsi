@@ -121,11 +121,33 @@
                             </tr>
                         </tbody>
                     </q-markup-table>
+
+                    <!-- treemap by element + treemap by category -->
+                    <div class="row q-col-gutter-md q-mt-sm">
+                        <div class="col-12 col-md-6">
+                            <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
+                                {{ $t('resultsChartTreemapByElement') }}
+                            </div>
+                            <EmbodiedTreemapChart
+                                :groups="mitsi.embodiedByCategory"
+                                :grand-total="mitsi.totalEmbodied"
+                                variant="element"
+                            />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
+                                {{ $t('resultsChartTreemapByCategory') }}
+                            </div>
+                            <EmbodiedTreemapChart
+                                :groups="mitsi.embodiedByCategory"
+                                :grand-total="mitsi.totalEmbodied"
+                                variant="category"
+                            />
+                        </div>
+                    </div>
                 </q-card-section>
             </q-expansion-item>
         </q-card>
-
-        <!-- treemap by element + treemap by category -->
 
         <!-- Operational emissions -->
         <q-card flat bordered class="results-zone q-mb-md">
@@ -164,11 +186,20 @@
                             </tr>
                         </tbody>
                     </q-markup-table>
+
+                    <!-- pie by datacenter -->
+                    <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
+                        {{ $t('resultsChartPieByDatacenter') }}
+                    </div>
+                    <DatacentersPieChart
+                        :rows="mitsi.operationalPerDc"
+                        :label-for="dcLabel"
+                        :total="mitsi.totalOperational"
+                        metric="lifespan"
+                    />
                 </q-card-section>
             </q-expansion-item>
         </q-card>
-
-        <!-- pie by datacenter -->
 
         <!-- v2 FEATURE (lead decision: excluded from v1; spec contradiction — Results
              proposes the checkbox+editable table while "What we will not do yet" lists
@@ -210,11 +241,25 @@
                             </tr>
                         </tbody>
                     </q-markup-table>
+
+                    <!-- split pie embodied/operational/underlying -->
+                    <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
+                        {{ $t('resultsChartSplitTitle') }}
+                    </div>
+                    <TotalSplitPieChart
+                        :embodied="mitsi.totalEmbodied"
+                        :operational="mitsi.totalOperational"
+                        :total="mitsi.totalLifespan"
+                        :labels="{
+                            embodied: t('resultsRowEmbodied'),
+                            operational: t('resultsRowOperational'),
+                        }"
+                    />
+                    <!-- v2 (lead decision): underlying services excluded in v1 — one-line restore:
+                    :underlying="mitsi.totalUnderlying"  and  labels.underlying: t('resultsRowUnderlying') -->
                 </q-card-section>
             </q-expansion-item>
         </q-card>
-
-        <!-- split pie embodied/operational/underlying -->
 
         <!-- Emissions related to the functional unit -->
         <q-card flat bordered class="results-zone q-mb-md">
@@ -261,6 +306,9 @@ import { useI18n } from 'vue-i18n';
 
 import { useMitsiStore } from 'src/stores/mitsi';
 import { useResultFormatting } from 'src/composables/useResultFormatting';
+import EmbodiedTreemapChart from 'src/components/results/EmbodiedTreemapChart.vue';
+import DatacentersPieChart from 'src/components/results/DatacentersPieChart.vue';
+import TotalSplitPieChart from 'src/components/results/TotalSplitPieChart.vue';
 import {
     buildFunctionalUnitSentence,
     formatDatacenterName,
