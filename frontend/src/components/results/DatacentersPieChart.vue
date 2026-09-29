@@ -1,6 +1,6 @@
 <template>
     <v-chart v-if="slices.length" class="datacenter-pie" :option="chartOption" autoresize />
-    <div v-else class="text-grey-6 datacenter-null">{{ t('mainNotApplicable') }}</div>
+    <div v-else class="text-grey-6 text-center q-py-md">{{ t('mainNotApplicable') }}</div>
 </template>
 
 <script setup lang="ts">
@@ -16,7 +16,8 @@ import {
     type LegendComponentOption,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
-import { OKABEITO, toDatacenterPieData } from 'src/utils/charts';
+import { OKABEITO } from 'src/utils/charts';
+import type { DatacenterOperationalResult } from 'src/stores/mitsi';
 import { formatKg } from 'src/utils/format';
 
 echarts.use([PieChart, TooltipComponent, LegendComponent, CanvasRenderer]);
@@ -27,13 +28,29 @@ type ECOption = echarts.ComposeOption<
 
 const props = withDefaults(
     defineProps<{
-        rows: { datacenterId: string; co2Period: number | null; co2Lifespan: number | null }[];
+        rows: DatacenterOperationalResult[];
         labelFor: (id: string) => string;
         total: number | null; // denominator (totalOperational), null -> dash
         metric?: 'period' | 'lifespan';
     }>(),
     { metric: 'lifespan' },
 );
+
+/** One wedge per datacenter with an available estimate.
+ *  Null or non-positive values are filtered out.
+ */
+function toDatacenterPieData(
+    rows: DatacenterOperationalResult[],
+    labelFor: (id: string) => string,
+    metric: 'period' | 'lifespan',
+): NonNullable<PieSeriesOption['data']> {
+    return rows
+        .map((r) => ({
+            name: labelFor(r.datacenterId),
+            value: r[metric === 'period' ? 'co2Period' : 'co2Lifespan'],
+        }))
+        .filter((d): d is { name: string; value: number } => d.value !== null && d.value > 0);
+}
 
 const { t } = useI18n();
 
@@ -70,9 +87,5 @@ const chartOption = computed<ECOption>(() => ({
 .datacenter-pie {
     width: 100%;
     height: 300px;
-}
-.datacenter-null {
-    padding: 12px 0;
-    text-align: center;
 }
 </style>

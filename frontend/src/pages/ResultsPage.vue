@@ -125,7 +125,7 @@
                     <!-- treemap by element + treemap by category -->
                     <div class="row q-col-gutter-md q-mt-sm">
                         <div class="col-12 col-md-6">
-                            <div class="results-chart-title">
+                            <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
                                 {{ $t('resultsChartTreemapByElement') }}
                             </div>
                             <EmbodiedTreemapChart
@@ -135,7 +135,7 @@
                             />
                         </div>
                         <div class="col-12 col-md-6">
-                            <div class="results-chart-title">
+                            <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
                                 {{ $t('resultsChartTreemapByCategory') }}
                             </div>
                             <EmbodiedTreemapChart
@@ -188,11 +188,13 @@
                     </q-markup-table>
 
                     <!-- pie by datacenter -->
-                    <div class="results-chart-title">{{ $t('resultsChartPieByDatacenter') }}</div>
+                    <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
+                        {{ $t('resultsChartPieByDatacenter') }}
+                    </div>
                     <DatacentersPieChart
                         :rows="mitsi.operationalPerDc"
                         :label-for="dcLabel"
-                        :total="mitsi.totalOperational ?? 0"
+                        :total="mitsi.totalOperational"
                         metric="lifespan"
                     />
                 </q-card-section>
@@ -241,7 +243,9 @@
                     </q-markup-table>
 
                     <!-- split pie embodied/operational/underlying -->
-                    <div class="results-chart-title">{{ $t('resultsChartSplitTitle') }}</div>
+                    <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
+                        {{ $t('resultsChartSplitTitle') }}
+                    </div>
                     <TotalSplitPieChart
                         :embodied="mitsi.totalEmbodied"
                         :operational="mitsi.totalOperational"
@@ -393,10 +397,5 @@ const perFunctionalUnitText = computed(() =>
 }
 .results-total td {
     border-top: 2px solid rgba(0, 0, 0, 0.2);
-}
-.results-chart-title {
-    font-weight: 600;
-    color: rgba(0, 0, 0, 0.7);
-    margin-bottom: 4px;
 }
 </style>

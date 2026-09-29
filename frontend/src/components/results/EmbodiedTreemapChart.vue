@@ -1,6 +1,6 @@
 <template>
     <v-chart v-if="hasData" class="embodied-treemap" :option="chartOption" autoresize />
-    <div v-else class="text-grey-6 treemap-null">{{ t('mainNotApplicable') }}</div>
+    <div v-else class="text-grey-6 text-center q-py-md">{{ t('mainNotApplicable') }}</div>
 </template>
 
 <script setup lang="ts">
@@ -11,12 +11,51 @@ import * as echarts from 'echarts/core';
 import { TreemapChart, type TreemapSeriesOption } from 'echarts/charts';
 import { TooltipComponent, type TooltipComponentOption } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
-import { toCategoryTreemapData, toElementTreemapData, type EmbodiedGroup } from 'src/utils/charts';
+import { palette } from 'src/utils/charts';
+import type { EmbodiedGroup } from 'src/stores/mitsi';
 import { formatKg } from 'src/utils/format';
 
 echarts.use([TreemapChart, TooltipComponent, CanvasRenderer]);
 
 type ECOption = echarts.ComposeOption<TreemapSeriesOption | TooltipComponentOption>;
+
+/** Flat treemap (by element): each tile gets its category's colour — identical
+ *  colours on both charts, as in the Excel reference. Skips excluded rows
+ *  (the store's second-hand flag) and zero totals (0-size tiles). */
+function toElementTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeriesOption['data']> {
+    return groups.flatMap((g, categoryIdx) => {
+        const categoryColor = palette(categoryIdx);
+        return g.rows
+            .filter((r) => !r.excluded && r.co2RowTotal > 0)
+            .map((r) => ({
+                name: r.name,
+                value: r.co2RowTotal,
+                itemStyle: { color: categoryColor },
+            }));
+    });
+}
+
+/** Nested treemap (by category): parent + children share the  `categoryColor`, separated by clear borders.
+ *  Categories with no accounted children are omitted. */
+function toCategoryTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeriesOption['data']> {
+    return groups
+        .map((g, i) => {
+            const categoryColor = palette(i);
+            return {
+                name: g.category,
+                value: g.categoryTotal,
+                itemStyle: { color: categoryColor },
+                children: g.rows
+                    .filter((r) => !r.excluded && r.co2RowTotal > 0)
+                    .map((r) => ({
+                        name: r.name,
+                        value: r.co2RowTotal,
+                        itemStyle: { color: categoryColor },
+                    })),
+            };
+        })
+        .filter((g) => (g.children?.length ?? 0) > 0);
+}
 
 const props = withDefaults(
     defineProps<{
@@ -74,9 +113,5 @@ const chartOption = computed<ECOption>(() => ({
 .embodied-treemap {
     width: 100%;
     height: 340px;
-}
-.treemap-null {
-    padding: 16px 0;
-    text-align: center;
 }
 </style>

@@ -1,6 +1,6 @@
 <template>
     <v-chart v-if="props.total !== null" class="split-pie" :option="chartOption" autoresize />
-    <div v-else class="text-grey-6 split-null">{{ t('mainNotApplicable') }}</div>
+    <div v-else class="text-grey-6 text-center q-py-md">{{ t('mainNotApplicable') }}</div>
 </template>
 
 <script setup lang="ts">
@@ -16,7 +16,7 @@ import {
     type LegendComponentOption,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
-import { OKABEITO, toSplitPieData } from 'src/utils/charts';
+import { OKABEITO } from 'src/utils/charts';
 import { formatKg } from 'src/utils/format';
 
 echarts.use([PieChart, TooltipComponent, LegendComponent, CanvasRenderer]);
@@ -36,6 +36,26 @@ const props = withDefaults(
     }>(),
     {},
 );
+
+/** Split pie: exactly two wedges in v1 (Embodied vs Operational).
+ * The optional `underlying` parameter appears only when supplied
+ * and is reserved for v2 functionality.*/
+function toSplitPieData(
+    embodied: number,
+    operational: number | null,
+    labels: { embodied: string; operational: string; underlying?: string },
+    underlying?: number,
+): NonNullable<PieSeriesOption['data']> {
+    const data = [
+        { name: labels.embodied, value: embodied },
+        { name: labels.operational, value: operational ?? 0 },
+    ];
+    // v2: underlying-services wedge — only present when its contribution is supplied.
+    if (underlying !== undefined) {
+        data.push({ name: labels.underlying ?? 'Underlying services', value: underlying });
+    }
+    return data;
+}
 
 const { t } = useI18n();
 
@@ -71,9 +91,5 @@ const chartOption = computed<ECOption>(() => {
 .split-pie {
     width: 100%;
     height: 300px;
-}
-.split-null {
-    padding: 12px 0;
-    text-align: center;
 }
 </style>
