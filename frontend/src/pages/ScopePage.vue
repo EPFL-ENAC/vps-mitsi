@@ -10,244 +10,167 @@
         </q-banner>
 
         <!-- General (report-only) -->
-        <q-card flat bordered class="scope-zone q-mb-md">
-            <q-expansion-item default-opened>
-                <template #header>
-                    <q-item-section class="scope-zone-title">
-                        <q-item-label>{{ $t('scopeGeneralTitle') }}</q-item-label>
-                    </q-item-section>
-                    <q-item-section side>
-                        <span class="scope-badge scope-badge--report"
-                            >{{ $t('scopeReportOnly')
-                            }}<q-tooltip>{{ $t('scopeBadgeReportTooltip') }}</q-tooltip></span
-                        >
-                    </q-item-section>
-                </template>
-                <q-separator />
-                <q-card-section>
-                    <div class="row q-col-gutter-md">
-                        <div class="col-12 col-md-4">
-                            <ZodValidatedTextInput
-                                v-model="mitsi.scope.organizationName"
-                                :label="$t('scopeOrganizationLabel')"
-                                :schema="ScopeSchema.shape.organizationName"
-                                dense
-                                outlined
-                            />
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <ZodValidatedTextInput
-                                v-model="mitsi.scope.assessors"
-                                :label="$t('scopeAssessorsLabel')"
-                                :schema="ScopeSchema.shape.assessors"
-                                dense
-                                outlined
-                            />
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <ZodValidatedTextInput
-                                v-model="mitsi.scope.serviceName"
-                                :label="$t('scopeServiceNameLabel')"
-                                :schema="ScopeSchema.shape.serviceName"
-                                dense
-                                outlined
-                            >
-                                <q-tooltip>{{ $t('scopeServiceNameTooltip') }}</q-tooltip>
-                            </ZodValidatedTextInput>
-                        </div>
-                    </div>
-                </q-card-section>
-            </q-expansion-item>
-        </q-card>
-
-        <!-- Function (used in calculation) -->
-        <q-card flat bordered class="scope-zone q-mb-md">
-            <q-expansion-item :default-opened="!mitsi.isScopeValid">
-                <template #header>
-                    <q-item-section class="scope-zone-title">
-                        <q-item-label>{{ $t('scopeFunctionTitle') }}</q-item-label>
-                    </q-item-section>
-                    <q-item-section side>
-                        <span class="scope-badge scope-badge--calc"
-                            >∑ {{ $t('scopeUsedInCalculation')
-                            }}<q-tooltip>{{ $t('scopeBadgeCalcTooltip') }}</q-tooltip></span
-                        >
-                    </q-item-section>
-                </template>
-                <q-separator />
-                <q-card-section>
-                    <div class="row q-col-gutter-md">
-                        <div class="col-12">
-                            <ZodValidatedTextInput
-                                type="textarea"
-                                v-model="mitsi.scope.function"
-                                :label="$t('scopeFunctionLabel')"
-                                :schema="ScopeSchema.shape.function"
-                                outlined
-                            >
-                                <q-tooltip>{{ $t('scopeFunctionTooltip') }}</q-tooltip>
-                            </ZodValidatedTextInput>
-                        </div>
-
-                        <div class="col-12">
-                            <div class="text-subtitle2 q-mb-xs">
-                                {{ $t('scopeFunctionalUnitLabel') }}
-                            </div>
-                            <div class="scope-fu row items-center q-gutter-sm flex-nowrap">
-                                <span>{{ $t('scopeFuBefore') }}</span>
-                                <ZodValidatedNumberInput
-                                    class="scope-fu-input"
-                                    v-model="mitsi.scope.functionalUnit.usageDuration"
-                                    :schema="FunctionalUnitSchema.shape.usageDuration"
-                                    dense
-                                    outlined
-                                    hide-bottom-space
-                                >
-                                    <q-tooltip>{{ $t('scopeFuDurationTooltip') }}</q-tooltip>
-                                </ZodValidatedNumberInput>
-                                <q-select
-                                    class="scope-fu-select"
-                                    :model-value="mitsi.scope.functionalUnit.timeUnit"
-                                    @update:model-value="
-                                        (v) => (mitsi.scope.functionalUnit.timeUnit = v)
-                                    "
-                                    :options="timeUnitOptions"
-                                    :rules="[toValidationRule(FunctionalUnitSchema.shape.timeUnit)]"
-                                    emit-value
-                                    map-options
-                                    dense
-                                    hide-bottom-space
-                                    outlined
-                                >
-                                    <q-tooltip anchor="top middle" self="top middle">{{
-                                        $t('scopeFuTimeUnitTooltip')
-                                    }}</q-tooltip>
-                                </q-select>
-                                <span>{{ $t('scopeFuMiddle') }}</span>
-                                <ZodValidatedNumberInput
-                                    class="scope-fu-input"
-                                    v-model="mitsi.scope.functionalUnit.resourceCount"
-                                    :schema="FunctionalUnitSchema.shape.resourceCount"
-                                    dense
-                                    outlined
-                                    hide-bottom-space
-                                >
-                                    <q-tooltip>{{ $t('scopeFuResourceCountTooltip') }}</q-tooltip>
-                                </ZodValidatedNumberInput>
-                                <q-select
-                                    class="scope-fu-select scope-fu-select--grow"
-                                    :model-value="mitsi.scope.functionalUnit.resourceType"
-                                    @update:model-value="
-                                        (v) => {
-                                            mitsi.scope.functionalUnit.resourceType = String(
-                                                v ?? '',
-                                            );
-                                        }
-                                    "
-                                    :options="resourceTypeOptions"
-                                    emit-value
-                                    map-options
-                                    dense
-                                    outlined
-                                >
-                                    <q-tooltip anchor="center right" self="center left">{{
-                                        $t('scopeFuResourceTypeTooltip')
-                                    }}</q-tooltip>
-                                </q-select>
-                            </div>
-                        </div>
-                    </div>
-                </q-card-section>
-            </q-expansion-item>
-        </q-card>
-
-        <!-- Boundaries — datacenters -->
-        <q-card flat bordered class="scope-zone q-mb-md">
-            <q-expansion-item default-opened>
-                <template #header>
-                    <q-item-section class="scope-zone-title">
-                        <q-item-label
-                            >{{ $t('scopeBoundariesDcTitle')
-                            }}<q-tooltip>{{ $t('scopeDcColumnsTooltip') }}</q-tooltip></q-item-label
-                        >
-                    </q-item-section>
-                    <q-item-section side>
-                        <span class="scope-badge scope-badge--report"
-                            >{{ $t('scopeReportOnly')
-                            }}<q-tooltip>{{ $t('scopeBadgeReportTooltip') }}</q-tooltip></span
-                        >
-                    </q-item-section>
-                </template>
-                <q-separator />
-                <q-card-section>
-                    <ScopeDatacentersTable />
-                </q-card-section>
-            </q-expansion-item>
-        </q-card>
-
-        <!-- Boundaries — included & excluded -->
-        <q-card flat bordered class="scope-zone q-mb-md">
-            <q-expansion-item>
-                <template #header>
-                    <q-item-section class="scope-zone-title">
-                        <q-item-label
-                            >{{ $t('scopeBoundariesInclExclTitle')
-                            }}<q-tooltip>{{
-                                $t('scopeBndColumnsTooltip')
-                            }}</q-tooltip></q-item-label
-                        >
-                    </q-item-section>
-                    <q-item-section side>
-                        <span class="scope-badge scope-badge--report"
-                            >{{ $t('scopeReportOnly')
-                            }}<q-tooltip>{{ $t('scopeBadgeReportTooltip') }}</q-tooltip></span
-                        >
-                    </q-item-section>
-                </template>
-                <q-separator />
-                <q-card-section>
-                    <div class="text-subtitle1 q-mb-xs">{{ $t('scopeBndIncludedTitle') }}</div>
-                    <ScopeBoundaryItemsTable kind="included" />
-
-                    <q-separator spaced />
-
-                    <div class="text-subtitle1 q-mb-xs">{{ $t('scopeBndExcludedTitle') }}</div>
-                    <ScopeBoundaryItemsTable kind="excluded" />
-                </q-card-section>
-            </q-expansion-item>
-        </q-card>
-
-        <!-- Lifespan -->
-        <q-card flat bordered class="scope-zone q-mb-md">
-            <q-expansion-item default-opened>
-                <template #header>
-                    <q-item-section class="scope-zone-title">
-                        <q-item-label>{{ $t('scopeLifespanTitle') }}</q-item-label>
-                    </q-item-section>
-                    <q-item-section side>
-                        <span class="scope-badge scope-badge--calc"
-                            >∑<q-tooltip>{{ $t('scopeBadgeCalcTooltip') }}</q-tooltip></span
-                        >
-                    </q-item-section>
-                </template>
-                <q-separator />
-                <q-card-section>
-                    <ZodValidatedNumberInput
-                        class="scope-lifespan"
-                        v-model="mitsi.scope.lifespanYears"
-                        :label="$t('scopeLifespanLabel')"
-                        :suffix="$t('scopeLifespanYears')"
-                        :schema="ScopeSchema.shape.lifespanYears"
+        <AssessmentSection :title="$t('scopeGeneralTitle')" purpose="report" default-opened>
+            <div class="row q-col-gutter-md">
+                <div class="col-12 col-md-4">
+                    <ZodValidatedTextInput
+                        v-model="mitsi.scope.organizationName"
+                        :label="$t('scopeOrganizationLabel')"
+                        :schema="ScopeSchema.shape.organizationName"
                         dense
                         outlined
                     />
-                </q-card-section>
-            </q-expansion-item>
-        </q-card>
+                </div>
+                <div class="col-12 col-md-4">
+                    <ZodValidatedTextInput
+                        v-model="mitsi.scope.assessors"
+                        :label="$t('scopeAssessorsLabel')"
+                        :schema="ScopeSchema.shape.assessors"
+                        dense
+                        outlined
+                    />
+                </div>
+                <div class="col-12 col-md-4">
+                    <ZodValidatedTextInput
+                        v-model="mitsi.scope.serviceName"
+                        :label="$t('scopeServiceNameLabel')"
+                        :schema="ScopeSchema.shape.serviceName"
+                        dense
+                        outlined
+                    >
+                        <q-tooltip>{{ $t('scopeServiceNameTooltip') }}</q-tooltip>
+                    </ZodValidatedTextInput>
+                </div>
+            </div>
+        </AssessmentSection>
+
+        <!-- Function (used in calculation) -->
+        <AssessmentSection
+            :title="$t('scopeFunctionTitle')"
+            purpose="calculation"
+            :default-opened="!mitsi.isScopeValid"
+        >
+            <div class="row q-col-gutter-md">
+                <div class="col-12">
+                    <ZodValidatedTextInput
+                        type="textarea"
+                        v-model="mitsi.scope.function"
+                        :label="$t('scopeFunctionLabel')"
+                        :schema="ScopeSchema.shape.function"
+                        outlined
+                    >
+                        <q-tooltip>{{ $t('scopeFunctionTooltip') }}</q-tooltip>
+                    </ZodValidatedTextInput>
+                </div>
+
+                <div class="col-12">
+                    <div class="text-subtitle2 q-mb-xs">
+                        {{ $t('scopeFunctionalUnitLabel') }}
+                    </div>
+                    <div class="scope-fu row items-center q-gutter-sm flex-nowrap">
+                        <span>{{ $t('scopeFuBefore') }}</span>
+                        <ZodValidatedNumberInput
+                            class="scope-fu-input"
+                            v-model="mitsi.scope.functionalUnit.usageDuration"
+                            :schema="FunctionalUnitSchema.shape.usageDuration"
+                            dense
+                            outlined
+                            hide-bottom-space
+                        >
+                            <q-tooltip>{{ $t('scopeFuDurationTooltip') }}</q-tooltip>
+                        </ZodValidatedNumberInput>
+                        <q-select
+                            class="scope-fu-select"
+                            :model-value="mitsi.scope.functionalUnit.timeUnit"
+                            @update:model-value="(v) => (mitsi.scope.functionalUnit.timeUnit = v)"
+                            :options="timeUnitOptions"
+                            :rules="[toValidationRule(FunctionalUnitSchema.shape.timeUnit)]"
+                            emit-value
+                            map-options
+                            dense
+                            hide-bottom-space
+                            outlined
+                        >
+                            <q-tooltip anchor="top middle" self="top middle">{{
+                                $t('scopeFuTimeUnitTooltip')
+                            }}</q-tooltip>
+                        </q-select>
+                        <span>{{ $t('scopeFuMiddle') }}</span>
+                        <ZodValidatedNumberInput
+                            class="scope-fu-input"
+                            v-model="mitsi.scope.functionalUnit.resourceCount"
+                            :schema="FunctionalUnitSchema.shape.resourceCount"
+                            dense
+                            outlined
+                            hide-bottom-space
+                        >
+                            <q-tooltip>{{ $t('scopeFuResourceCountTooltip') }}</q-tooltip>
+                        </ZodValidatedNumberInput>
+                        <q-select
+                            class="scope-fu-select scope-fu-select--grow"
+                            :model-value="mitsi.scope.functionalUnit.resourceType"
+                            @update:model-value="
+                                (v) => {
+                                    mitsi.scope.functionalUnit.resourceType = String(v ?? '');
+                                }
+                            "
+                            :options="resourceTypeOptions"
+                            emit-value
+                            map-options
+                            dense
+                            outlined
+                        >
+                            <q-tooltip anchor="center right" self="center left">{{
+                                $t('scopeFuResourceTypeTooltip')
+                            }}</q-tooltip>
+                        </q-select>
+                    </div>
+                </div>
+            </div>
+        </AssessmentSection>
+
+        <!-- Boundaries — datacenters -->
+        <AssessmentSection
+            :title="$t('scopeBoundariesDcTitle')"
+            :title-tooltip="$t('scopeDcColumnsTooltip')"
+            purpose="report"
+            default-opened
+        >
+            <ScopeDatacentersTable />
+        </AssessmentSection>
+
+        <!-- Boundaries — included & excluded -->
+        <AssessmentSection
+            :title="$t('scopeBoundariesInclExclTitle')"
+            :title-tooltip="$t('scopeBndColumnsTooltip')"
+            purpose="report"
+        >
+            <div class="text-subtitle1 q-mb-xs">{{ $t('scopeBndIncludedTitle') }}</div>
+            <ScopeBoundaryItemsTable kind="included" />
+
+            <q-separator spaced />
+
+            <div class="text-subtitle1 q-mb-xs">{{ $t('scopeBndExcludedTitle') }}</div>
+            <ScopeBoundaryItemsTable kind="excluded" />
+        </AssessmentSection>
+
+        <!-- Lifespan -->
+        <AssessmentSection :title="$t('scopeLifespanTitle')" purpose="calculation" default-opened>
+            <ZodValidatedNumberInput
+                class="scope-lifespan"
+                v-model="mitsi.scope.lifespanYears"
+                :label="$t('scopeLifespanLabel')"
+                :suffix="$t('scopeLifespanYears')"
+                :schema="ScopeSchema.shape.lifespanYears"
+                dense
+                outlined
+            />
+        </AssessmentSection>
     </div>
 </template>
 
 <script setup lang="ts">
+import AssessmentSection from 'src/components/AssessmentSection.vue';
 import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInput.vue';
 import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
 import { computed } from 'vue';
@@ -278,29 +201,6 @@ const resourceTypeOptions = computed(() => [
 </script>
 
 <style scoped>
-.scope-zone-title {
-    font-weight: 600;
-}
-
-.scope-badge {
-    font-size: 11px;
-    padding: 2px 8px;
-    border-radius: 999px;
-    white-space: nowrap;
-    margin-right: 8px;
-}
-
-.scope-badge--calc {
-    background: #fff0f1;
-    color: #c1001a;
-    font-weight: 600;
-}
-
-.scope-badge--report {
-    background: #eff2f6;
-    color: #48525f;
-}
-
 .scope-fu-input {
     width: 90px;
 }

@@ -46,15 +46,21 @@ export default {
     mainUnitTonnesCo2e: 'tCO₂e',
     mainUnitGramsCo2e: 'gCO₂e',
     mainNotApplicable: '—',
+    assessmentSection: {
+        calculation: {
+            label: '∑ Used in calculation',
+            tooltip: 'This field feeds the calculation',
+        },
+        report: {
+            label: 'Report only',
+            tooltip: 'No field in this zone affects a number',
+        },
+    },
     // --- Scope page ---
     scopePageTitle: 'Scope of the assessment',
     scopePageHint:
         'Complete this block first — it defines the datacenters and the functional unit the rest of the assessment refers to.',
     scopeBlockFirstHint: 'Complete this block first',
-    scopeReportOnly: 'Report only',
-    scopeUsedInCalculation: 'used in calculation',
-    scopeBadgeCalcTooltip: 'This field feeds the calculation',
-    scopeBadgeReportTooltip: 'No field in this zone affects a number',
     // General (report-only zone)
     scopeGeneralTitle: 'General',
     scopeOrganizationLabel: 'Name of the organization',
