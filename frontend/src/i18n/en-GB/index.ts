@@ -23,6 +23,15 @@ export default {
     mainSaveFailed:
         'Could not save the assessment. Check invalid fields and available browser storage, then try again.',
     mainSave: 'Save',
+    mainExport: 'Export',
+    mainExportSuccess: 'File successfully downloaded.',
+    mainExportFailed: 'Browser blocked the download.',
+    mainImport: 'Import',
+    mainImportWarningTitle: 'Import will replace the draft',
+    mainImportWarning:
+        'Your current assessment will be deleted. Use Export first if you want to keep it.',
+    mainImportSuccess: 'Assessment imported successfully.',
+    mainImportFailed: 'Import failed: the file is not a valid assessment file.',
     mainNavWelcome: 'Welcome',
     mainNavScope: 'Scope of the assessment',
     mainNavInventory: 'Hardware inventory',
