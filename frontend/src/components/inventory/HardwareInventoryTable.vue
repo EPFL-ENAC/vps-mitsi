@@ -595,35 +595,11 @@ function confirmDeleteRow(row: HardwareItem): void {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@use 'src/css/table-cells';
+
 .inventory-table {
-    width: 100%;
-}
-
-/* Keep header and body alignment and widths consistent for each column kind. */
-.inventory-table [data-kind] {
-    text-align: left;
-}
-.inventory-table [data-kind='number'],
-.inventory-table [data-kind='derived'] {
-    text-align: right;
-    min-width: 110px;
-}
-
-.inventory-table [data-kind='text'] {
-    min-width: 140px;
-}
-
-.inventory-table [data-kind='enum'] {
-    min-width: 130px;
-}
-
-.inventory-table [data-kind='datacenter'] {
-    min-width: 150px;
-}
-
-.inventory-table [data-kind='toggle'] {
-    min-width: 80px;
+    @include table-cells.cells;
 }
 
 .inventory-group-row .q-th {

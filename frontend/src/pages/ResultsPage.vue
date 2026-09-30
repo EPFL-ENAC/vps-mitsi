@@ -16,24 +16,30 @@
                 </template>
                 <q-separator />
                 <q-card-section class="q-pa-sm">
-                    <q-markup-table dense flat bordered>
+                    <q-markup-table dense flat bordered class="results-table">
                         <tbody>
                             <tr>
-                                <td class="results-key">{{ $t('resultsSummaryServiceName') }}</td>
+                                <th scope="row" class="results-key text-left">
+                                    {{ $t('resultsSummaryServiceName') }}
+                                </th>
                                 <td>{{ mitsi.scope.serviceName }}</td>
                             </tr>
                             <tr>
-                                <td class="results-key">{{ $t('resultsSummaryFunction') }}</td>
+                                <th scope="row" class="results-key text-left">
+                                    {{ $t('resultsSummaryFunction') }}
+                                </th>
                                 <td>{{ mitsi.scope.function }}</td>
                             </tr>
                             <tr>
-                                <td class="results-key">
+                                <th scope="row" class="results-key text-left">
                                     {{ $t('resultsSummaryFunctionalUnit') }}
-                                </td>
+                                </th>
                                 <td>{{ fuSentence }}</td>
                             </tr>
                             <tr>
-                                <td class="results-key">{{ $t('resultsSummaryLifespan') }}</td>
+                                <th scope="row" class="results-key text-left">
+                                    {{ $t('resultsSummaryLifespan') }}
+                                </th>
                                 <td>
                                     {{
                                         $t('resultsLifespanYears', { n: mitsi.scope.lifespanYears })
@@ -72,33 +78,39 @@
                         dense
                         class="results-category"
                     >
-                        <q-markup-table dense flat bordered>
+                        <q-markup-table dense flat bordered class="results-table">
                             <thead>
                                 <tr>
-                                    <th class="text-left">{{ $t('resultsColName') }}</th>
-                                    <th class="text-left">{{ $t('resultsColDescription') }}</th>
-                                    <th class="text-right">{{ $t('resultsColNumber') }}</th>
-                                    <th class="text-right">{{ $t('resultsColCo2Unit') }}</th>
-                                    <th class="text-right">{{ $t('resultsColCo2Total') }}</th>
+                                    <th
+                                        v-for="col in embodiedColumns"
+                                        :key="col.name"
+                                        :data-kind="col.kind"
+                                        scope="col"
+                                    >
+                                        {{ col.label }}
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr
-                                    v-for="r in g.rows"
-                                    :key="r.id"
-                                    :class="{ 'results-excluded': r.excluded }"
+                                    v-for="row in g.rows"
+                                    :key="row.id"
+                                    :class="{ 'results-excluded': row.excluded }"
                                 >
-                                    <td>{{ r.name }}</td>
-                                    <td>{{ r.description }}</td>
-                                    <td class="text-right">{{ r.number }}</td>
-                                    <td class="text-right">{{ formatKg(r.co2PerUnit) }}</td>
-                                    <td class="text-right">
-                                        <span :class="{ 'results-strike': r.excluded }">{{
-                                            formatKg(r.co2RowTotal)
-                                        }}</span>
-                                        <span v-if="r.excluded" class="results-not-counted"
-                                            >({{ $t('inventoryNotCounted') }})</span
-                                        >
+                                    <td
+                                        v-for="col in embodiedColumns"
+                                        :key="col.name"
+                                        :data-kind="col.kind"
+                                    >
+                                        <template v-if="col.name === 'co2RowTotal'">
+                                            <span :class="{ 'results-strike': row.excluded }">{{
+                                                col.display(row)
+                                            }}</span>
+                                            <span v-if="row.excluded" class="results-not-counted"
+                                                >({{ $t('inventoryNotCounted') }})</span
+                                            >
+                                        </template>
+                                        <template v-else>{{ col.display(row) }}</template>
                                     </td>
                                 </tr>
                             </tbody>
@@ -137,19 +149,28 @@
                 </template>
                 <q-separator />
                 <q-card-section class="q-pa-sm">
-                    <q-markup-table dense flat bordered>
+                    <q-markup-table dense flat bordered class="results-table">
                         <thead>
                             <tr>
-                                <th class="text-left">{{ $t('resultsColDcName') }}</th>
-                                <th class="text-right">{{ $t('resultsColCo2Period') }}</th>
-                                <th class="text-right">{{ $t('resultsColCo2Lifespan') }}</th>
+                                <th
+                                    v-for="col in operationalColumns"
+                                    :key="col.name"
+                                    :data-kind="col.kind"
+                                    scope="col"
+                                >
+                                    {{ col.label }}
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="op in mitsi.operationalPerDc" :key="op.datacenterId">
-                                <td>{{ dcLabel(op.datacenterId) }}</td>
-                                <td class="text-right">{{ formatKg(op.co2Period) }}</td>
-                                <td class="text-right">{{ formatKg(op.co2Lifespan) }}</td>
+                            <tr v-for="row in mitsi.operationalPerDc" :key="row.datacenterId">
+                                <td
+                                    v-for="col in operationalColumns"
+                                    :key="col.name"
+                                    :data-kind="col.kind"
+                                >
+                                    {{ col.display(row) }}
+                                </td>
                             </tr>
                             <tr class="results-total">
                                 <td>
@@ -188,7 +209,7 @@
                 </template>
                 <q-separator />
                 <q-card-section class="q-pa-sm">
-                    <q-markup-table dense flat bordered>
+                    <q-markup-table dense flat bordered class="results-table">
                         <tbody>
                             <tr>
                                 <td>{{ $t('resultsRowEmbodied') }}</td>
@@ -226,18 +247,22 @@
                 </template>
                 <q-separator />
                 <q-card-section class="q-pa-sm">
-                    <q-markup-table dense flat bordered>
+                    <q-markup-table dense flat bordered class="results-table">
                         <tbody>
                             <tr>
-                                <td class="results-key">{{ $t('resultsFuNumber') }}</td>
+                                <th scope="row" class="results-key text-left">
+                                    {{ $t('resultsFuNumber') }}
+                                </th>
                                 <td class="text-right">{{ mitsi.resourcesInService }}</td>
                             </tr>
                             <tr>
-                                <td class="results-key">{{ $t('resultsFuLifespanNote') }}</td>
+                                <th scope="row" class="results-key text-left">
+                                    {{ $t('resultsFuLifespanNote') }}
+                                </th>
                                 <td class="text-right">{{ totalPerResourceText }}</td>
                             </tr>
                             <tr>
-                                <td class="results-key">{{ fuSentence }}</td>
+                                <th scope="row" class="results-key text-left">{{ fuSentence }}</th>
                                 <td class="text-right">{{ perFunctionalUnitText }}</td>
                             </tr>
                             <tr class="results-total">
@@ -271,6 +296,77 @@ import {
 const { t } = useI18n();
 const mitsi = useMitsiStore();
 const { formatOperationalResult, formatCombinedResult } = useResultFormatting();
+
+type EmbodiedRow = (typeof mitsi.embodiedByCategory)[number]['rows'][number];
+type OperationalRow = (typeof mitsi.operationalPerDc)[number];
+
+interface EmbodiedColumn {
+    name: Exclude<keyof EmbodiedRow, 'id' | 'excluded'>;
+    label: string;
+    kind: 'text' | 'number';
+    display: (row: EmbodiedRow) => string | number;
+}
+
+interface OperationalColumn {
+    name: keyof OperationalRow;
+    label: string;
+    kind: 'text' | 'number';
+    display: (row: OperationalRow) => string;
+}
+
+const embodiedColumns = computed<EmbodiedColumn[]>(() => [
+    {
+        name: 'name',
+        label: t('resultsEmbodiedColumns.name'),
+        kind: 'text',
+        display: (row) => row.name,
+    },
+    {
+        name: 'description',
+        label: t('resultsEmbodiedColumns.description'),
+        kind: 'text',
+        display: (row) => row.description,
+    },
+    {
+        name: 'number',
+        label: t('resultsEmbodiedColumns.number'),
+        kind: 'number',
+        display: (row) => row.number,
+    },
+    {
+        name: 'co2PerUnit',
+        label: t('resultsEmbodiedColumns.co2PerUnit'),
+        kind: 'number',
+        display: (row) => formatKg(row.co2PerUnit),
+    },
+    {
+        name: 'co2RowTotal',
+        label: t('resultsEmbodiedColumns.co2RowTotal'),
+        kind: 'number',
+        display: (row) => formatKg(row.co2RowTotal),
+    },
+]);
+
+const operationalColumns = computed<OperationalColumn[]>(() => [
+    {
+        name: 'datacenterId',
+        label: t('resultsOperationalColumns.datacenterId'),
+        kind: 'text',
+        display: (row) => dcLabel(row.datacenterId),
+    },
+    {
+        name: 'co2Period',
+        label: t('resultsOperationalColumns.co2Period'),
+        kind: 'number',
+        display: (row) => formatKg(row.co2Period),
+    },
+    {
+        name: 'co2Lifespan',
+        label: t('resultsOperationalColumns.co2Lifespan'),
+        kind: 'number',
+        display: (row) => formatKg(row.co2Lifespan),
+    },
+]);
 
 /** Time-unit label resolved with the same keys the ScopePage FU select uses. */
 const timeUnitLabel = computed(() =>
@@ -316,7 +412,17 @@ const perFunctionalUnitText = computed(() =>
 );
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@use 'src/css/table-cells';
+
+.results-table {
+    @include table-cells.cells;
+}
+
+.results-table tbody tr:not(:last-child) > th[scope='row'] {
+    border-bottom-width: 1px;
+}
+
 .results-zone-title {
     font-weight: 600;
 }

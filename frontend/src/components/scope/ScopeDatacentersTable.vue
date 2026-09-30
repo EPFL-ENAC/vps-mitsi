@@ -1,82 +1,117 @@
 <template>
-    <q-btn flat color="primary" class="q-mb-sm" :label="$t('scopeDcAdd')" @click="addDatacenter" />
-    <div class="row items-center q-col-gutter-x-sm q-py-xs">
-        <div class="col-3">
-            <div class="scope-th">{{ $t('scopeDcColAbbreviation') }}</div>
-        </div>
-        <div class="col-3">
-            <div class="scope-th">{{ $t('scopeDcColName') }}</div>
-        </div>
-        <div class="col-3">
-            <div class="scope-th">{{ $t('scopeDcColComment') }}</div>
-        </div>
-        <div class="col-2">
-            <div class="scope-th text-right">{{ $t('scopeDcColUsedBy') }}</div>
-        </div>
-        <div class="col-1" />
-    </div>
-    <div
-        v-for="dc in mitsi.datacenters"
-        :key="dc.id"
-        class="row items-center q-col-gutter-x-sm q-py-xs"
+    <q-btn flat color="primary" class="q-mb-sm" :label="t('scopeDcAdd')" @click="addDatacenter" />
+    <q-table
+        :rows="mitsi.datacenters"
+        :columns="columns"
+        :table-colspan="columns.length + 1"
+        row-key="id"
+        :pagination="{ rowsPerPage: 0 }"
+        :rows-per-page-options="[0]"
+        dense
+        flat
+        bordered
+        hide-bottom
+        class="scope-datacenters-table"
     >
-        <div class="col-3">
-            <ZodValidatedTextInput
-                class="full-width"
-                v-model="dc.generalInfo.abbreviation"
-                :schema="DatacenterGeneralInfoSchema.shape.abbreviation"
-                dense
-                outlined
-                hide-bottom-space
-            />
-        </div>
-        <div class="col-3">
-            <ZodValidatedTextInput
-                class="full-width"
-                v-model="dc.generalInfo.name"
-                :schema="DatacenterGeneralInfoSchema.shape.name"
-                dense
-                outlined
-                hide-bottom-space
-            />
-        </div>
-        <div class="col-3">
-            <q-input
-                class="full-width"
-                v-model="dc.generalInfo.comment"
-                dense
-                outlined
-                hide-bottom-space
-            />
-        </div>
-        <div class="col-2 text-right text-grey-7">
-            {{ usedByCell(dc) }}
-        </div>
-        <div class="col-1 text-right">
-            <q-btn
-                flat
-                dense
-                icon="delete"
-                :aria-label="$t('scopeDcDelete')"
-                @click="removeDatacenter(dc)"
-            />
-        </div>
-    </div>
+        <template #header="props">
+            <q-tr :props="props">
+                <q-th
+                    v-for="col in props.cols"
+                    :key="col.name"
+                    :props="props"
+                    :data-kind="col.kind"
+                >
+                    {{ col.label }}
+                </q-th>
+                <q-th auto-width />
+            </q-tr>
+        </template>
+
+        <template #body="props">
+            <q-tr :props="props">
+                <q-td
+                    v-for="col in props.cols"
+                    :key="col.name"
+                    :props="props"
+                    :data-kind="col.kind"
+                >
+                    <span v-if="col.name === 'usedBy'" class="text-grey-7">{{ col.value }}</span>
+                    <ZodValidatedTextInput
+                        v-else-if="col.zod"
+                        v-model="props.row.generalInfo[col.name]"
+                        :schema="col.zod"
+                        :aria-label="col.label"
+                        dense
+                        outlined
+                        hide-bottom-space
+                    />
+                </q-td>
+                <q-td auto-width>
+                    <q-btn
+                        flat
+                        dense
+                        icon="delete"
+                        :aria-label="t('scopeDcDelete')"
+                        @click="removeDatacenter(props.row)"
+                    />
+                </q-td>
+            </q-tr>
+        </template>
+    </q-table>
 </template>
 
 <script setup lang="ts">
 import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
 import { useI18n } from 'vue-i18n';
-import { useQuasar } from 'quasar';
+import { computed } from 'vue';
+import { useQuasar, type QTableColumn } from 'quasar';
+import type { z } from 'zod';
 
-import type { Datacenter } from 'src/models/mitsi';
+import type { Datacenter, DatacenterGeneralInfo } from 'src/models/mitsi';
 import { DatacenterGeneralInfoSchema } from 'src/models/schema';
 import { useMitsiStore } from 'src/stores/mitsi';
 import { formatDatacenterName } from 'src/utils/format';
 
+interface DatacenterColumn extends QTableColumn<Datacenter> {
+    name: keyof DatacenterGeneralInfo | 'usedBy';
+    kind: 'text' | 'number';
+    zod?: z.ZodType;
+    sort?: (a: unknown, b: unknown, rowA: Datacenter, rowB: Datacenter) => number;
+}
+
 const { t } = useI18n();
 const $q = useQuasar();
 const mitsi = useMitsiStore();
+
+const columns = computed<DatacenterColumn[]>(() => [
+    {
+        name: 'abbreviation',
+        field: (dc) => dc.generalInfo.abbreviation,
+        label: t('scopeDatacenterColumns.abbreviation'),
+        kind: 'text',
+        zod: DatacenterGeneralInfoSchema.shape.abbreviation,
+    },
+    {
+        name: 'name',
+        field: (dc) => dc.generalInfo.name,
+        label: t('scopeDatacenterColumns.name'),
+        kind: 'text',
+        zod: DatacenterGeneralInfoSchema.shape.name,
+    },
+    {
+        name: 'comment',
+        field: (dc) => dc.generalInfo.comment,
+        label: t('scopeDatacenterColumns.comment'),
+        kind: 'text',
+        zod: DatacenterGeneralInfoSchema.shape.comment,
+    },
+    {
+        name: 'usedBy',
+        field: usedByCell,
+        label: t('scopeDatacenterColumns.usedBy'),
+        kind: 'number',
+    },
+]);
 
 function addDatacenter(): void {
     mitsi.addDatacenter();
@@ -119,12 +154,10 @@ function removeDatacenter(dc: Datacenter): void {
 }
 </script>
 
-<style scoped>
-.scope-th {
-    font-size: 12px;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    color: #78828f;
-    font-weight: 600;
+<style scoped lang="scss">
+@use 'src/css/table-cells';
+
+.scope-datacenters-table {
+    @include table-cells.cells;
 }
 </style>
