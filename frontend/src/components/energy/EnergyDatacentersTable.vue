@@ -70,11 +70,10 @@
             />
         </div>
         <div class="col-1">
-            <q-input
-                type="number"
+            <ZodValidatedNumberInput
                 class="full-width"
-                v-model.number="dc.energy.carbonIntensity"
-                :rules="[toValidationRule(DatacenterEnergySchema.shape.carbonIntensity)]"
+                v-model="dc.energy.carbonIntensity"
+                :schema="DatacenterEnergySchema.shape.carbonIntensity"
                 dense
                 outlined
                 hide-bottom-space
@@ -90,11 +89,10 @@
             />
         </div>
         <div class="col-1">
-            <q-input
-                type="number"
+            <ZodValidatedNumberInput
                 class="full-width"
-                v-model.number="dc.energy.pue"
-                :rules="[toValidationRule(DatacenterEnergySchema.shape.pue)]"
+                v-model="dc.energy.pue"
+                :schema="DatacenterEnergySchema.shape.pue"
                 dense
                 outlined
                 hide-bottom-space
@@ -110,11 +108,10 @@
             />
         </div>
         <div class="col-1">
-            <q-input
-                type="number"
+            <ZodValidatedNumberInput
                 class="full-width"
-                v-model.number="dc.energy.energyConsumption"
-                :rules="[toValidationRule(DatacenterEnergySchema.shape.energyConsumption)]"
+                v-model="dc.energy.energyConsumption"
+                :schema="DatacenterEnergySchema.shape.energyConsumption"
                 dense
                 outlined
                 hide-bottom-space
@@ -142,18 +139,17 @@
 </template>
 
 <script setup lang="ts">
+import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInput.vue';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import { useMitsiStore } from 'src/stores/mitsi';
 import { formatDatacenterName } from 'src/utils/format';
-import { useValidation } from 'src/composables/useValidation';
 import { DatacenterEnergySchema } from 'src/models/schema';
 import type { Datacenter } from 'src/models/mitsi';
 
 const mitsi = useMitsiStore();
 const { t } = useI18n();
 const $q = useQuasar();
-const { toValidationRule } = useValidation();
 
 function clearEnergy(dc: Datacenter): void {
     $q.dialog({

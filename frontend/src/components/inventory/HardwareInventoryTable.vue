@@ -60,11 +60,10 @@
                             }}</span>
                             <span class="inventory-dim">({{ $t('inventoryNotCounted') }})</span>
                         </template>
-                        <q-input
-                            v-else
-                            type="number"
-                            v-model.number="props.row.impactManufacturingDistributionEol"
-                            :rules="[toValidationRule(col.zod)]"
+                        <ZodValidatedNumberInput
+                            v-else-if="col.zod"
+                            v-model="props.row.impactManufacturingDistributionEol"
+                            :schema="col.zod"
                             dense
                             outlined
                             hide-bottom-space
@@ -118,11 +117,10 @@
                     </template>
 
                     <!-- Number -->
-                    <template v-else-if="col.kind === 'number'">
-                        <q-input
-                            type="number"
-                            v-model.number="props.row[col.field]"
-                            :rules="[toValidationRule(col.zod)]"
+                    <template v-else-if="col.kind === 'number' && col.zod">
+                        <ZodValidatedNumberInput
+                            v-model="props.row[col.field]"
+                            :schema="col.zod"
                             dense
                             outlined
                             hide-bottom-space
@@ -130,10 +128,10 @@
                     </template>
 
                     <!-- Free text -->
-                    <template v-else-if="col.kind === 'text'">
-                        <q-input
+                    <template v-else-if="col.kind === 'text' && col.zod">
+                        <ZodValidatedTextInput
                             v-model="props.row[col.field]"
-                            :rules="[toValidationRule(col.zod)]"
+                            :schema="col.zod"
                             dense
                             outlined
                             hide-bottom-space
@@ -160,6 +158,8 @@
 </template>
 
 <script setup lang="ts">
+import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInput.vue';
+import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';

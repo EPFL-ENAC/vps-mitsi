@@ -21,20 +21,20 @@
         class="row items-center q-col-gutter-x-sm q-py-xs"
     >
         <div class="col-3">
-            <q-input
+            <ZodValidatedTextInput
                 class="full-width"
                 v-model="dc.generalInfo.abbreviation"
-                :rules="[toValidationRule(DatacenterGeneralInfoSchema.shape.abbreviation)]"
+                :schema="DatacenterGeneralInfoSchema.shape.abbreviation"
                 dense
                 outlined
                 hide-bottom-space
             />
         </div>
         <div class="col-3">
-            <q-input
+            <ZodValidatedTextInput
                 class="full-width"
                 v-model="dc.generalInfo.name"
-                :rules="[toValidationRule(DatacenterGeneralInfoSchema.shape.name)]"
+                :schema="DatacenterGeneralInfoSchema.shape.name"
                 dense
                 outlined
                 hide-bottom-space
@@ -65,19 +65,18 @@
 </template>
 
 <script setup lang="ts">
+import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 
 import type { Datacenter } from 'src/models/mitsi';
 import { DatacenterGeneralInfoSchema } from 'src/models/schema';
 import { useMitsiStore } from 'src/stores/mitsi';
-import { useValidation } from 'src/composables/useValidation';
 import { formatDatacenterName } from 'src/utils/format';
 
 const { t } = useI18n();
 const $q = useQuasar();
 const mitsi = useMitsiStore();
-const { toValidationRule } = useValidation();
 
 function addDatacenter(): void {
     mitsi.addDatacenter();

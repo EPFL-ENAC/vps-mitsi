@@ -27,33 +27,33 @@
                 <q-card-section>
                     <div class="row q-col-gutter-md">
                         <div class="col-12 col-md-4">
-                            <q-input
+                            <ZodValidatedTextInput
                                 v-model="mitsi.scope.organizationName"
                                 :label="$t('scopeOrganizationLabel')"
-                                :rules="[toValidationRule(ScopeSchema.shape.organizationName)]"
+                                :schema="ScopeSchema.shape.organizationName"
                                 dense
                                 outlined
                             />
                         </div>
                         <div class="col-12 col-md-4">
-                            <q-input
+                            <ZodValidatedTextInput
                                 v-model="mitsi.scope.assessors"
                                 :label="$t('scopeAssessorsLabel')"
-                                :rules="[toValidationRule(ScopeSchema.shape.assessors)]"
+                                :schema="ScopeSchema.shape.assessors"
                                 dense
                                 outlined
                             />
                         </div>
                         <div class="col-12 col-md-4">
-                            <q-input
+                            <ZodValidatedTextInput
                                 v-model="mitsi.scope.serviceName"
                                 :label="$t('scopeServiceNameLabel')"
-                                :rules="[toValidationRule(ScopeSchema.shape.serviceName)]"
+                                :schema="ScopeSchema.shape.serviceName"
                                 dense
                                 outlined
                             >
                                 <q-tooltip>{{ $t('scopeServiceNameTooltip') }}</q-tooltip>
-                            </q-input>
+                            </ZodValidatedTextInput>
                         </div>
                     </div>
                 </q-card-section>
@@ -78,15 +78,15 @@
                 <q-card-section>
                     <div class="row q-col-gutter-md">
                         <div class="col-12">
-                            <q-input
+                            <ZodValidatedTextInput
                                 type="textarea"
                                 v-model="mitsi.scope.function"
                                 :label="$t('scopeFunctionLabel')"
-                                :rules="[toValidationRule(ScopeSchema.shape.function)]"
+                                :schema="ScopeSchema.shape.function"
                                 outlined
                             >
                                 <q-tooltip>{{ $t('scopeFunctionTooltip') }}</q-tooltip>
-                            </q-input>
+                            </ZodValidatedTextInput>
                         </div>
 
                         <div class="col-12">
@@ -95,19 +95,16 @@
                             </div>
                             <div class="scope-fu row items-center q-gutter-sm flex-nowrap">
                                 <span>{{ $t('scopeFuBefore') }}</span>
-                                <q-input
-                                    type="number"
+                                <ZodValidatedNumberInput
                                     class="scope-fu-input"
-                                    v-model.number="mitsi.scope.functionalUnit.usageDuration"
-                                    :rules="[
-                                        toValidationRule(FunctionalUnitSchema.shape.usageDuration),
-                                    ]"
+                                    v-model="mitsi.scope.functionalUnit.usageDuration"
+                                    :schema="FunctionalUnitSchema.shape.usageDuration"
                                     dense
                                     outlined
                                     hide-bottom-space
                                 >
                                     <q-tooltip>{{ $t('scopeFuDurationTooltip') }}</q-tooltip>
-                                </q-input>
+                                </ZodValidatedNumberInput>
                                 <q-select
                                     class="scope-fu-select"
                                     :model-value="mitsi.scope.functionalUnit.timeUnit"
@@ -127,19 +124,16 @@
                                     }}</q-tooltip>
                                 </q-select>
                                 <span>{{ $t('scopeFuMiddle') }}</span>
-                                <q-input
-                                    type="number"
+                                <ZodValidatedNumberInput
                                     class="scope-fu-input"
-                                    v-model.number="mitsi.scope.functionalUnit.resourceCount"
-                                    :rules="[
-                                        toValidationRule(FunctionalUnitSchema.shape.resourceCount),
-                                    ]"
+                                    v-model="mitsi.scope.functionalUnit.resourceCount"
+                                    :schema="FunctionalUnitSchema.shape.resourceCount"
                                     dense
                                     outlined
                                     hide-bottom-space
                                 >
                                     <q-tooltip>{{ $t('scopeFuResourceCountTooltip') }}</q-tooltip>
-                                </q-input>
+                                </ZodValidatedNumberInput>
                                 <q-select
                                     class="scope-fu-select scope-fu-select--grow"
                                     :model-value="mitsi.scope.functionalUnit.resourceType"
@@ -238,13 +232,12 @@
                 </template>
                 <q-separator />
                 <q-card-section>
-                    <q-input
-                        type="number"
+                    <ZodValidatedNumberInput
                         class="scope-lifespan"
-                        v-model.number="mitsi.scope.lifespanYears"
+                        v-model="mitsi.scope.lifespanYears"
                         :label="$t('scopeLifespanLabel')"
                         :suffix="$t('scopeLifespanYears')"
-                        :rules="[toValidationRule(ScopeSchema.shape.lifespanYears)]"
+                        :schema="ScopeSchema.shape.lifespanYears"
                         dense
                         outlined
                     />
@@ -255,6 +248,8 @@
 </template>
 
 <script setup lang="ts">
+import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInput.vue';
+import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 

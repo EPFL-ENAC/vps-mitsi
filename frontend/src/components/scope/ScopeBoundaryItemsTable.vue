@@ -2,28 +2,28 @@
     <q-btn flat color="primary" dense class="q-mb-sm" :label="$t('scopeBndAdd')" @click="addItem" />
     <div v-for="item in items" :key="item.id" class="row items-start q-col-gutter-sm q-mb-sm">
         <div class="col-3">
-            <q-input
+            <ZodValidatedTextInput
                 v-model="item.type"
                 :placeholder="$t('scopeBndColType')"
-                :rules="[toValidationRule(BoundaryItemSchema.shape.type)]"
+                :schema="BoundaryItemSchema.shape.type"
                 dense
                 outlined
             />
         </div>
         <div class="col-3">
-            <q-input
+            <ZodValidatedTextInput
                 v-model="item.purpose"
                 :placeholder="$t('scopeBndColPurpose')"
-                :rules="[toValidationRule(BoundaryItemSchema.shape.purpose)]"
+                :schema="BoundaryItemSchema.shape.purpose"
                 dense
                 outlined
             />
         </div>
         <div class="col-5">
-            <q-input
+            <ZodValidatedTextInput
                 v-model="item.reason"
                 :placeholder="reasonPlaceholder"
-                :rules="[toValidationRule(BoundaryItemSchema.shape.reason)]"
+                :schema="BoundaryItemSchema.shape.reason"
                 dense
                 outlined
             />
@@ -41,12 +41,12 @@
 </template>
 
 <script setup lang="ts">
+import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { BoundaryItemSchema } from 'src/models/schema';
 import { useMitsiStore } from 'src/stores/mitsi';
-import { useValidation } from 'src/composables/useValidation';
 
 const props = defineProps<{
     kind: 'included' | 'excluded';
@@ -54,7 +54,6 @@ const props = defineProps<{
 
 const { t } = useI18n();
 const mitsi = useMitsiStore();
-const { toValidationRule } = useValidation();
 
 const items = computed(() =>
     props.kind === 'included' ? mitsi.scope.includedItems : mitsi.scope.excludedItems,
