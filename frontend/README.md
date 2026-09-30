@@ -6,14 +6,7 @@ JSON import/export through the assessment store; no backend or `.env` is require
 
 ## Development
 
-Use Node.js 24 and npm. From this directory:
-
-```sh
-npm install
-npm run dev
-```
-
-Alternatively, run `make install` and `make run-frontend` from the repository root.
+Use Node.js 24 and npm. Run `make install` and `make run-frontend` from the repository root.
 Quasar prints the development URL, normally <http://localhost:9000>.
 
 ## Validation
