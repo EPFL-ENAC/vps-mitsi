@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { z } from 'zod';
 import { numberInputAttributes } from '../src/utils/number-input.ts';
 import { DatacenterEnergySchema, HardwareItemSchema } from '../src/models/schema.ts';
-import { buildInventoryColumns } from '../src/models/inventory-columns.ts';
+import { renderInventoryTable } from './helpers/inventory-table.mjs';
 
 test('native bounds distinguish integers, decimals and unbounded numbers', () => {
     assert.deepEqual(numberInputAttributes(z.number().int().min(1).max(10)), {
@@ -49,8 +49,8 @@ test('exclusive bounds remain enforced by Zod rather than invented precision', (
     assert.equal(schema.safeParse(0.000001).success, true);
 });
 
-test('every numeric inventory column supports attribute extraction', () => {
-    const { columns } = buildInventoryColumns((key) => key, 'advanced');
+test('every numeric inventory column supports attribute extraction', async () => {
+    const { columns } = await renderInventoryTable();
     for (const column of columns.filter((column) => column.kind === 'number')) {
         assert.doesNotThrow(() => numberInputAttributes(column.zod), column.field);
     }

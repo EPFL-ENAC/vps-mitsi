@@ -19,7 +19,7 @@
             <q-tr class="inventory-group-row">
                 <q-th
                     v-for="grp in groupRows"
-                    :key="grp.label"
+                    :key="grp.name"
                     :colspan="grp.span"
                     class="inventory-group-th text-left"
                 >
@@ -34,7 +34,7 @@
                     v-for="col in props.cols"
                     :key="col.name"
                     :props="props"
-                    :style="col.headerStyle"
+                    :data-kind="col.kind"
                 >
                     <span class="inventory-th-label">{{ col.label }}</span>
                     <span v-if="col.calc" class="inventory-calc-badge">∑</span>
@@ -49,8 +49,7 @@
                     v-for="col in props.cols"
                     :key="col.name"
                     :props="props"
-                    :class="col.align === 'right' ? 'text-right' : 'text-left'"
-                    :style="col.style"
+                    :data-kind="col.kind"
                 >
                     <!-- Second-hand not-counted impact -->
                     <template v-if="col.name === 'impactManufacturingDistributionEol'">
@@ -162,17 +161,39 @@ import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInp
 import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useQuasar } from 'quasar';
+import { useQuasar, type QTableColumn } from 'quasar';
+import type { z } from 'zod';
 
 import type { HardwareItem } from 'src/models/mitsi';
+import type { VisibilityMode } from 'src/models/inventory-columns';
+import { formatDatacenterName, formatKg, normalizeKey } from 'src/utils/format';
+import { rowSubtotal } from 'src/utils/math';
 import {
-    buildInventoryColumns,
-    type InventoryColumn,
-    type VisibilityMode,
-} from 'src/models/inventory-columns';
-import { formatDatacenterName, formatKg } from 'src/utils/format';
+    HardwareCategorySchema,
+    HardwareItemSchema,
+    StorageCasingSchema,
+    StorageTechnologySchema,
+    StorageTypeSchema,
+} from 'src/models/schema';
 import { useMitsiStore } from 'src/stores/mitsi';
 import { useValidation } from 'src/composables/useValidation';
+
+const GROUPS = ['general', 'impact', 'cpu', 'memory', 'storage', 'gpu', 'network'] as const;
+type GroupKey = (typeof GROUPS)[number];
+
+interface InventoryColumn extends QTableColumn<HardwareItem, keyof HardwareItem | 'subtotal'> {
+    field: keyof HardwareItem | 'subtotal';
+    group: GroupKey;
+    mode: VisibilityMode;
+    kind: 'enum' | 'datacenter' | 'text' | 'number' | 'toggle' | 'derived';
+    /** Field feeds the calculation → show the ∑ badge. */
+    calc?: boolean;
+    zod: z.ZodType | undefined;
+    options?: { label: string; value: string }[];
+    /** Quasar sets col.value in body slots, so use a separate name for the calculation. */
+    derived?: (row: HardwareItem) => number;
+    sort?: (a: unknown, b: unknown, rowA: HardwareItem, rowB: HardwareItem) => number;
+}
 
 const props = defineProps<{
     mode: VisibilityMode;
@@ -192,11 +213,6 @@ function isNotCounted(row: HardwareItem): boolean {
     return mitsi.isSecondHandExcluded(row);
 }
 
-// ── Columns from the registry (single source of truth) ──────────────────────
-// Full registry: every non-hidden column, whatever the active mode. Cumulative
-// (rank-based) visibility is applied below so Advanced keeps the simpler modes.
-const built = computed(() => buildInventoryColumns(t, props.mode));
-
 // Options for the datacenter select come from the store's datacenters.
 const datacenterOptions = computed<{ label: string; value: string }[]>(() =>
     mitsi.datacenters.map((dc) => ({
@@ -205,24 +221,365 @@ const datacenterOptions = computed<{ label: string; value: string }[]>(() =>
     })),
 );
 
-const visibleColumns = computed<InventoryColumn[]>(() =>
-    built.value.columns
-        .filter((c) => MODE_RANK[c.mode] <= MODE_RANK[props.mode])
-        .map((c) => (c.kind === 'datacenter' ? { ...c, options: datacenterOptions.value } : c)),
+const columns = computed<InventoryColumn[]>(() => [
+    // ── General ──────────────────────────────────────────────────────────
+    {
+        name: 'category',
+        field: 'category',
+        label: t('inventoryColumns.category'),
+        group: 'general',
+        mode: 'simple',
+        kind: 'enum',
+        sortable: true,
+        zod: HardwareItemSchema.shape.category,
+        options: HardwareCategorySchema.options.map((value) => ({
+            label: t('inventoryCategory_' + normalizeKey(value)),
+            value,
+        })),
+    },
+    {
+        name: 'name',
+        field: 'name',
+        label: t('inventoryColumns.name'),
+        group: 'general',
+        mode: 'simple',
+        kind: 'text',
+        sortable: true,
+        zod: HardwareItemSchema.shape.name,
+    },
+    {
+        name: 'rackUnit',
+        field: 'rackUnit',
+        label: t('inventoryColumns.rackUnit'),
+        group: 'general',
+        mode: 'advanced',
+        kind: 'number',
+        zod: HardwareItemSchema.shape.rackUnit,
+    },
+    {
+        name: 'quantity',
+        field: 'quantity',
+        label: t('inventoryColumns.quantity'),
+        group: 'general',
+        mode: 'simple',
+        kind: 'number',
+        calc: true,
+        sortable: true,
+        zod: HardwareItemSchema.shape.quantity,
+    },
+    {
+        name: 'description',
+        field: 'description',
+        label: t('inventoryColumns.description'),
+        group: 'general',
+        mode: 'normal',
+        kind: 'text',
+        zod: HardwareItemSchema.shape.description,
+    },
+    {
+        name: 'datacenterId',
+        field: 'datacenterId',
+        label: t('inventoryColumns.datacenterId'),
+        group: 'general',
+        mode: 'simple',
+        kind: 'datacenter',
+        zod: HardwareItemSchema.shape.datacenterId,
+        options: datacenterOptions.value,
+    },
+    {
+        name: 'isSecondHand',
+        field: 'isSecondHand',
+        label: t('inventoryColumns.isSecondHand'),
+        group: 'general',
+        mode: 'simple',
+        kind: 'toggle',
+        calc: true,
+        zod: HardwareItemSchema.shape.isSecondHand,
+    },
+
+    // ── Impact (∑) ───────────────────────────────────────────────────────
+    {
+        name: 'impactManufacturing',
+        field: 'impactManufacturing',
+        label: t('inventoryColumns.impactManufacturing'),
+        group: 'impact',
+        mode: 'normal',
+        kind: 'number',
+        sortable: true,
+        zod: HardwareItemSchema.shape.impactManufacturing,
+    },
+    {
+        name: 'impactManufacturingDistributionEol',
+        field: 'impactManufacturingDistributionEol',
+        label: t('inventoryColumns.impactManufacturingDistributionEol'),
+        group: 'impact',
+        mode: 'simple',
+        kind: 'number',
+        calc: true,
+        sortable: true,
+        zod: HardwareItemSchema.shape.impactManufacturingDistributionEol,
+    },
+    {
+        name: 'resilioDbHash',
+        field: 'resilioDbHash',
+        label: t('inventoryColumns.resilioDbHash'),
+        group: 'impact',
+        mode: 'normal',
+        kind: 'text',
+        zod: HardwareItemSchema.shape.resilioDbHash,
+    },
+    {
+        name: 'subtotal',
+        field: 'subtotal',
+        label: t('inventoryColumns.subtotal'),
+        group: 'impact',
+        mode: 'simple',
+        kind: 'derived',
+        calc: true,
+        sortable: true,
+        zod: undefined,
+        derived: rowSubtotal,
+        sort: (_a, _b, rowA, rowB) => rowSubtotal(rowA) - rowSubtotal(rowB),
+    },
+
+    // ── CPU ──────────────────────────────────────────────────────────────
+    {
+        name: 'cpuName',
+        field: 'cpuName',
+        label: t('inventoryColumns.cpuName'),
+        group: 'cpu',
+        mode: 'normal',
+        kind: 'text',
+        zod: HardwareItemSchema.shape.cpuName,
+    },
+    {
+        name: 'cpuQuantity',
+        field: 'cpuQuantity',
+        label: t('inventoryColumns.cpuQuantity'),
+        group: 'cpu',
+        mode: 'simple',
+        kind: 'number',
+        zod: HardwareItemSchema.shape.cpuQuantity,
+    },
+    {
+        name: 'cpuLithography',
+        field: 'cpuLithography',
+        label: t('inventoryColumns.cpuLithography'),
+        group: 'cpu',
+        mode: 'advanced',
+        kind: 'number',
+        zod: HardwareItemSchema.shape.cpuLithography,
+    },
+    {
+        name: 'cpuDieSize',
+        field: 'cpuDieSize',
+        label: t('inventoryColumns.cpuDieSize'),
+        group: 'cpu',
+        mode: 'advanced',
+        kind: 'number',
+        zod: HardwareItemSchema.shape.cpuDieSize,
+    },
+    {
+        name: 'cpuCores',
+        field: 'cpuCores',
+        label: t('inventoryColumns.cpuCores'),
+        group: 'cpu',
+        mode: 'advanced',
+        kind: 'number',
+        zod: HardwareItemSchema.shape.cpuCores,
+    },
+
+    // ── Memory ───────────────────────────────────────────────────────────
+    {
+        name: 'memoryQuantity',
+        field: 'memoryQuantity',
+        label: t('inventoryColumns.memoryQuantity'),
+        group: 'memory',
+        mode: 'simple',
+        kind: 'number',
+        zod: HardwareItemSchema.shape.memoryQuantity,
+    },
+    {
+        name: 'memorySizeGb',
+        field: 'memorySizeGb',
+        label: t('inventoryColumns.memorySizeGb'),
+        group: 'memory',
+        mode: 'simple',
+        kind: 'number',
+        zod: HardwareItemSchema.shape.memorySizeGb,
+    },
+    {
+        name: 'memoryTotalGb',
+        field: 'memoryTotalGb',
+        label: t('inventoryColumns.memoryTotalGb'),
+        group: 'memory',
+        mode: 'advanced',
+        kind: 'derived',
+        zod: undefined,
+        derived: (row) => (row.memoryQuantity || 0) * (row.memorySizeGb || 0),
+    },
+
+    // ── Storage ──────────────────────────────────────────────────────────
+    {
+        name: 'storageType',
+        field: 'storageType',
+        label: t('inventoryColumns.storageType'),
+        group: 'storage',
+        mode: 'advanced',
+        kind: 'enum',
+        zod: HardwareItemSchema.shape.storageType,
+        options: StorageTypeSchema.options.map((value) => ({
+            label: t('inventoryStorageType_' + normalizeKey(value)),
+            value,
+        })),
+    },
+    {
+        name: 'storageQuantity',
+        field: 'storageQuantity',
+        label: t('inventoryColumns.storageQuantity'),
+        group: 'storage',
+        mode: 'simple',
+        kind: 'number',
+        zod: HardwareItemSchema.shape.storageQuantity,
+    },
+    {
+        name: 'storageSize',
+        field: 'storageSize',
+        label: t('inventoryColumns.storageSize'),
+        group: 'storage',
+        mode: 'simple',
+        kind: 'number',
+        zod: HardwareItemSchema.shape.storageSize,
+    },
+    {
+        name: 'storageTotal',
+        field: 'storageTotal',
+        label: t('inventoryColumns.storageTotal'),
+        group: 'storage',
+        mode: 'advanced',
+        kind: 'derived',
+        zod: undefined,
+        derived: (row) => (row.storageQuantity || 0) * (row.storageSize || 0),
+    },
+    {
+        name: 'storageTechnology',
+        field: 'storageTechnology',
+        label: t('inventoryColumns.storageTechnology'),
+        group: 'storage',
+        mode: 'advanced',
+        kind: 'enum',
+        zod: HardwareItemSchema.shape.storageTechnology,
+        options: StorageTechnologySchema.options.map((value) => ({
+            label: t('inventoryStorageTechnology_' + normalizeKey(value)),
+            value,
+        })),
+    },
+    {
+        name: 'storageCasing',
+        field: 'storageCasing',
+        label: t('inventoryColumns.storageCasing'),
+        group: 'storage',
+        mode: 'advanced',
+        kind: 'enum',
+        zod: HardwareItemSchema.shape.storageCasing,
+        options: StorageCasingSchema.options.map((value) => ({
+            label: t('inventoryStorageCasing_' + normalizeKey(value)),
+            value,
+        })),
+    },
+
+    // ── GPU ──────────────────────────────────────────────────────────────
+    {
+        name: 'gpuName',
+        field: 'gpuName',
+        label: t('inventoryColumns.gpuName'),
+        group: 'gpu',
+        mode: 'normal',
+        kind: 'text',
+        zod: HardwareItemSchema.shape.gpuName,
+    },
+    {
+        name: 'gpuQuantity',
+        field: 'gpuQuantity',
+        label: t('inventoryColumns.gpuQuantity'),
+        group: 'gpu',
+        mode: 'simple',
+        kind: 'number',
+        zod: HardwareItemSchema.shape.gpuQuantity,
+    },
+    {
+        name: 'gpuLithography',
+        field: 'gpuLithography',
+        label: t('inventoryColumns.gpuLithography'),
+        group: 'gpu',
+        mode: 'advanced',
+        kind: 'number',
+        zod: HardwareItemSchema.shape.gpuLithography,
+    },
+    {
+        name: 'gpuDieSize',
+        field: 'gpuDieSize',
+        label: t('inventoryColumns.gpuDieSize'),
+        group: 'gpu',
+        mode: 'advanced',
+        kind: 'number',
+        zod: HardwareItemSchema.shape.gpuDieSize,
+    },
+    {
+        name: 'gpuMemory',
+        field: 'gpuMemory',
+        label: t('inventoryColumns.gpuMemory'),
+        group: 'gpu',
+        mode: 'normal',
+        kind: 'number',
+        zod: HardwareItemSchema.shape.gpuMemory,
+    },
+
+    // ── Network & PSU ────────────────────────────────────────────────────
+    {
+        name: 'networkPorts',
+        field: 'networkPorts',
+        label: t('inventoryColumns.networkPorts'),
+        group: 'network',
+        mode: 'normal',
+        kind: 'number',
+        zod: HardwareItemSchema.shape.networkPorts,
+    },
+    {
+        name: 'psuQuantity',
+        field: 'psuQuantity',
+        label: t('inventoryColumns.psuQuantity'),
+        group: 'network',
+        mode: 'advanced',
+        kind: 'number',
+        zod: HardwareItemSchema.shape.psuQuantity,
+    },
+    {
+        name: 'psuPower',
+        field: 'psuPower',
+        label: t('inventoryColumns.psuPower'),
+        group: 'network',
+        mode: 'advanced',
+        kind: 'number',
+        zod: HardwareItemSchema.shape.psuPower,
+    },
+]);
+
+const visibleColumns = computed(() =>
+    columns.value.filter((column) => MODE_RANK[column.mode] <= MODE_RANK[props.mode]),
 );
 
-/** Group sub-headers, spans matched 1:1 to the columns rendered this mode. */
-const groupRows = computed<{ label: string; span: number }[]>(() => {
-    const rows: { label: string; span: number }[] = [];
-    for (const g of built.value.groups) {
-        const span = visibleColumns.value.filter((c) => c.group === g.name).length;
-        if (span > 0) rows.push({ label: g.label, span });
-    }
-    return rows;
-});
+/** Group sub-headers, spans matched to the columns rendered in this mode. */
+const groupRows = computed(() =>
+    GROUPS.map((name) => ({
+        name,
+        label: t(`inventoryGroups.${name}`),
+        span: visibleColumns.value.filter((column) => column.group === name).length,
+    })).filter((group) => group.span > 0),
+);
 
 function rowName(row: HardwareItem): string {
-    return row.name.trim() || t('inventoryColName');
+    return row.name.trim() || t('inventoryColumns.name');
 }
 
 function confirmDeleteRow(row: HardwareItem): void {
@@ -241,6 +598,32 @@ function confirmDeleteRow(row: HardwareItem): void {
 <style scoped>
 .inventory-table {
     width: 100%;
+}
+
+/* Keep header and body alignment and widths consistent for each column kind. */
+.inventory-table [data-kind] {
+    text-align: left;
+}
+.inventory-table [data-kind='number'],
+.inventory-table [data-kind='derived'] {
+    text-align: right;
+    min-width: 110px;
+}
+
+.inventory-table [data-kind='text'] {
+    min-width: 140px;
+}
+
+.inventory-table [data-kind='enum'] {
+    min-width: 130px;
+}
+
+.inventory-table [data-kind='datacenter'] {
+    min-width: 150px;
+}
+
+.inventory-table [data-kind='toggle'] {
+    min-width: 80px;
 }
 
 .inventory-group-row .q-th {
