@@ -141,6 +141,7 @@
                         <thead>
                             <tr>
                                 <th class="text-left">{{ $t('resultsColDcName') }}</th>
+                                <th class="text-left">{{ $t('resultsColPue') }}</th>
                                 <th class="text-right">{{ $t('resultsColCo2Period') }}</th>
                                 <th class="text-right">{{ $t('resultsColCo2Lifespan') }}</th>
                             </tr>
@@ -148,6 +149,7 @@
                         <tbody>
                             <tr v-for="op in mitsi.operationalPerDc" :key="op.datacenterId">
                                 <td>{{ dcLabel(op.datacenterId) }}</td>
+                                <td class="text-left">{{ pueText(op.datacenterId) }}</td>
                                 <td class="text-right">{{ formatKg(op.co2Period) }}</td>
                                 <td class="text-right">{{ formatKg(op.co2Lifespan) }}</td>
                             </tr>
@@ -266,6 +268,7 @@ import {
     formatDatacenterName,
     formatKg,
     normalizeKey,
+    formatPueInclusion,
 } from 'src/utils/format';
 
 const { t } = useI18n();
@@ -287,6 +290,16 @@ function dcLabel(datacenterId: string): string {
     const dc = mitsi.datacenters.find((d) => d.id === datacenterId);
     if (!dc) return datacenterId;
     return formatDatacenterName(dc);
+}
+
+/** PUE stored for the datacenter behind this results row (empty draft = null). */
+function pueFor(datacenterId: string): number | null {
+    return mitsi.datacenters.find((d) => d.id === datacenterId)?.energy.pue ?? null;
+}
+
+/** Cell text: "included" or "not included" */
+function pueText(datacenterId: string): string {
+    return formatPueInclusion(t, pueFor(datacenterId));
 }
 
 /** Where the service runs: datacenter labels and locations. */
