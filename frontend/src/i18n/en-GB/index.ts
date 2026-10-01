@@ -28,6 +28,7 @@ export default {
     mainNavInventory: 'Hardware inventory',
     mainNavEnergy: 'Energy consumption',
     mainNavResults: 'Results',
+    mainNavReport: 'Report',
     mainStatusComplete: 'Complete',
     mainStatusPartial: 'In progress',
     mainStatusNotStarted: 'Not started',

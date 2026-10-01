@@ -52,6 +52,11 @@
                         />
                     </q-item-section>
                 </q-item>
+                <q-separator spaced />
+                <q-item clickable v-ripple to="/report">
+                    <q-item-section avatar><q-icon name="print" /></q-item-section>
+                    <q-item-section>{{ $t('mainNavReport') }}</q-item-section>
+                </q-item>
             </q-list>
         </q-drawer>
 

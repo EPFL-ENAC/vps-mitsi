@@ -254,12 +254,21 @@
                 </q-card-section>
             </q-expansion-item>
         </q-card>
+        <q-btn
+            unelevated
+            color="primary"
+            class="full-width q-mt-md"
+            :label="$t('resultsGenerateReport')"
+            :disable="!mitsi.isScopeValid"
+            @click="router.push('/report')"
+        />
     </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
 
 import { useMitsiStore } from 'src/stores/mitsi';
 import { useResultFormatting } from 'src/composables/useResultFormatting';
@@ -272,6 +281,7 @@ import {
 } from 'src/utils/format';
 
 const { t } = useI18n();
+const router = useRouter();
 const mitsi = useMitsiStore();
 const { formatOperationalResult, formatCombinedResult } = useResultFormatting();
 
