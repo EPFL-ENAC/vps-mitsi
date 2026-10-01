@@ -28,11 +28,10 @@
             />
         </div>
         <div class="col-2">
-            <q-input
-                type="number"
+            <ZodValidatedNumberInput
                 class="full-width"
-                v-model.number="mitsi.monitoringPeriod.value"
-                :rules="[toValidationRule(MonitoringPeriodSchema.shape.value)]"
+                v-model="mitsi.monitoringPeriod.value"
+                :schema="MonitoringPeriodSchema.shape.value"
                 dense
                 outlined
                 hide-bottom-space
@@ -51,6 +50,7 @@
 </template>
 
 <script setup lang="ts">
+import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInput.vue';
 import { useI18n } from 'vue-i18n';
 import { useMitsiStore } from 'src/stores/mitsi';
 import { useValidation } from 'src/composables/useValidation';
