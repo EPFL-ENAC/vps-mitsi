@@ -24,7 +24,7 @@
                     @click="exportAssessment"
                 />
                 <q-file
-                    v-model="importFile"
+                    :model-value="null"
                     accept=".json,application/json"
                     dense
                     outlined
@@ -124,33 +124,23 @@ function saveAssessment(): void {
     }
 }
 
-/** True when the draft holds nothing worth warning about */
-const storeIsEmpty = computed<boolean>(
-    () =>
-        mitsi.scope.organizationName === '' &&
-        mitsi.scope.serviceName === '' &&
-        mitsi.scope.function === '' &&
-        mitsi.hardware.length === 0 &&
-        mitsi.datacenters.length === 0,
-);
-
-const importFile = ref<File | null>(null);
-
 /** QFile returns a File object directly, empty draft results in immediate import, while one containing data triggers warning */
 function onFilePicked(file: File | null): void {
-    importFile.value = null;
     if (!file) return;
 
-    if (storeIsEmpty.value) {
+    if (mitsi.isStoreEmpty) {
         readAndImport(file);
         return;
     }
+
     $q.dialog({
         title: t('mainImportWarningTitle'),
         message: t('mainImportWarning'),
         cancel: true,
         persistent: true,
-    }).onOk(() => readAndImport(file));
+    }).onOk(() => {
+        readAndImport(file);
+    });
 }
 
 /** Reads the file and gives text to the store */
@@ -164,6 +154,9 @@ function readAndImport(file: File): void {
         } else {
             $q.notify({ type: 'negative', message: t('mainImportFailed') });
         }
+    };
+    reader.onerror = () => {
+        $q.notify({ type: 'negative', message: t('mainImportFailed') });
     };
     reader.readAsText(file);
 }

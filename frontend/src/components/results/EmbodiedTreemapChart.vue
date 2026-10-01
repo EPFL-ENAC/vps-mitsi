@@ -19,6 +19,17 @@ echarts.use([TreemapChart, TooltipComponent, CanvasRenderer]);
 
 type ECOption = echarts.ComposeOption<TreemapSeriesOption | TooltipComponentOption>;
 
+const props = withDefaults(
+    defineProps<{
+        groups: EmbodiedGroup[];
+        grandTotal: number;
+        variant?: 'element' | 'category';
+    }>(),
+    { variant: 'category' },
+);
+
+const { t } = useI18n();
+
 /** Flat treemap (by element): each tile gets its category's colour — identical
  *  colours on both charts, as in the Excel reference. Skips excluded rows
  *  (the store's second-hand flag) and zero totals (0-size tiles). */
@@ -56,17 +67,6 @@ function toCategoryTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeri
         })
         .filter((g) => (g.children?.length ?? 0) > 0);
 }
-
-const props = withDefaults(
-    defineProps<{
-        groups: EmbodiedGroup[];
-        grandTotal: number;
-        variant?: 'element' | 'category';
-    }>(),
-    { variant: 'category' },
-);
-
-const { t } = useI18n();
 
 /** Pre-computed data items for the treemap. */
 const chartData = computed(() =>

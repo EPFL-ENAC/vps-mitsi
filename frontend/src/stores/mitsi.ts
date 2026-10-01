@@ -104,6 +104,16 @@ export const useMitsiStore = defineStore('mitsi', () => {
             ),
     );
 
+    /** True when the draft holds nothing worth warning about */
+    const isStoreEmpty = computed<boolean>(
+        () =>
+            scope.value.organizationName === '' &&
+            scope.value.serviceName === '' &&
+            scope.value.function === '' &&
+            hardware.value.length === 0 &&
+            datacenters.value.length === 0,
+    );
+
     /**
      * Whether a second-hand row is excluded from the embodied total — i.e. it is
      * second-hand AND second-hand embodied emissions are not being accounted for.
@@ -463,6 +473,7 @@ export const useMitsiStore = defineStore('mitsi', () => {
         savedAt,
         exportedAt,
         isScopeValid,
+        isStoreEmpty,
         isSecondHandExcluded,
         totalEmbodied,
         secondHandExcludedCount,
