@@ -7,168 +7,149 @@
         </q-banner>
 
         <!-- Summary -->
-        <q-card flat bordered class="results-zone q-mb-md">
-            <q-expansion-item default-opened>
-                <template #header>
-                    <q-item-section class="results-zone-title">
-                        <q-item-label>{{ $t('resultsSummaryTitle') }}</q-item-label>
-                    </q-item-section>
-                </template>
-                <q-separator />
-                <q-card-section class="q-pa-sm">
-                    <q-markup-table dense flat bordered>
-                        <tbody>
-                            <tr>
-                                <td class="results-key">{{ $t('resultsSummaryServiceName') }}</td>
-                                <td>{{ mitsi.scope.serviceName }}</td>
-                            </tr>
-                            <tr>
-                                <td class="results-key">{{ $t('resultsSummaryFunction') }}</td>
-                                <td>{{ mitsi.scope.function }}</td>
-                            </tr>
-                            <tr>
-                                <td class="results-key">
-                                    {{ $t('resultsSummaryFunctionalUnit') }}
-                                </td>
-                                <td>{{ fuSentence }}</td>
-                            </tr>
-                            <tr>
-                                <td class="results-key">{{ $t('resultsSummaryLifespan') }}</td>
-                                <td>
-                                    {{
-                                        $t('resultsLifespanYears', { n: mitsi.scope.lifespanYears })
-                                    }}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </q-markup-table>
-                </q-card-section>
-            </q-expansion-item>
-        </q-card>
+        <AssessmentSection :title="$t('resultsSummaryTitle')" default-opened>
+            <q-markup-table dense flat bordered class="results-table">
+                <tbody>
+                    <tr>
+                        <th scope="row" class="results-key text-left">
+                            {{ $t('resultsSummaryServiceName') }}
+                        </th>
+                        <td>{{ mitsi.scope.serviceName }}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row" class="results-key text-left">
+                            {{ $t('resultsSummaryFunction') }}
+                        </th>
+                        <td>{{ mitsi.scope.function }}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row" class="results-key text-left">
+                            {{ $t('resultsSummaryFunctionalUnit') }}
+                        </th>
+                        <td>{{ fuSentence }}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row" class="results-key text-left">
+                            {{ $t('resultsSummaryLifespan') }}
+                        </th>
+                        <td>
+                            {{ $t('resultsLifespanYears', { n: mitsi.scope.lifespanYears }) }}
+                        </td>
+                    </tr>
+                </tbody>
+            </q-markup-table>
+        </AssessmentSection>
 
         <!-- Embodied emissions -->
-        <q-card flat bordered class="results-zone q-mb-md">
-            <q-expansion-item default-opened>
-                <template #header>
-                    <q-item-section class="results-zone-title">
-                        <q-item-label>{{ $t('resultsEmbodiedTitle') }}</q-item-label>
-                    </q-item-section>
-                </template>
-                <q-separator />
-                <q-card-section>
-                    <div class="row items-center q-mb-md">
-                        <q-toggle
-                            v-model="mitsi.includeSecondHandEmbodied"
-                            :label="$t('resultsSecondHandToggle')"
-                            color="primary"
-                        />
-                    </div>
+        <AssessmentSection :title="$t('resultsEmbodiedTitle')" default-opened>
+            <div class="row items-center q-mb-md">
+                <q-toggle
+                    v-model="mitsi.includeSecondHandEmbodied"
+                    :label="$t('resultsSecondHandToggle')"
+                    color="primary"
+                />
+            </div>
 
-                    <q-expansion-item
-                        v-for="g in mitsi.embodiedByCategory"
-                        :key="g.category"
-                        :label="t('inventoryCategory_' + normalizeKey(g.category))"
-                        default-opened
-                        dense
-                        class="results-category"
-                    >
-                        <q-markup-table dense flat bordered>
-                            <thead>
-                                <tr>
-                                    <th class="text-left">{{ $t('resultsColName') }}</th>
-                                    <th class="text-left">{{ $t('resultsColDescription') }}</th>
-                                    <th class="text-right">{{ $t('resultsColNumber') }}</th>
-                                    <th class="text-right">{{ $t('resultsColCo2Unit') }}</th>
-                                    <th class="text-right">{{ $t('resultsColCo2Total') }}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr
-                                    v-for="r in g.rows"
-                                    :key="r.id"
-                                    :class="{ 'results-excluded': r.excluded }"
-                                >
-                                    <td>{{ r.name }}</td>
-                                    <td>{{ r.description }}</td>
-                                    <td class="text-right">{{ r.number }}</td>
-                                    <td class="text-right">{{ formatKg(r.co2PerUnit) }}</td>
-                                    <td class="text-right">
-                                        <span :class="{ 'results-strike': r.excluded }">{{
-                                            formatKg(r.co2RowTotal)
-                                        }}</span>
-                                        <span v-if="r.excluded" class="results-not-counted"
-                                            >({{ $t('inventoryNotCounted') }})</span
-                                        >
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </q-markup-table>
-                        <div class="results-category-total">
-                            {{ $t('resultsCategoryTotal') }}:
-                            <strong>{{ formatKg(g.categoryTotal) }}</strong>
-                        </div>
-                    </q-expansion-item>
-
-                    <q-markup-table dense flat bordered class="results-total-table">
-                        <tbody>
-                            <tr class="results-total">
-                                <td>
-                                    <strong>{{ $t('resultsTotalEmbodied') }}</strong>
-                                </td>
-                                <td class="text-right">
-                                    <strong>{{ formatKg(mitsi.totalEmbodied) }}</strong>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </q-markup-table>
-                </q-card-section>
+            <q-expansion-item
+                v-for="g in mitsi.embodiedByCategory"
+                :key="g.category"
+                :label="t('inventoryCategory_' + normalizeKey(g.category))"
+                default-opened
+                dense
+                class="results-category"
+            >
+                <q-markup-table dense flat bordered class="results-table">
+                    <thead>
+                        <tr>
+                            <th
+                                v-for="col in embodiedColumns"
+                                :key="col.name"
+                                :data-kind="col.kind"
+                                scope="col"
+                            >
+                                {{ col.label }}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="row in g.rows"
+                            :key="row.id"
+                            :class="{ 'results-excluded': row.excluded }"
+                        >
+                            <td
+                                v-for="col in embodiedColumns"
+                                :key="col.name"
+                                :data-kind="col.kind"
+                            >
+                                <template v-if="col.name === 'co2RowTotal'">
+                                    <span :class="{ 'results-strike': row.excluded }">{{
+                                        col.display(row)
+                                    }}</span>
+                                    <span v-if="row.excluded" class="results-not-counted"
+                                        >({{ $t('inventoryNotCounted') }})</span
+                                    >
+                                </template>
+                                <template v-else>{{ col.display(row) }}</template>
+                            </td>
+                        </tr>
+                    </tbody>
+                </q-markup-table>
+                <div class="results-category-total">
+                    {{ $t('resultsCategoryTotal') }}:
+                    <strong>{{ formatKg(g.categoryTotal) }}</strong>
+                </div>
             </q-expansion-item>
-        </q-card>
+
+            <q-markup-table dense flat bordered class="results-total-table">
+                <tbody>
+                    <tr class="results-total">
+                        <td>
+                            <strong>{{ $t('resultsTotalEmbodied') }}</strong>
+                        </td>
+                        <td class="text-right">
+                            <strong>{{ formatKg(mitsi.totalEmbodied) }}</strong>
+                        </td>
+                    </tr>
+                </tbody>
+            </q-markup-table>
+        </AssessmentSection>
 
         <!-- treemap by element + treemap by category -->
 
         <!-- Operational emissions -->
-        <q-card flat bordered class="results-zone q-mb-md">
-            <q-expansion-item default-opened>
-                <template #header>
-                    <q-item-section class="results-zone-title">
-                        <q-item-label>{{ $t('resultsOperationalTitle') }}</q-item-label>
-                    </q-item-section>
-                </template>
-                <q-separator />
-                <q-card-section class="q-pa-sm">
-                    <q-markup-table dense flat bordered>
-                        <thead>
-                            <tr>
-                                <th class="text-left">{{ $t('resultsColDcName') }}</th>
-                                <th class="text-left">{{ $t('resultsColPue') }}</th>
-                                <th class="text-right">{{ $t('resultsColCo2Period') }}</th>
-                                <th class="text-right">{{ $t('resultsColCo2Lifespan') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="op in mitsi.operationalPerDc" :key="op.datacenterId">
-                                <td>{{ dcLabel(op.datacenterId) }}</td>
-                                <td class="text-left">{{ pueText(op.datacenterId) }}</td>
-                                <td class="text-right">{{ formatKg(op.co2Period) }}</td>
-                                <td class="text-right">{{ formatKg(op.co2Lifespan) }}</td>
-                            </tr>
-                            <tr class="results-total">
-                                <td>
-                                    <strong>{{ $t('resultsTotalOperational') }}</strong>
-                                </td>
-                                <td></td>
-                                <td class="text-right">
-                                    <strong>{{
-                                        formatOperationalResult(mitsi.totalOperational)
-                                    }}</strong>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </q-markup-table>
-                </q-card-section>
-            </q-expansion-item>
-        </q-card>
+        <AssessmentSection :title="$t('resultsOperationalTitle')" default-opened>
+            <q-markup-table dense flat bordered class="results-table">
+                <thead>
+                    <tr>
+                        <th
+                            v-for="col in operationalColumns"
+                            :key="col.name"
+                            :data-kind="col.kind"
+                            scope="col"
+                        >
+                            {{ col.label }}
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="row in mitsi.operationalPerDc" :key="row.datacenterId">
+                        <td v-for="col in operationalColumns" :key="col.name" :data-kind="col.kind">
+                            {{ col.display(row) }}
+                        </td>
+                    </tr>
+                    <tr class="results-total">
+                        <td colspan="2">
+                            <strong>{{ $t('resultsTotalOperational') }}</strong>
+                        </td>
+                        <td></td>
+                        <td class="text-right">
+                            <strong>{{ formatOperationalResult(mitsi.totalOperational) }}</strong>
+                        </td>
+                    </tr>
+                </tbody>
+            </q-markup-table>
+        </AssessmentSection>
 
         <!-- pie by datacenter -->
 
@@ -181,79 +162,61 @@
              Total zone and the split pie. -->
 
         <!-- Total emissions -->
-        <q-card flat bordered class="results-zone q-mb-md">
-            <q-expansion-item default-opened>
-                <template #header>
-                    <q-item-section class="results-zone-title">
-                        <q-item-label>{{ $t('resultsTotalTitle') }}</q-item-label>
-                    </q-item-section>
-                </template>
-                <q-separator />
-                <q-card-section class="q-pa-sm">
-                    <q-markup-table dense flat bordered>
-                        <tbody>
-                            <tr>
-                                <td>{{ $t('resultsRowEmbodied') }}</td>
-                                <td class="text-right">{{ formatKg(mitsi.totalEmbodied) }}</td>
-                            </tr>
-                            <tr>
-                                <td>{{ $t('resultsRowOperational') }}</td>
-                                <td class="text-right">
-                                    {{ formatOperationalResult(mitsi.totalOperational) }}
-                                </td>
-                            </tr>
-                            <tr class="results-total">
-                                <td>
-                                    <strong>{{ $t('resultsRowTotal') }}</strong>
-                                </td>
-                                <td class="text-right">
-                                    <strong>{{ formatCombinedResult(mitsi.totalLifespan) }}</strong>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </q-markup-table>
-                </q-card-section>
-            </q-expansion-item>
-        </q-card>
+        <AssessmentSection :title="$t('resultsTotalTitle')" default-opened>
+            <q-markup-table dense flat bordered class="results-table">
+                <tbody>
+                    <tr>
+                        <td>{{ $t('resultsRowEmbodied') }}</td>
+                        <td class="text-right">{{ formatKg(mitsi.totalEmbodied) }}</td>
+                    </tr>
+                    <tr>
+                        <td>{{ $t('resultsRowOperational') }}</td>
+                        <td class="text-right">
+                            {{ formatOperationalResult(mitsi.totalOperational) }}
+                        </td>
+                    </tr>
+                    <tr class="results-total">
+                        <td>
+                            <strong>{{ $t('resultsRowTotal') }}</strong>
+                        </td>
+                        <td class="text-right">
+                            <strong>{{ formatCombinedResult(mitsi.totalLifespan) }}</strong>
+                        </td>
+                    </tr>
+                </tbody>
+            </q-markup-table>
+        </AssessmentSection>
 
         <!-- split pie embodied/operational/underlying -->
 
         <!-- Emissions related to the functional unit -->
-        <q-card flat bordered class="results-zone q-mb-md">
-            <q-expansion-item default-opened>
-                <template #header>
-                    <q-item-section class="results-zone-title">
-                        <q-item-label>{{ $t('resultsFuTitle') }}</q-item-label>
-                    </q-item-section>
-                </template>
-                <q-separator />
-                <q-card-section class="q-pa-sm">
-                    <q-markup-table dense flat bordered>
-                        <tbody>
-                            <tr>
-                                <td class="results-key">{{ $t('resultsFuNumber') }}</td>
-                                <td class="text-right">{{ mitsi.resourcesInService }}</td>
-                            </tr>
-                            <tr>
-                                <td class="results-key">{{ $t('resultsFuLifespanNote') }}</td>
-                                <td class="text-right">{{ totalPerResourceText }}</td>
-                            </tr>
-                            <tr>
-                                <td class="results-key">{{ fuSentence }}</td>
-                                <td class="text-right">{{ perFunctionalUnitText }}</td>
-                            </tr>
-                            <tr class="results-total">
-                                <td colspan="2">
-                                    <strong>{{
-                                        $t('resultsHostedIn', { dcs: hostedInDcs })
-                                    }}</strong>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </q-markup-table>
-                </q-card-section>
-            </q-expansion-item>
-        </q-card>
+        <AssessmentSection :title="$t('resultsFuTitle')" default-opened>
+            <q-markup-table dense flat bordered class="results-table">
+                <tbody>
+                    <tr>
+                        <th scope="row" class="results-key text-left">
+                            {{ $t('resultsFuNumber') }}
+                        </th>
+                        <td class="text-right">{{ mitsi.resourcesInService }}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row" class="results-key text-left">
+                            {{ $t('resultsFuLifespanNote') }}
+                        </th>
+                        <td class="text-right">{{ totalPerResourceText }}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row" class="results-key text-left">{{ fuSentence }}</th>
+                        <td class="text-right">{{ perFunctionalUnitText }}</td>
+                    </tr>
+                    <tr class="results-total">
+                        <td colspan="2">
+                            <strong>{{ $t('resultsHostedIn', { dcs: hostedInDcs }) }}</strong>
+                        </td>
+                    </tr>
+                </tbody>
+            </q-markup-table>
+        </AssessmentSection>
         <q-btn
             unelevated
             color="primary"
@@ -266,6 +229,7 @@
 </template>
 
 <script setup lang="ts">
+import AssessmentSection from 'src/components/AssessmentSection.vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
@@ -284,6 +248,83 @@ const { t } = useI18n();
 const router = useRouter();
 const mitsi = useMitsiStore();
 const { formatOperationalResult, formatCombinedResult } = useResultFormatting();
+
+type EmbodiedRow = (typeof mitsi.embodiedByCategory)[number]['rows'][number];
+type OperationalRow = (typeof mitsi.operationalPerDc)[number];
+
+interface EmbodiedColumn {
+    name: Exclude<keyof EmbodiedRow, 'id' | 'excluded'>;
+    label: string;
+    kind: 'text' | 'number';
+    display: (row: EmbodiedRow) => string | number;
+}
+
+interface OperationalColumn {
+    name: keyof OperationalRow | 'pue';
+    label: string;
+    kind: 'text' | 'number';
+    display: (row: OperationalRow) => string;
+}
+
+const embodiedColumns = computed<EmbodiedColumn[]>(() => [
+    {
+        name: 'name',
+        label: t('resultsEmbodiedColumns.name'),
+        kind: 'text',
+        display: (row) => row.name,
+    },
+    {
+        name: 'description',
+        label: t('resultsEmbodiedColumns.description'),
+        kind: 'text',
+        display: (row) => row.description,
+    },
+    {
+        name: 'number',
+        label: t('resultsEmbodiedColumns.number'),
+        kind: 'number',
+        display: (row) => row.number,
+    },
+    {
+        name: 'co2PerUnit',
+        label: t('resultsEmbodiedColumns.co2PerUnit'),
+        kind: 'number',
+        display: (row) => formatKg(row.co2PerUnit),
+    },
+    {
+        name: 'co2RowTotal',
+        label: t('resultsEmbodiedColumns.co2RowTotal'),
+        kind: 'number',
+        display: (row) => formatKg(row.co2RowTotal),
+    },
+]);
+
+const operationalColumns = computed<OperationalColumn[]>(() => [
+    {
+        name: 'datacenterId',
+        label: t('resultsOperationalColumns.datacenterId'),
+        kind: 'text',
+        display: (row) => dcLabel(row.datacenterId),
+    },
+    {
+        name: 'pue',
+        label: t('resultsOperationalColumns.pue'),
+        kind: 'text',
+        display: (row) => pueText(row.datacenterId),
+    },
+    {
+        name: 'co2Period',
+        label: t('resultsOperationalColumns.co2Period'),
+        kind: 'number',
+        display: (row) => formatKg(row.co2Period),
+    },
+    {
+        name: 'co2Lifespan',
+        label: t('resultsOperationalColumns.co2Lifespan'),
+        kind: 'number',
+        display: (row) => formatKg(row.co2Lifespan),
+    },
+]);
 
 /** Time-unit label resolved with the same keys the ScopePage FU select uses. */
 const timeUnitLabel = computed(() =>
@@ -339,10 +380,17 @@ const perFunctionalUnitText = computed(() =>
 );
 </script>
 
-<style scoped>
-.results-zone-title {
-    font-weight: 600;
+<style scoped lang="scss">
+@use 'src/css/table-cells';
+
+.results-table {
+    @include table-cells.cells;
 }
+
+.results-table tbody tr:not(:last-child) > th[scope='row'] {
+    border-bottom-width: 1px;
+}
+
 .results-key {
     font-weight: 600;
     color: rgba(0, 0, 0, 0.7);

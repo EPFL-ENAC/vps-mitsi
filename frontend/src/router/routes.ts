@@ -30,14 +30,13 @@ const routes: RouteRecordRaw[] = [
                 name: 'results',
                 component: () => import('pages/ResultsPage.vue'),
             },
-            {
-                path: 'report',
-                name: 'report',
-                component: () => import('pages/ReportPreviewPage.vue'),
-            },
         ],
     },
-
+    {
+        path: '/report',
+        name: 'report',
+        component: () => import('pages/ReportPreviewPage.vue'),
+    },
     {
         path: '/:catchAll(.*)*',
         component: () => import('pages/ErrorNotFound.vue'),

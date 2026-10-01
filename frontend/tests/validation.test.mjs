@@ -4,7 +4,7 @@ import { createSSRApp, h } from 'vue';
 import { renderToString } from 'vue/server-renderer';
 import { createI18n } from 'vue-i18n';
 import { useValidation } from '../src/composables/useValidation.ts';
-import { buildInventoryColumns } from '../src/models/inventory-columns.ts';
+import { renderInventoryTable } from './helpers/inventory-table.mjs';
 import {
     DatacenterEnergySchema,
     HardwareItemSchema,
@@ -47,8 +47,8 @@ test('forms translate canonical errors and preserve optional empty values', asyn
     assert.equal(toValidationRule()(undefined), true);
 });
 
-test('inventory uses canonical fields directly and skips derived values', () => {
-    const { columns } = buildInventoryColumns((key) => key, 'advanced');
+test('inventory uses canonical fields directly and skips derived values', async () => {
+    const { columns } = await renderInventoryTable();
     for (const column of columns) {
         assert.equal(
             column.zod,
