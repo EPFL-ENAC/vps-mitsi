@@ -139,7 +139,7 @@
                         </td>
                     </tr>
                     <tr class="results-total">
-                        <td>
+                        <td colspan="2">
                             <strong>{{ $t('resultsTotalOperational') }}</strong>
                         </td>
                         <td></td>
@@ -217,6 +217,14 @@
                 </tbody>
             </q-markup-table>
         </AssessmentSection>
+        <q-btn
+            unelevated
+            color="primary"
+            class="full-width q-mt-md"
+            :label="$t('resultsGenerateReport')"
+            :disable="!mitsi.isScopeValid"
+            @click="router.push('/report')"
+        />
     </div>
 </template>
 
@@ -224,6 +232,7 @@
 import AssessmentSection from 'src/components/AssessmentSection.vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
 
 import { useMitsiStore } from 'src/stores/mitsi';
 import { useResultFormatting } from 'src/composables/useResultFormatting';
@@ -232,9 +241,11 @@ import {
     formatDatacenterName,
     formatKg,
     normalizeKey,
+    formatPueInclusion,
 } from 'src/utils/format';
 
 const { t } = useI18n();
+const router = useRouter();
 const mitsi = useMitsiStore();
 const { formatOperationalResult, formatCombinedResult } = useResultFormatting();
 
@@ -249,7 +260,7 @@ interface EmbodiedColumn {
 }
 
 interface OperationalColumn {
-    name: keyof OperationalRow;
+    name: keyof OperationalRow | 'pue';
     label: string;
     kind: 'text' | 'number';
     display: (row: OperationalRow) => string;
@@ -296,6 +307,12 @@ const operationalColumns = computed<OperationalColumn[]>(() => [
         display: (row) => dcLabel(row.datacenterId),
     },
     {
+        name: 'pue',
+        label: t('resultsOperationalColumns.pue'),
+        kind: 'text',
+        display: (row) => pueText(row.datacenterId),
+    },
+    {
         name: 'co2Period',
         label: t('resultsOperationalColumns.co2Period'),
         kind: 'number',
@@ -324,6 +341,16 @@ function dcLabel(datacenterId: string): string {
     const dc = mitsi.datacenters.find((d) => d.id === datacenterId);
     if (!dc) return datacenterId;
     return formatDatacenterName(dc);
+}
+
+/** PUE stored for the datacenter behind this results row (empty draft = null). */
+function pueFor(datacenterId: string): number | null {
+    return mitsi.datacenters.find((d) => d.id === datacenterId)?.energy.pue ?? null;
+}
+
+/** Cell text: "included" or "not included" */
+function pueText(datacenterId: string): string {
+    return formatPueInclusion(t, pueFor(datacenterId));
 }
 
 /** Where the service runs: datacenter labels and locations. */

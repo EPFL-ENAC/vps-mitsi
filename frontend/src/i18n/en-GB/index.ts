@@ -23,11 +23,21 @@ export default {
     mainSaveFailed:
         'Could not save the assessment. Check invalid fields and available browser storage, then try again.',
     mainSave: 'Save',
+    mainExport: 'Export',
+    mainExportSuccess: 'File successfully downloaded.',
+    mainExportFailed: 'Browser blocked the download.',
+    mainImport: 'Import',
+    mainImportWarningTitle: 'Import will replace the draft',
+    mainImportWarning:
+        'Your current assessment will be deleted. Use Export first if you want to keep it.',
+    mainImportSuccess: 'Assessment imported successfully.',
+    mainImportFailed: 'Import failed: the file is not a valid assessment file.',
     mainNavWelcome: 'Welcome',
     mainNavScope: 'Scope of the assessment',
     mainNavInventory: 'Hardware inventory',
     mainNavEnergy: 'Energy consumption',
     mainNavResults: 'Results',
+    mainNavReport: 'Report',
     mainStatusComplete: 'Complete',
     mainStatusPartial: 'In progress',
     mainStatusNotStarted: 'Not started',
@@ -270,6 +280,8 @@ export default {
         co2PerUnit: 'CO₂ estimation (kg CO₂-eq) for 1 IT element',
         co2RowTotal: 'CO₂ cumulated (kg CO₂-eq)',
     },
+    resultsPueIncluded: 'included ({value})',
+    resultsPueNotIncluded: 'not included',
     resultsCategoryTotal: 'Category total',
     resultsTotalEmbodied: 'Total embodied',
     resultsPartial: 'Partial',
@@ -277,6 +289,7 @@ export default {
     resultsOperationalTitle: 'Operational emissions',
     resultsOperationalColumns: {
         datacenterId: 'Datacenter',
+        pue: 'PUE',
         co2Period: 'CO₂ estimation (kg CO₂-eq) for the monitoring period',
         co2Lifespan: 'CO₂ estimation (kg CO₂-eq) for the whole lifespan',
     },
@@ -292,6 +305,11 @@ export default {
     resultsUnitKg: 'kg CO₂',
     resultsUnitG: 'g CO₂',
     resultsHostedIn: 'Hosted in: {dcs}',
+    resultsChartTreemapByElement: 'Embodied emissions by element',
+    resultsChartTreemapByCategory: 'Embodied emissions by category',
+    resultsChartPieByDatacenter: 'Operational emissions by datacenter',
+    resultsChartSplitTitle: 'Emissions repartition',
+    resultsColPercent: '%',
     // --- Validation messages (Zod → Quasar; see composables/useValidation.ts) ---
     validation: {
         invalid_type: {
