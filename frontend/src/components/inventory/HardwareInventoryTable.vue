@@ -44,7 +44,10 @@
         </template>
 
         <template v-slot:body="props">
-            <q-tr :props="props" :class="{ 'inventory-row--excluded': isNotCounted(props.row) }">
+            <q-tr
+                :props="props"
+                :class="{ 'inventory-row--excluded': mitsi.isSecondHandExcluded(props.row) }"
+            >
                 <q-td
                     v-for="col in props.cols"
                     :key="col.name"
@@ -53,7 +56,7 @@
                 >
                     <!-- Second-hand not-counted impact -->
                     <template v-if="col.name === 'impactManufacturingDistributionEol'">
-                        <template v-if="isNotCounted(props.row)">
+                        <template v-if="mitsi.isSecondHandExcluded(props.row)">
                             <span class="inventory-strike">{{
                                 formatKg(props.row.impactManufacturingDistributionEol)
                             }}</span>
@@ -71,7 +74,7 @@
 
                     <!-- Subtotal -->
                     <template v-else-if="col.name === 'subtotal'">
-                        <template v-if="isNotCounted(props.row)">
+                        <template v-if="mitsi.isSecondHandExcluded(props.row)">
                             <span class="inventory-dim">{{ $t('inventoryNotCounted') }}</span>
                         </template>
                         <span v-else>{{ formatKg(col.derived ? col.derived(props.row) : 0) }}</span>
@@ -206,12 +209,6 @@ const { toValidationRule } = useValidation();
 
 /** Columns are cumulative: advanced ⊇ normal ⊇ simple. */
 const MODE_RANK: Record<VisibilityMode, number> = { simple: 0, normal: 1, advanced: 2 };
-
-// ── Display-only helpers (never written back to the store) ──────────────────
-/** True when a row's impact must be struck through (second-hand, not accounted). */
-function isNotCounted(row: HardwareItem): boolean {
-    return mitsi.isSecondHandExcluded(row);
-}
 
 // Options for the datacenter select come from the store's datacenters.
 const datacenterOptions = computed<{ label: string; value: string }[]>(() =>

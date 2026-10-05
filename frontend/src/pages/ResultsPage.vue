@@ -227,12 +227,7 @@ import { useI18n } from 'vue-i18n';
 
 import { useMitsiStore } from 'src/stores/mitsi';
 import { useResultFormatting } from 'src/composables/useResultFormatting';
-import {
-    buildFunctionalUnitSentence,
-    formatDatacenterName,
-    formatKg,
-    normalizeKey,
-} from 'src/utils/format';
+import { formatDatacenterName, formatKg, normalizeKey } from 'src/utils/format';
 
 const { t } = useI18n();
 const mitsi = useMitsiStore();
@@ -315,9 +310,15 @@ const timeUnitLabel = computed(() =>
 );
 
 /** Assembled functional-unit sentence ('Usage of 1 hour of the service with 1 GPU'). */
-const fuSentence = computed(() =>
-    buildFunctionalUnitSentence(t, mitsi.scope.functionalUnit, timeUnitLabel.value),
-);
+const fuSentence = computed(() => {
+    const fu = mitsi.scope.functionalUnit;
+    return t('scopeFuSentence', {
+        duration: fu.usageDuration,
+        unit: timeUnitLabel.value,
+        count: fu.resourceCount,
+        type: fu.resourceType,
+    });
+});
 
 /** Datacenter label 'abbreviation — name', falling back gracefully on missing parts. */
 function dcLabel(datacenterId: string): string {

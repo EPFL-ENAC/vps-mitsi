@@ -7,13 +7,6 @@
  * that are not part of the persisted schema, so pages and components keep
  * importing from `src/models/mitsi` exactly as before.
  */
-import {
-    HardwareItemDraftSchema,
-    MitsiStateDraftSchema,
-    type HardwareItem,
-    type MitsiState,
-} from 'src/models/schema';
-
 export { MITSI_SCHEMA_VERSION } from 'src/models/schema';
 export type {
     TimeUnit,
@@ -42,21 +35,3 @@ export type BlockStatus = 'complete' | 'partial' | 'not_started';
 
 /** The four assessment blocks, in the order shown in the navigation rail. */
 export type BlockKey = 'scope' | 'inventory' | 'energy' | 'results';
-
-/**
- * Creates a blank (empty) assessment state by parsing `{}` through the schema,
- * so every field falls back to its default.
- */
-export function emptyMitsiState(): MitsiState {
-    return MitsiStateDraftSchema.parse({});
-}
-
-/**
- * Creates a ready-to-edit hardware row. Parsing `{}` fills every field from the
- * schema defaults; the UI then overwrites the fallback id with a fresh uuid so
- * each new row is uniquely identified before it is ever persisted.
- */
-export function newHardwareItem(): HardwareItem {
-    const base = HardwareItemDraftSchema.parse({});
-    return { ...base, id: crypto.randomUUID() };
-}

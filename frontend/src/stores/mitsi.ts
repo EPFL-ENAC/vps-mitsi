@@ -10,8 +10,6 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 
 import {
-    emptyMitsiState,
-    newHardwareItem,
     MITSI_SCHEMA_VERSION,
     MITSI_STORAGE_KEY,
     type BlockKey,
@@ -30,6 +28,7 @@ import {
     DatacenterDraftSchema,
     DatacenterGeneralInfoSchema,
     HardwareCategorySchema,
+    HardwareItemDraftSchema,
     HardwareItemSchema,
     MitsiStateDraftSchema,
     MitsiStateSchema,
@@ -64,14 +63,14 @@ export type EnergyCoverage = {
 };
 
 export const useMitsiStore = defineStore('mitsi', () => {
-    const initial = emptyMitsiState();
+    const initial = MitsiStateDraftSchema.parse({});
     const scope = ref<Scope>(initial.scope);
-    const hardware = ref<HardwareItem[]>([]);
+    const hardware = ref<HardwareItem[]>(initial.hardware);
     const monitoringPeriod = ref<MonitoringPeriod>({ ...initial.monitoringPeriod });
     const datacenters = ref<Datacenter[]>(initial.datacenters);
-    const includeSecondHandEmbodied = ref(false);
-    const includeUnderlyingServices = ref(false);
-    const underlyingServices = ref<UnderlyingService[]>([]);
+    const includeSecondHandEmbodied = ref(initial.includeSecondHandEmbodied);
+    const includeUnderlyingServices = ref(initial.includeUnderlyingServices);
+    const underlyingServices = ref<UnderlyingService[]>(initial.underlyingServices);
     const savedAt = ref<number | null>(null);
     const exportedAt = ref<number | null>(null);
 
@@ -319,14 +318,7 @@ export const useMitsiStore = defineStore('mitsi', () => {
     }
 
     function reset(): void {
-        const blank = emptyMitsiState();
-        scope.value = blank.scope;
-        hardware.value = [];
-        monitoringPeriod.value = blank.monitoringPeriod;
-        datacenters.value = [];
-        includeSecondHandEmbodied.value = false;
-        includeUnderlyingServices.value = false;
-        underlyingServices.value = [];
+        applyState(MitsiStateDraftSchema.parse({}));
         savedAt.value = null;
         exportedAt.value = null;
         LocalStorage.remove(MITSI_STORAGE_KEY);
@@ -382,7 +374,7 @@ export const useMitsiStore = defineStore('mitsi', () => {
     }
 
     function addHardwareItem(): void {
-        hardware.value.push(newHardwareItem());
+        hardware.value.push(HardwareItemDraftSchema.parse({ id: crypto.randomUUID() }));
     }
 
     /** Creates a blank included/excluded boundary row (fresh uuid). */

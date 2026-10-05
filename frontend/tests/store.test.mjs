@@ -3,14 +3,16 @@ import { beforeEach, afterEach, mock, test } from 'node:test';
 import { createPinia, setActivePinia } from 'pinia';
 import { LocalStorage } from 'quasar';
 import { useMitsiStore } from '../src/stores/mitsi.ts';
-import { MITSI_STORAGE_KEY, newHardwareItem } from '../src/models/mitsi.ts';
+import { MITSI_STORAGE_KEY } from '../src/models/mitsi.ts';
 import {
     BoundaryItemDraftSchema,
     DatacenterEnergyDraftSchema,
     DatacenterDraftSchema,
     HardwareItemDraftSchema,
     MITSI_SCHEMA_VERSION,
+    MitsiStateDraftSchema,
     ScopeDraftSchema,
+    UnderlyingServiceDraftSchema,
 } from '../src/models/schema.ts';
 
 let stored;
@@ -57,7 +59,7 @@ test('blank and partially edited assessments survive save and reload, including 
     assert.equal(store.saveToStorage(), true);
     store.addDatacenter();
     store.addBoundaryItem('included');
-    store.hardware.push(newHardwareItem());
+    store.addHardwareItem();
     store.scope.organizationName = 'EPFL';
     assert.equal(store.saveToStorage(), true);
     const snapshot = store.exportJson();
@@ -69,6 +71,21 @@ test('blank and partially edited assessments survive save and reload, including 
     assert.equal(restored.datacenters.length, 1);
     assert.equal(restored.scope.includedItems.length, 1);
     assert.equal(restored.isScopeValid, false);
+});
+
+test('hardware creation uses draft defaults and gives each row its own id', () => {
+    const store = useMitsiStore();
+    store.addHardwareItem();
+    store.addHardwareItem();
+    const [first, second] = store.hardware;
+    assert.ok(first.id);
+    assert.ok(second.id);
+    assert.notEqual(first.id, second.id);
+    for (const row of store.hardware) {
+        assert.deepEqual({ ...row, id: '' }, HardwareItemDraftSchema.parse({}));
+    }
+    first.name = 'Edited';
+    assert.equal(second.name, '');
 });
 
 test('invalid saves and exports preserve previous storage and timestamps', () => {
@@ -359,7 +376,7 @@ test('invalid shared inputs withhold energy estimates and real zero results rema
     assert.equal(store.totalPerResource, null);
 });
 
-test('cleared nested energy survives persistence and reset removes the whole collection', () => {
+test('cleared nested energy survives persistence and reset restores fresh assessment defaults', () => {
     const store = useMitsiStore();
     setupScope(store);
     store.datacenters[0].energy.energyConsumption = 12;
@@ -372,11 +389,42 @@ test('cleared nested energy survives persistence and reset removes the whole col
     assert.equal(store.importJson(json), true);
     assert.equal(store.datacenters[0].energy.energyConsumption, null);
     assert.equal(store.datacenters.length, 1);
-    store.reset();
-    assert.deepEqual(store.datacenters, []);
-    assert.equal(store.totalOperational, null);
-    assert.equal(store.totalLifespan, null);
-    assert.equal(store.blockStatus.energy, 'not_started');
+    const defaults = MitsiStateDraftSchema.parse({});
+    for (let attempt = 0; attempt < 2; attempt++) {
+        store.scope.organizationName = 'Edited';
+        store.scope.functionalUnit.resourceCount = 3;
+        store.addBoundaryItem('included');
+        store.addBoundaryItem('excluded');
+        store.addHardwareItem();
+        store.addDatacenter();
+        store.monitoringPeriod.value = 7;
+        store.includeSecondHandEmbodied = true;
+        store.includeUnderlyingServices = true;
+        store.underlyingServices.push(UnderlyingServiceDraftSchema.parse({ co2EstimateKg: 12 }));
+        assert.equal(store.blockStatus.energy, 'partial');
+        assert.equal(store.saveToStorage(), true);
+        store.exportJson();
+        assert.ok(store.savedAt);
+        assert.ok(store.exportedAt);
+        assert.equal(stored.has(MITSI_STORAGE_KEY), true);
+
+        const previousScope = store.scope;
+        const previousPeriod = store.monitoringPeriod;
+        store.reset();
+        for (const [key, value] of Object.entries(defaults)) {
+            if (key !== 'schemaVersion') assert.deepEqual(store[key], value, key);
+        }
+        assert.notEqual(store.scope, previousScope);
+        assert.notEqual(store.scope.functionalUnit, previousScope.functionalUnit);
+        assert.notEqual(store.scope.includedItems, previousScope.includedItems);
+        assert.notEqual(store.monitoringPeriod, previousPeriod);
+        assert.equal(store.savedAt, null);
+        assert.equal(store.exportedAt, null);
+        assert.equal(stored.has(MITSI_STORAGE_KEY), false);
+        assert.equal(store.totalOperational, null);
+        assert.equal(store.totalLifespan, null);
+        assert.equal(store.blockStatus.energy, 'not_started');
+    }
 });
 
 test('unsupported stored versions are ignored without modifying state or storage', () => {
