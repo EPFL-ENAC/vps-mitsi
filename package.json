@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "vue-echarts": "^8.3.1"
+  }
+}
