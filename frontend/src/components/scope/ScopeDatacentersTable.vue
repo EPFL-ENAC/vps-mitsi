@@ -76,7 +76,6 @@ interface DatacenterColumn extends QTableColumn<Datacenter> {
     name: keyof DatacenterGeneralInfo | 'usedBy';
     kind: 'text' | 'number';
     zod?: z.ZodType;
-    sort?: (a: unknown, b: unknown, rowA: Datacenter, rowB: Datacenter) => number;
 }
 
 const { t } = useI18n();

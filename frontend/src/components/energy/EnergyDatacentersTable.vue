@@ -84,7 +84,6 @@ interface EnergyColumn extends QTableColumn<Datacenter> {
     name: keyof DatacenterEnergy | 'datacenter';
     kind: 'datacenter' | 'text' | 'number';
     zod?: z.ZodType;
-    sort?: (a: unknown, b: unknown, rowA: Datacenter, rowB: Datacenter) => number;
 }
 
 const mitsi = useMitsiStore();
