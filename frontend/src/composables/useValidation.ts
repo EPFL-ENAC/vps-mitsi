@@ -1,12 +1,9 @@
 /**
  * MITSI — Quasar form validation via Zod (silent adapter).
  *
- * Replaces the legacy hand-written rule factories (src/models/validation.ts)
- * with rules derived straight from the strict field-rule schemas in
- * src/models/schema.ts (`formRules`). Pages/registries carry `z.ZodType`
- * schemas (plain data) and convert them to Quasar `ValidationRule`s here, so
- * the rule text is always translated through vue-i18n and stays in sync with
- * the single source of truth.
+ * Adapts canonical entity fields from src/models/schema.ts to Quasar rules.
+ * Pages and registries pass schemas directly; this adapter supplies translated
+ * validation messages and normalizes empty inputs.
  */
 import type { ValidationRule } from 'quasar';
 import type * as z from 'zod';
