@@ -310,6 +310,11 @@ export default {
     resultsChartPieByDatacenter: 'Operational emissions by datacenter',
     resultsChartSplitTitle: 'Emissions repartition',
     resultsColPercent: '%',
+    resultsGenerateReport: 'Generate report',
+    // --- Report (printable; see src/pages/ReportPreviewPage.vue) ---
+    reportToolbarTitle: 'Report',
+    reportPrint: 'Print',
+    reportGeneratedOn: 'Generated on {date}',
     // --- Validation messages (Zod → Quasar; see composables/useValidation.ts) ---
     validation: {
         invalid_type: {
