@@ -77,6 +77,30 @@
                 </tr>
             </tbody>
         </q-markup-table>
+
+        <!-- treemap by element + treemap by category -->
+        <div v-if="showChart" class="row q-col-gutter-md q-mt-sm">
+            <div class="col-12 col-md-6">
+                <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
+                    {{ $t('resultsChartTreemapByElement') }}
+                </div>
+                <EmbodiedTreemapChart
+                    :groups="mitsi.embodiedByCategory"
+                    :grand-total="mitsi.totalEmbodied"
+                    variant="element"
+                />
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
+                    {{ $t('resultsChartTreemapByCategory') }}
+                </div>
+                <EmbodiedTreemapChart
+                    :groups="mitsi.embodiedByCategory"
+                    :grand-total="mitsi.totalEmbodied"
+                    variant="category"
+                />
+            </div>
+        </div>
     </div>
 </template>
 
@@ -85,15 +109,18 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMitsiStore } from 'src/stores/mitsi';
 import { formatKg, normalizeKey } from 'src/utils/format';
+import EmbodiedTreemapChart from 'src/components/results/EmbodiedTreemapChart.vue';
 
 withDefaults(
     defineProps<{
         showToggle?: boolean;
         interactive?: boolean;
+        showChart?: boolean;
     }>(),
     {
         showToggle: false,
         interactive: false,
+        showChart: false,
     },
 );
 

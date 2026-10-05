@@ -14,17 +14,25 @@
 
         <!-- Embodied emissions -->
         <AssessmentSection :title="$t('resultsEmbodiedTitle')" default-opened>
-            <ResultsEmbodiedSection show-toggle interactive />
+            <ResultsEmbodiedSection show-toggle interactive show-chart />
         </AssessmentSection>
 
         <!-- Operational emissions -->
         <AssessmentSection :title="$t('resultsOperationalTitle')" default-opened>
-            <ResultsOperationalSection />
+            <ResultsOperationalSection show-chart />
         </AssessmentSection>
+
+        <!-- v2 FEATURE (lead decision: excluded from v1; spec contradiction — Results
+             proposes the checkbox+editable table while "What we will not do yet" lists
+             underlying services as a future evolution). The store already supports it:
+             includeUnderlyingServices, underlyingServices, totalUnderlying (0 while off).
+             To enable: add an editable Quasar-grid table
+             (name / usage description / co2EstimateKg), include totalUnderlying in the
+             Total zone and the split pie. -->
 
         <!-- Total emissions -->
         <AssessmentSection :title="$t('resultsTotalTitle')" default-opened>
-            <ResultsTotalSection />
+            <ResultsTotalSection show-chart />
         </AssessmentSection>
 
         <!-- Emissions related to the functional unit -->
