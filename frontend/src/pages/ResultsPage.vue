@@ -144,7 +144,9 @@
                         </td>
                         <td></td>
                         <td class="text-right">
-                            <strong>{{ formatOperationalResult(mitsi.totalOperational) }}</strong>
+                            <strong>{{
+                                formatResult(mitsi.totalOperational, operationalResultOptions)
+                            }}</strong>
                         </td>
                     </tr>
                 </tbody>
@@ -172,7 +174,7 @@
                     <tr>
                         <td>{{ $t('resultsRowOperational') }}</td>
                         <td class="text-right">
-                            {{ formatOperationalResult(mitsi.totalOperational) }}
+                            {{ formatResult(mitsi.totalOperational, operationalResultOptions) }}
                         </td>
                     </tr>
                     <tr class="results-total">
@@ -180,7 +182,9 @@
                             <strong>{{ $t('resultsRowTotal') }}</strong>
                         </td>
                         <td class="text-right">
-                            <strong>{{ formatCombinedResult(mitsi.totalLifespan) }}</strong>
+                            <strong>{{
+                                formatResult(mitsi.totalLifespan, combinedResultOptions)
+                            }}</strong>
                         </td>
                     </tr>
                 </tbody>
@@ -226,12 +230,23 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { useMitsiStore } from 'src/stores/mitsi';
-import { useResultFormatting } from 'src/composables/useResultFormatting';
-import { formatDatacenterName, formatKg, normalizeKey } from 'src/utils/format';
+import { formatDatacenterName, formatKg, formatResult, normalizeKey } from 'src/utils/format';
 
 const { t } = useI18n();
 const mitsi = useMitsiStore();
-const { formatOperationalResult, formatCombinedResult } = useResultFormatting();
+const operationalResultOptions = computed(() => ({
+    missingLabel: t('mainNotApplicable'),
+    partialLabel: mitsi.energyCoverage.isComplete
+        ? ''
+        : t('resultsEnergyCoverage', {
+              complete: mitsi.energyCoverage.completeDatacenters,
+              total: mitsi.energyCoverage.totalDatacenters,
+          }),
+}));
+const combinedResultOptions = computed(() => ({
+    missingLabel: t('mainNotApplicable'),
+    partialLabel: mitsi.resultsPartial ? t('resultsPartial') : '',
+}));
 
 type EmbodiedRow = (typeof mitsi.embodiedByCategory)[number]['rows'][number];
 type OperationalRow = (typeof mitsi.operationalPerDc)[number];
@@ -339,18 +354,18 @@ const hostedInDcs = computed(() =>
 );
 
 const totalPerResourceText = computed(() =>
-    formatCombinedResult(
-        mitsi.totalPerResource,
-        (value) => `${formatKg(value)} ${t('resultsUnitKg')}`,
-    ),
+    formatResult(mitsi.totalPerResource, {
+        ...combinedResultOptions.value,
+        formatValue: (value) => `${formatKg(value)} ${t('resultsUnitKg')}`,
+    }),
 );
 
 const perFunctionalUnitText = computed(() =>
-    formatCombinedResult(
-        mitsi.perFunctionalUnit,
-        (value) =>
+    formatResult(mitsi.perFunctionalUnit, {
+        ...combinedResultOptions.value,
+        formatValue: (value) =>
             `${value.toFixed(4)} ${t('resultsUnitKg')} / ${(value * 1000).toFixed(4)} ${t('resultsUnitG')}`,
-    ),
+    }),
 );
 </script>
 

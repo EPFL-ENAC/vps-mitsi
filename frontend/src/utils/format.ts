@@ -15,6 +15,24 @@ export function formatKg(n: number | null): string {
     }).format(n);
 }
 
+/** Format a result with caller-provided missing and partial-result labels. */
+export function formatResult(
+    value: number | null,
+    {
+        formatValue = formatKg,
+        missingLabel,
+        partialLabel,
+    }: {
+        formatValue?: (value: number) => string;
+        missingLabel: string;
+        partialLabel?: string;
+    },
+): string {
+    if (value === null) return missingLabel;
+    const formatted = formatValue(value);
+    return partialLabel ? `${formatted} (${partialLabel})` : formatted;
+}
+
 /** Normalizes a schema enum value into an i18n key suffix: every run of
  *  non-alphanumeric characters becomes a single underscore. e.g. 'compute_server'
  *  → 'compute_server', '2.5 inch' → '2_5_inch', 'HDD' → 'HDD'. */

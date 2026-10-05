@@ -89,7 +89,7 @@ import { useI18n } from 'vue-i18n';
 
 import type { BlockKey, BlockStatus } from 'src/models/mitsi';
 import { useMitsiStore } from 'src/stores/mitsi';
-import { useResultFormatting } from 'src/composables/useResultFormatting';
+import { formatResult } from 'src/utils/format';
 
 interface BlockDef {
     labelKey: string;
@@ -103,7 +103,19 @@ const epflLogoUrl = `${import.meta.env.BASE_URL}epfl.svg`;
 
 const leftDrawerOpen = ref(false);
 const mitsi = useMitsiStore();
-const { formatOperationalResult, formatCombinedResult } = useResultFormatting();
+const operationalResultOptions = computed(() => ({
+    missingLabel: t('mainNotApplicable'),
+    partialLabel: mitsi.energyCoverage.isComplete
+        ? ''
+        : t('resultsEnergyCoverage', {
+              complete: mitsi.energyCoverage.completeDatacenters,
+              total: mitsi.energyCoverage.totalDatacenters,
+          }),
+}));
+const combinedResultOptions = computed(() => ({
+    missingLabel: t('mainNotApplicable'),
+    partialLabel: mitsi.resultsPartial ? t('resultsPartial') : '',
+}));
 const $q = useQuasar();
 
 function saveAssessment(): void {
@@ -163,29 +175,29 @@ const embodiedText = computed<string>(() =>
 /** Operational emissions in tonnes, or a dash until the scope is valid. */
 const operationalText = computed<string>(() =>
     mitsi.isScopeValid
-        ? formatOperationalResult(
-              mitsi.totalOperational,
-              (value) => `${(value / 1000).toFixed(1)} ${t('mainUnitTonnes')}`,
-          )
+        ? formatResult(mitsi.totalOperational, {
+              ...operationalResultOptions.value,
+              formatValue: (value) => `${(value / 1000).toFixed(1)} ${t('mainUnitTonnes')}`,
+          })
         : t('mainNotApplicable'),
 );
 
 /** Total over the lifespan in tonnes of CO2-eq, or a dash until the scope is valid. */
 const totalLifespanText = computed<string>(() =>
     mitsi.isScopeValid
-        ? formatCombinedResult(
-              mitsi.totalLifespan,
-              (value) => `${(value / 1000).toFixed(1)} ${t('mainUnitTonnesCo2e')}`,
-          )
+        ? formatResult(mitsi.totalLifespan, {
+              ...combinedResultOptions.value,
+              formatValue: (value) => `${(value / 1000).toFixed(1)} ${t('mainUnitTonnesCo2e')}`,
+          })
         : t('mainNotApplicable'),
 );
 
 /** Per-functional-unit emissions in grams of CO2-eq, or a dash when not computable. */
 const perFunctionalUnitText = computed<string>(() =>
-    formatCombinedResult(
-        mitsi.perFunctionalUnit,
-        (value) => `${(value * 1000).toFixed(2)} ${t('mainUnitGramsCo2e')}`,
-    ),
+    formatResult(mitsi.perFunctionalUnit, {
+        ...combinedResultOptions.value,
+        formatValue: (value) => `${(value * 1000).toFixed(2)} ${t('mainUnitGramsCo2e')}`,
+    }),
 );
 
 const savedText = computed<string>(() =>
