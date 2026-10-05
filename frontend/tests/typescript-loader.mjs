@@ -2,17 +2,23 @@
 // another test framework. Typechecking remains the responsibility of vue-tsc.
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
+import { parse, compileScript } from 'vue/compiler-sfc';
 
 export function resolve(specifier, context, nextResolve) {
     if (specifier.startsWith('src/')) {
-        return nextResolve(new URL(`../${specifier}.ts`, import.meta.url).href, context);
+        const path = /\.(ts|vue)$/.test(specifier) ? specifier : `${specifier}.ts`;
+        return nextResolve(new URL(`../${path}`, import.meta.url).href, context);
     }
     return nextResolve(specifier, context);
 }
 
 export function load(url, context, nextLoad) {
-    if (url.endsWith('.ts') && !url.includes('/node_modules/')) {
-        const source = readFileSync(new URL(url), 'utf8');
+    if (/\.(ts|vue)$/.test(url) && !url.includes('/node_modules/')) {
+        let source = readFileSync(new URL(url), 'utf8');
+        if (url.endsWith('.vue')) {
+            const { descriptor } = parse(source, { filename: url });
+            source = compileScript(descriptor, { id: url, inlineTemplate: true }).content;
+        }
         return {
             format: 'module',
             source: ts.transpileModule(source, {

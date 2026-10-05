@@ -10,9 +10,12 @@
                     :aria-label="$t('mainMenuAriaLabel')"
                     @click="leftDrawerOpen = !leftDrawerOpen"
                 />
-                <q-toolbar-title class="text-weight-medium">MITSI</q-toolbar-title>
+                <q-toolbar-title class="header-brand text-weight-medium">
+                    <img :src="epflLogoUrl" alt="EPFL" class="header-brand__logo" />
+                    <span>MITSI</span>
+                </q-toolbar-title>
                 <q-space />
-                <span class="text-caption text-grey-7 q-mr-sm">
+                <span class="text-caption text-grey-7 q-mr-sm gt-xs">
                     {{ $t('mainTagline') }}
                 </span>
                 <q-btn unelevated color="primary" :label="$t('mainSave')" @click="saveAssessment" />
@@ -112,6 +115,7 @@ interface BlockDef {
 }
 
 const { t } = useI18n();
+const epflLogoUrl = `${import.meta.env.BASE_URL}epfl.svg`;
 
 const leftDrawerOpen = ref(false);
 const mitsi = useMitsiStore();
