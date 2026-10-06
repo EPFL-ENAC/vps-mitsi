@@ -315,7 +315,7 @@ export default {
     reportToolbarTitle: 'Report',
     reportPrint: 'Print',
     reportGeneratedOn: 'Generated on {date}',
-    // --- Validation messages (Zod → Quasar; see composables/useValidation.ts) ---
+    // --- Validation messages (Zod -> Quasar; see composables/useValidation.ts) ---
     validation: {
         invalid_type: {
             number: 'Must be a number.',

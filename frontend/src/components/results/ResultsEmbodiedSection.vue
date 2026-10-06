@@ -20,43 +20,49 @@
                     {{ t('inventoryCategory_' + normalizeKey(g.category)) }}
                 </div>
 
-                <q-markup-table dense flat bordered class="results-table">
-                    <thead>
-                        <tr>
-                            <th
-                                v-for="col in embodiedColumns"
+                <q-table
+                    flat
+                    bordered
+                    dense
+                    hide-pagination
+                    :pagination="{ rowsPerPage: 0 }"
+                    :rows="g.rows"
+                    :columns="embodiedColumns"
+                    row-key="id"
+                    class="results-table"
+                >
+                    <template #header-cell="props">
+                        <q-th :props="props" :data-kind="props.col.kind">
+                            {{ props.col.label }}
+                        </q-th>
+                    </template>
+
+                    <template #body="props">
+                        <q-tr :props="props" :class="{ 'results-excluded': props.row.excluded }">
+                            <q-td
+                                v-for="col in props.cols"
                                 :key="col.name"
-                                :data-kind="col.kind"
-                                scope="col"
-                            >
-                                {{ col.label }}
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                            v-for="row in g.rows"
-                            :key="row.id"
-                            :class="{ 'results-excluded': row.excluded }"
-                        >
-                            <td
-                                v-for="col in embodiedColumns"
-                                :key="col.name"
+                                :props="props"
                                 :data-kind="col.kind"
                             >
                                 <template v-if="col.name === 'co2RowTotal'">
-                                    <span :class="{ 'results-strike': row.excluded }">
-                                        {{ col.display(row) }}
+                                    <span :class="{ 'results-strike': props.row.excluded }">
+                                        {{ col.value }}
                                     </span>
-                                    <span v-if="row.excluded" class="results-not-counted q-ml-xs">
+                                    <span
+                                        v-if="props.row.excluded"
+                                        class="results-not-counted q-ml-xs"
+                                    >
                                         ({{ $t('inventoryNotCounted') }})
                                     </span>
                                 </template>
-                                <template v-else>{{ col.display(row) }}</template>
-                            </td>
-                        </tr>
-                    </tbody>
-                </q-markup-table>
+                                <template v-else>
+                                    {{ col.value }}
+                                </template>
+                            </q-td>
+                        </q-tr>
+                    </template>
+                </q-table>
 
                 <div class="results-category-total text-right q-py-xs text-caption">
                     {{ $t('resultsCategoryTotal') }}:
@@ -107,6 +113,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import type { QTableColumn } from 'quasar';
 import { useMitsiStore } from 'src/stores/mitsi';
 import { formatKg, normalizeKey } from 'src/utils/format';
 import EmbodiedTreemapChart from 'src/components/results/EmbodiedTreemapChart.vue';
@@ -129,43 +136,45 @@ const mitsi = useMitsiStore();
 
 type EmbodiedRow = (typeof mitsi.embodiedByCategory)[number]['rows'][number];
 
-interface EmbodiedColumn {
-    name: Exclude<keyof EmbodiedRow, 'id' | 'excluded'>;
-    label: string;
+interface EmbodiedTableColumn extends QTableColumn<EmbodiedRow> {
     kind: 'text' | 'number';
-    display: (row: EmbodiedRow) => string | number;
 }
 
-const embodiedColumns = computed<EmbodiedColumn[]>(() => [
+const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
     {
         name: 'name',
         label: t('resultsEmbodiedColumns.name'),
+        align: 'left',
+        field: (row) => row.name,
         kind: 'text',
-        display: (row) => row.name,
     },
     {
         name: 'description',
         label: t('resultsEmbodiedColumns.description'),
+        align: 'left',
+        field: (row) => row.description,
         kind: 'text',
-        display: (row) => row.description,
     },
     {
         name: 'number',
         label: t('resultsEmbodiedColumns.number'),
+        align: 'right',
+        field: (row) => row.number,
         kind: 'number',
-        display: (row) => row.number,
     },
     {
         name: 'co2PerUnit',
         label: t('resultsEmbodiedColumns.co2PerUnit'),
+        align: 'right',
+        field: (row) => formatKg(row.co2PerUnit),
         kind: 'number',
-        display: (row) => formatKg(row.co2PerUnit),
     },
     {
         name: 'co2RowTotal',
         label: t('resultsEmbodiedColumns.co2RowTotal'),
+        align: 'right',
+        field: (row) => formatKg(row.co2RowTotal),
         kind: 'number',
-        display: (row) => formatKg(row.co2RowTotal),
     },
 ]);
 </script>
@@ -177,8 +186,8 @@ const embodiedColumns = computed<EmbodiedColumn[]>(() => [
     @include table-cells.cells;
     overflow: visible !important;
 
-    th,
-    td {
+    :deep(th),
+    :deep(td) {
         white-space: normal !important;
         word-break: break-word;
     }
