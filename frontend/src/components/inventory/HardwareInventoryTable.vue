@@ -165,6 +165,7 @@ import type { z } from 'zod';
 import type { HardwareItem, VisibilityMode } from 'src/models/mitsi';
 import { formatDatacenterName, formatKg, normalizeKey } from 'src/utils/format';
 import { rowSubtotal } from 'src/utils/math';
+import { createSchemaColumn } from 'src/utils/tables';
 import {
     HardwareCategorySchema,
     HardwareItemSchema,
@@ -218,12 +219,13 @@ type ColumnSpec = Omit<InventoryColumn, 'name' | 'label' | 'field' | 'zod'> & {
     zod?: undefined;
 };
 
-/** Schema columns share their name, translation key and canonical field schema. */
+const schemaColumn = createSchemaColumn(HardwareItemSchema.shape, (field) =>
+    t(`inventoryColumns.${field}`),
+);
+
 function column(spec: ColumnSpec): InventoryColumn {
     return {
-        name: spec.field,
-        label: t(`inventoryColumns.${spec.field}`),
-        zod: HardwareItemSchema.shape[spec.field],
+        ...schemaColumn(spec.field),
         ...spec,
     };
 }

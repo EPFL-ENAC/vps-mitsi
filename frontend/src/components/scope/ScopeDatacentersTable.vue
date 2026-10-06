@@ -71,6 +71,7 @@ import type { Datacenter, DatacenterGeneralInfo } from 'src/models/mitsi';
 import { DatacenterGeneralInfoSchema } from 'src/models/schema';
 import { useMitsiStore } from 'src/stores/mitsi';
 import { formatDatacenterName } from 'src/utils/format';
+import { createSchemaColumn } from 'src/utils/tables';
 
 interface DatacenterColumn extends QTableColumn<Datacenter> {
     name: keyof DatacenterGeneralInfo | 'usedBy';
@@ -82,28 +83,28 @@ const { t } = useI18n();
 const $q = useQuasar();
 const mitsi = useMitsiStore();
 
+type ColumnSpec = Omit<DatacenterColumn, 'name' | 'label' | 'field' | 'zod'> & {
+    field: keyof DatacenterGeneralInfo;
+};
+
+const schemaColumn = createSchemaColumn(DatacenterGeneralInfoSchema.shape, (field) =>
+    t(`scopeDatacenterColumns.${field}`),
+);
+
+function column(spec: ColumnSpec): DatacenterColumn {
+    const { field, ...options } = spec;
+
+    return {
+        ...schemaColumn(field),
+        ...options,
+        field: (dc) => dc.generalInfo[field],
+    };
+}
+
 const columns = computed<DatacenterColumn[]>(() => [
-    {
-        name: 'abbreviation',
-        field: (dc) => dc.generalInfo.abbreviation,
-        label: t('scopeDatacenterColumns.abbreviation'),
-        kind: 'text',
-        zod: DatacenterGeneralInfoSchema.shape.abbreviation,
-    },
-    {
-        name: 'name',
-        field: (dc) => dc.generalInfo.name,
-        label: t('scopeDatacenterColumns.name'),
-        kind: 'text',
-        zod: DatacenterGeneralInfoSchema.shape.name,
-    },
-    {
-        name: 'comment',
-        field: (dc) => dc.generalInfo.comment,
-        label: t('scopeDatacenterColumns.comment'),
-        kind: 'text',
-        zod: DatacenterGeneralInfoSchema.shape.comment,
-    },
+    column({ field: 'abbreviation', kind: 'text' }),
+    column({ field: 'name', kind: 'text' }),
+    column({ field: 'comment', kind: 'text' }),
     {
         name: 'usedBy',
         field: usedByCell,

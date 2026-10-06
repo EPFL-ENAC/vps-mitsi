@@ -77,6 +77,7 @@ import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.v
 import { useI18n } from 'vue-i18n';
 import { useMitsiStore } from 'src/stores/mitsi';
 import { formatDatacenterName } from 'src/utils/format';
+import { createSchemaColumn } from 'src/utils/tables';
 import { DatacenterEnergySchema } from 'src/models/schema';
 import type { Datacenter, DatacenterEnergy } from 'src/models/mitsi';
 
@@ -90,6 +91,24 @@ const mitsi = useMitsiStore();
 const { t } = useI18n();
 const $q = useQuasar();
 
+type ColumnSpec = Omit<EnergyColumn, 'name' | 'label' | 'field' | 'zod'> & {
+    field: keyof DatacenterEnergy;
+};
+
+const schemaColumn = createSchemaColumn(DatacenterEnergySchema.shape, (field) =>
+    t(`energyColumns.${field}`),
+);
+
+function column(spec: ColumnSpec): EnergyColumn {
+    const { field, ...options } = spec;
+
+    return {
+        ...schemaColumn(field),
+        ...options,
+        field: (dc) => dc.energy[field],
+    };
+}
+
 const columns = computed<EnergyColumn[]>(() => [
     {
         name: 'datacenter',
@@ -97,69 +116,15 @@ const columns = computed<EnergyColumn[]>(() => [
         label: t('energyColumns.datacenter'),
         kind: 'datacenter',
     },
-    {
-        name: 'comment',
-        field: (dc) => dc.energy.comment,
-        label: t('energyColumns.comment'),
-        kind: 'text',
-        zod: DatacenterEnergySchema.shape.comment,
-    },
-    {
-        name: 'location',
-        field: (dc) => dc.energy.location,
-        label: t('energyColumns.location'),
-        kind: 'text',
-        zod: DatacenterEnergySchema.shape.location,
-    },
-    {
-        name: 'locationComment',
-        field: (dc) => dc.energy.locationComment,
-        label: t('energyColumns.locationComment'),
-        kind: 'text',
-        zod: DatacenterEnergySchema.shape.locationComment,
-    },
-    {
-        name: 'carbonIntensity',
-        field: (dc) => dc.energy.carbonIntensity,
-        label: t('energyColumns.carbonIntensity'),
-        kind: 'number',
-        zod: DatacenterEnergySchema.shape.carbonIntensity,
-    },
-    {
-        name: 'carbonIntensityComment',
-        field: (dc) => dc.energy.carbonIntensityComment,
-        label: t('energyColumns.carbonIntensityComment'),
-        kind: 'text',
-        zod: DatacenterEnergySchema.shape.carbonIntensityComment,
-    },
-    {
-        name: 'pue',
-        field: (dc) => dc.energy.pue,
-        label: t('energyColumns.pue'),
-        kind: 'number',
-        zod: DatacenterEnergySchema.shape.pue,
-    },
-    {
-        name: 'pueComment',
-        field: (dc) => dc.energy.pueComment,
-        label: t('energyColumns.pueComment'),
-        kind: 'text',
-        zod: DatacenterEnergySchema.shape.pueComment,
-    },
-    {
-        name: 'energyConsumption',
-        field: (dc) => dc.energy.energyConsumption,
-        label: t('energyColumns.energyConsumption'),
-        kind: 'number',
-        zod: DatacenterEnergySchema.shape.energyConsumption,
-    },
-    {
-        name: 'energyComment',
-        field: (dc) => dc.energy.energyComment,
-        label: t('energyColumns.energyComment'),
-        kind: 'text',
-        zod: DatacenterEnergySchema.shape.energyComment,
-    },
+    column({ field: 'comment', kind: 'text' }),
+    column({ field: 'location', kind: 'text' }),
+    column({ field: 'locationComment', kind: 'text' }),
+    column({ field: 'carbonIntensity', kind: 'number' }),
+    column({ field: 'carbonIntensityComment', kind: 'text' }),
+    column({ field: 'pue', kind: 'number' }),
+    column({ field: 'pueComment', kind: 'text' }),
+    column({ field: 'energyConsumption', kind: 'number' }),
+    column({ field: 'energyComment', kind: 'text' }),
 ]);
 
 function clearEnergy(dc: Datacenter): void {
