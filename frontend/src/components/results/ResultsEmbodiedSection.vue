@@ -2,13 +2,13 @@
     <div class="results-embodied-wrapper">
         <div v-if="showToggle" class="row items-center q-mb-md">
             <q-toggle
-                v-model="mitsi.includeSecondHandEmbodied"
+                v-model="surveyData.includeSecondHandEmbodied"
                 :label="$t('resultsSecondHandToggle')"
                 color="primary"
             />
         </div>
 
-        <div v-for="g in mitsi.embodiedByCategory" :key="g.category" class="q-mb-md">
+        <div v-for="g in surveyResults.embodiedByCategory" :key="g.category" class="q-mb-md">
             <component
                 :is="interactive ? QExpansionItem : 'div'"
                 :label="t('inventoryCategory_' + normalizeKey(g.category))"
@@ -78,7 +78,7 @@
                         <strong>{{ $t('resultsTotalEmbodied') }}</strong>
                     </td>
                     <td class="text-right">
-                        <strong>{{ formatKg(mitsi.totalEmbodied) }}</strong>
+                        <strong>{{ formatKg(surveyResults.totalEmbodied) }}</strong>
                     </td>
                 </tr>
             </tbody>
@@ -91,8 +91,8 @@
                     {{ $t('resultsChartTreemapByElement') }}
                 </div>
                 <EmbodiedTreemapChart
-                    :groups="mitsi.embodiedByCategory"
-                    :grand-total="mitsi.totalEmbodied"
+                    :groups="surveyResults.embodiedByCategory"
+                    :grand-total="surveyResults.totalEmbodied"
                     variant="element"
                 />
             </div>
@@ -101,8 +101,8 @@
                     {{ $t('resultsChartTreemapByCategory') }}
                 </div>
                 <EmbodiedTreemapChart
-                    :groups="mitsi.embodiedByCategory"
-                    :grand-total="mitsi.totalEmbodied"
+                    :groups="surveyResults.embodiedByCategory"
+                    :grand-total="surveyResults.totalEmbodied"
                     variant="category"
                 />
             </div>
@@ -111,12 +111,17 @@
 </template>
 
 <script setup lang="ts">
+import { useSurveyDataStore } from 'src/stores/surveyData';
+import { useSurveyResultsStore } from 'src/stores/surveyResults';
+
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { QExpansionItem, type QTableColumn } from 'quasar';
-import { useMitsiStore } from 'src/stores/mitsi';
 import { formatKg, normalizeKey } from 'src/utils/format';
 import EmbodiedTreemapChart from 'src/components/results/EmbodiedTreemapChart.vue';
+
+const surveyData = useSurveyDataStore();
+const surveyResults = useSurveyResultsStore();
 
 withDefaults(
     defineProps<{
@@ -132,9 +137,8 @@ withDefaults(
 );
 
 const { t } = useI18n();
-const mitsi = useMitsiStore();
 
-type EmbodiedRow = (typeof mitsi.embodiedByCategory)[number]['rows'][number];
+type EmbodiedRow = (typeof surveyResults.embodiedByCategory)[number]['rows'][number];
 
 interface EmbodiedTableColumn extends QTableColumn<EmbodiedRow> {
     kind: 'text' | 'number';

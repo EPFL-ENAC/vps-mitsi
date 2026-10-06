@@ -1,7 +1,7 @@
 <template>
     <q-btn flat color="primary" class="q-mb-sm" :label="t('scopeDcAdd')" @click="addDatacenter" />
     <q-table
-        :rows="mitsi.datacenters"
+        :rows="surveyData.datacenters"
         :columns="columns"
         :table-colspan="columns.length + 1"
         row-key="id"
@@ -61,6 +61,8 @@
 </template>
 
 <script setup lang="ts">
+import { useSurveyDataStore } from 'src/stores/surveyData';
+
 import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
 import { useI18n } from 'vue-i18n';
 import { computed } from 'vue';
@@ -69,9 +71,10 @@ import type { z } from 'zod';
 
 import type { Datacenter, DatacenterGeneralInfo } from 'src/models/mitsi';
 import { DatacenterGeneralInfoSchema } from 'src/models/schema';
-import { useMitsiStore } from 'src/stores/mitsi';
 import { formatDatacenterName } from 'src/utils/format';
 import { createSchemaColumn } from 'src/utils/tables';
+
+const surveyData = useSurveyDataStore();
 
 interface DatacenterColumn extends QTableColumn<Datacenter> {
     name: keyof DatacenterGeneralInfo | 'usedBy';
@@ -81,7 +84,6 @@ interface DatacenterColumn extends QTableColumn<Datacenter> {
 
 const { t } = useI18n();
 const $q = useQuasar();
-const mitsi = useMitsiStore();
 
 type ColumnSpec = Omit<DatacenterColumn, 'name' | 'label' | 'field' | 'zod'> & {
     field: keyof DatacenterGeneralInfo;
@@ -114,11 +116,11 @@ const columns = computed<DatacenterColumn[]>(() => [
 ]);
 
 function addDatacenter(): void {
-    mitsi.addDatacenter();
+    surveyData.addDatacenter();
 }
 
 function usedByCell(dc: Datacenter): string {
-    const guard = mitsi.getDatacenterDeletionBlock(dc.id);
+    const guard = surveyData.getDatacenterDeletionBlock(dc.id);
     return guard ? t('scopeDcInvRows', guard.hardwareRowCount) : t('scopeDcUsedByNone');
 }
 
@@ -135,7 +137,7 @@ function showDeletionBlocked(name: string, hardwareRowCount: number): void {
 
 function removeDatacenter(dc: Datacenter): void {
     const name = formatDatacenterName(dc);
-    const guard = mitsi.getDatacenterDeletionBlock(dc.id);
+    const guard = surveyData.getDatacenterDeletionBlock(dc.id);
     if (guard) {
         showDeletionBlocked(name, guard.hardwareRowCount);
         return;
@@ -146,7 +148,7 @@ function removeDatacenter(dc: Datacenter): void {
         cancel: true,
         persistent: true,
     }).onOk(() => {
-        const result = mitsi.removeDatacenter(dc.id);
+        const result = surveyData.removeDatacenter(dc.id);
         if (!result.removed && result.reason === 'in_use') {
             showDeletionBlocked(name, result.usage.hardwareRowCount);
         }

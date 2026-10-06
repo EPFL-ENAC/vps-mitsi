@@ -5,13 +5,13 @@
                 <tr>
                     <td data-kind="text">{{ $t('resultsRowEmbodied') }}</td>
                     <td class="text-right" data-kind="number">
-                        {{ formatKg(mitsi.totalEmbodied) }}
+                        {{ formatKg(surveyResults.totalEmbodied) }}
                     </td>
                 </tr>
                 <tr>
                     <td data-kind="text">{{ $t('resultsRowOperational') }}</td>
                     <td class="text-right" data-kind="number">
-                        {{ formatResult(mitsi.totalOperational, operationalResultOptions) }}
+                        {{ formatResult(surveyResults.totalOperational, operationalResultOptions) }}
                     </td>
                 </tr>
                 <tr class="results-total">
@@ -20,7 +20,7 @@
                     </td>
                     <td class="text-right" data-kind="number">
                         <strong>{{
-                            formatResult(mitsi.totalLifespan, combinedResultOptions)
+                            formatResult(surveyResults.totalLifespan, combinedResultOptions)
                         }}</strong>
                     </td>
                 </tr>
@@ -33,26 +33,31 @@
                 {{ $t('resultsChartSplitTitle') }}
             </div>
             <TotalSplitPieChart
-                :embodied="mitsi.totalEmbodied"
-                :operational="mitsi.totalOperational"
-                :total="mitsi.totalLifespan"
+                :embodied="surveyResults.totalEmbodied"
+                :operational="surveyResults.totalOperational"
+                :total="surveyResults.totalLifespan"
                 :labels="{
                     embodied: t('resultsRowEmbodied'),
                     operational: t('resultsRowOperational'),
                 }"
             />
             <!-- v2 (lead decision): underlying services excluded in v1 — one-line restore:
-            :underlying="mitsi.totalUnderlying"  and  labels.underlying: t('resultsRowUnderlying') -->
+            :underlying="surveyResults.totalUnderlying"  and  labels.underlying: t('resultsRowUnderlying') -->
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
+import { useSurveyDataStore } from 'src/stores/surveyData';
+import { useSurveyResultsStore } from 'src/stores/surveyResults';
+
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useMitsiStore } from 'src/stores/mitsi';
 import { formatKg, formatResult } from 'src/utils/format';
 import TotalSplitPieChart from 'src/components/results/TotalSplitPieChart.vue';
+
+const surveyData = useSurveyDataStore();
+const surveyResults = useSurveyResultsStore();
 
 withDefaults(
     defineProps<{
@@ -62,19 +67,18 @@ withDefaults(
 );
 
 const { t } = useI18n();
-const mitsi = useMitsiStore();
 const operationalResultOptions = computed(() => ({
     missingLabel: t('mainNotApplicable'),
-    partialLabel: mitsi.energyCoverage.isComplete
+    partialLabel: surveyResults.energyCoverage.isComplete
         ? ''
         : t('resultsEnergyCoverage', {
-              complete: mitsi.energyCoverage.completeDatacenters,
-              total: mitsi.energyCoverage.totalDatacenters,
+              complete: surveyResults.energyCoverage.completeDatacenters,
+              total: surveyResults.energyCoverage.totalDatacenters,
           }),
 }));
 const combinedResultOptions = computed(() => ({
     missingLabel: t('mainNotApplicable'),
-    partialLabel: mitsi.resultsPartial ? t('resultsPartial') : '',
+    partialLabel: surveyData.resultsStatus === 'partial' ? t('resultsPartial') : '',
 }));
 </script>
 

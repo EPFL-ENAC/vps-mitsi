@@ -9,7 +9,11 @@
         </div>
 
         <!-- Scope gating hint -->
-        <q-banner v-if="!mitsi.isScopeValid" inline-actions class="bg-warning text-white q-mb-md">
+        <q-banner
+            v-if="!surveyData.isScopeValid"
+            inline-actions
+            class="bg-warning text-white q-mb-md"
+        >
             {{ $t('inventoryNoScopeHint') }}
         </q-banner>
 
@@ -20,7 +24,7 @@
                 unelevated
                 color="primary"
                 :label="$t('inventoryAddRow')"
-                @click="mitsi.addHardwareItem()"
+                @click="surveyData.addHardwareItem()"
             />
         </div>
 
@@ -29,9 +33,9 @@
             <div class="text-body1 text-weight-medium">
                 {{
                     $t('inventoryStats', {
-                        rows: rowsCount,
-                        elements: elementsCount,
-                        total: formatKg(mitsi.totalEmbodied),
+                        rows: surveyResults.rowsCount,
+                        elements: surveyResults.elementsCount,
+                        total: formatKg(surveyResults.totalEmbodied),
                     })
                 }}
             </div>
@@ -42,16 +46,16 @@
 
         <!-- Warning bar -->
         <q-banner
-            v-if="mitsi.missingMandatoryHardware > 0"
+            v-if="surveyData.missingMandatoryHardware > 0"
             inline-actions
             class="bg-warning text-white q-mb-md"
         >
-            {{ $t('inventoryWarningBar', { n: mitsi.missingMandatoryHardware }) }}
+            {{ $t('inventoryWarningBar', { n: surveyData.missingMandatoryHardware }) }}
         </q-banner>
 
         <!-- No datacenters hint -->
         <q-banner
-            v-if="mitsi.datacenters.length === 0"
+            v-if="surveyData.datacenters.length === 0"
             inline-actions
             class="bg-grey-3 text-grey-8 q-mb-md"
         >
@@ -64,26 +68,30 @@
         <!-- Footer -->
         <div class="row items-center q-mt-md inventory-footer">
             <div class="text-body1">
-                {{ $t('inventoryFooter', { n: mitsi.secondHandExcludedCount }) }}
+                {{ $t('inventoryFooter', { n: surveyResults.secondHandExcludedCount }) }}
             </div>
             <div class="text-body1 text-weight-medium" style="margin-left: auto">
-                {{ formatKg(mitsi.totalEmbodied) }}
+                {{ formatKg(surveyResults.totalEmbodied) }}
             </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { useSurveyDataStore } from 'src/stores/surveyData';
+import { useSurveyResultsStore } from 'src/stores/surveyResults';
+
+import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import HardwareInventoryTable from 'src/components/inventory/HardwareInventoryTable.vue';
 import type { VisibilityMode } from 'src/models/mitsi';
 import { formatKg } from 'src/utils/format';
-import { useMitsiStore } from 'src/stores/mitsi';
+
+const surveyData = useSurveyDataStore();
+const surveyResults = useSurveyResultsStore();
 
 const { t } = useI18n();
-const mitsi = useMitsiStore();
 
 // ── Local UI state (never persisted) ─────────────────────────────────────────
 const mode = ref<VisibilityMode>('normal');
@@ -92,12 +100,6 @@ const modeOptions = [
     { label: t('inventoryModeNormal'), value: 'normal' },
     { label: t('inventoryModeAdvanced'), value: 'advanced' },
 ];
-
-// ── Stats line (display-only) ────────────────────────────────────────────────
-const rowsCount = computed<number>(() => mitsi.hardware.length);
-const elementsCount = computed<number>(() =>
-    mitsi.hardware.reduce((sum, h) => sum + (h.quantity || 0), 0),
-);
 </script>
 
 <style scoped>

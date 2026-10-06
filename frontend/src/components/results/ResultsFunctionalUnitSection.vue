@@ -5,7 +5,9 @@
                 <th scope="row" class="results-key text-left" data-kind="text">
                     {{ $t('resultsFuNumber') }}
                 </th>
-                <td class="text-right" data-kind="number">{{ mitsi.resourcesInService }}</td>
+                <td class="text-right" data-kind="number">
+                    {{ surveyResults.resourcesInService }}
+                </td>
             </tr>
             <tr>
                 <th scope="row" class="results-key text-left" data-kind="text">
@@ -27,9 +29,11 @@
 </template>
 
 <script setup lang="ts">
+import { useSurveyDataStore } from 'src/stores/surveyData';
+import { useSurveyResultsStore } from 'src/stores/surveyResults';
+
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useMitsiStore } from 'src/stores/mitsi';
 import {
     buildFunctionalUnitSentence,
     formatDatacenterName,
@@ -37,16 +41,18 @@ import {
     formatResult,
 } from 'src/utils/format';
 
+const surveyData = useSurveyDataStore();
+const surveyResults = useSurveyResultsStore();
+
 const { t } = useI18n();
-const mitsi = useMitsiStore();
 const combinedResultOptions = computed(() => ({
     missingLabel: t('mainNotApplicable'),
-    partialLabel: mitsi.resultsPartial ? t('resultsPartial') : '',
+    partialLabel: surveyData.resultsStatus === 'partial' ? t('resultsPartial') : '',
 }));
-const fuSentence = computed(() => buildFunctionalUnitSentence(t, mitsi.scope.functionalUnit));
+const fuSentence = computed(() => buildFunctionalUnitSentence(t, surveyData.scope.functionalUnit));
 
 const hostedInDcs = computed(() =>
-    mitsi.datacenters
+    surveyData.datacenters
         .map((dc) => {
             const location = dc.energy.location.trim();
             const label = formatDatacenterName(dc);
@@ -56,14 +62,14 @@ const hostedInDcs = computed(() =>
 );
 
 const totalPerResourceText = computed(() =>
-    formatResult(mitsi.totalPerResource, {
+    formatResult(surveyResults.totalPerResource, {
         ...combinedResultOptions.value,
         formatValue: (value) => `${formatKg(value)} ${t('resultsUnitKg')}`,
     }),
 );
 
 const perFunctionalUnitText = computed(() =>
-    formatResult(mitsi.perFunctionalUnit, {
+    formatResult(surveyResults.perFunctionalUnit, {
         ...combinedResultOptions.value,
         formatValue: (value) =>
             `${value.toFixed(4)} ${t('resultsUnitKg')} / ${(value * 1000).toFixed(4)} ${t('resultsUnitG')}`,

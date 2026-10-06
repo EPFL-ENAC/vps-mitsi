@@ -5,13 +5,13 @@
                 <th scope="row" class="results-key text-left" data-kind="text">
                     {{ $t('resultsSummaryServiceName') }}
                 </th>
-                <td data-kind="text">{{ mitsi.scope.serviceName || '—' }}</td>
+                <td data-kind="text">{{ surveyData.scope.serviceName || '—' }}</td>
             </tr>
             <tr>
                 <th scope="row" class="results-key text-left" data-kind="text">
                     {{ $t('resultsSummaryFunction') }}
                 </th>
-                <td data-kind="text">{{ mitsi.scope.function || '—' }}</td>
+                <td data-kind="text">{{ surveyData.scope.function || '—' }}</td>
             </tr>
             <tr>
                 <th scope="row" class="results-key text-left" data-kind="text">
@@ -24,7 +24,7 @@
                     {{ $t('resultsSummaryLifespan') }}
                 </th>
                 <td data-kind="text">
-                    {{ $t('resultsLifespanYears', { n: mitsi.scope.lifespanYears }) }}
+                    {{ $t('resultsLifespanYears', { n: surveyData.scope.lifespanYears }) }}
                 </td>
             </tr>
         </tbody>
@@ -32,14 +32,16 @@
 </template>
 
 <script setup lang="ts">
+import { useSurveyDataStore } from 'src/stores/surveyData';
+
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { buildFunctionalUnitSentence } from 'src/utils/format';
-import { useMitsiStore } from 'src/stores/mitsi';
 
-const mitsi = useMitsiStore();
+const surveyData = useSurveyDataStore();
+
 const { t } = useI18n();
-const fuSentence = computed(() => buildFunctionalUnitSentence(t, mitsi.scope.functionalUnit));
+const fuSentence = computed(() => buildFunctionalUnitSentence(t, surveyData.scope.functionalUnit));
 </script>
 
 <style scoped lang="scss">

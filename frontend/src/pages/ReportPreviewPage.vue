@@ -18,7 +18,7 @@
 
         <div class="report-container">
             <q-banner
-                v-if="!mitsi.isScopeValid"
+                v-if="!surveyData.isScopeValid"
                 inline-actions
                 class="bg-warning text-white q-mb-md print-hide"
             >
@@ -30,7 +30,7 @@
                 <ReportSheet>
                     <div class="report-cover">
                         <h1 class="text-h3 text-weight-bolder text-primary q-mb-xl">
-                            {{ mitsi.scope.serviceName || $t('resultsSummaryServiceName') }}
+                            {{ surveyData.scope.serviceName || $t('resultsSummaryServiceName') }}
                         </h1>
 
                         <div class="q-gutter-y-lg text-body1">
@@ -38,14 +38,16 @@
                                 <div class="text-caption text-weight-bold text-grey-7">
                                     {{ $t('scopeOrganizationLabel') }}
                                 </div>
-                                <div class="text-h6">{{ mitsi.scope.organizationName || '—' }}</div>
+                                <div class="text-h6">
+                                    {{ surveyData.scope.organizationName || '—' }}
+                                </div>
                             </div>
 
                             <div>
                                 <div class="text-caption text-weight-bold text-grey-7">
                                     {{ $t('scopeAssessorsLabel') }}
                                 </div>
-                                <div class="text-h6">{{ mitsi.scope.assessors || '—' }}</div>
+                                <div class="text-h6">{{ surveyData.scope.assessors || '—' }}</div>
                             </div>
 
                             <div>
@@ -54,7 +56,9 @@
                                 </div>
                                 <div class="text-h6">
                                     {{
-                                        $t('resultsLifespanYears', { n: mitsi.scope.lifespanYears })
+                                        $t('resultsLifespanYears', {
+                                            n: surveyData.scope.lifespanYears,
+                                        })
                                     }}
                                 </div>
                             </div>
@@ -72,7 +76,9 @@
                         <div class="text-weight-bold text-subtitle2">
                             {{ $t('scopeFunctionLabel') }}
                         </div>
-                        <div class="text-body2 text-grey-9">{{ mitsi.scope.function || '—' }}</div>
+                        <div class="text-body2 text-grey-9">
+                            {{ surveyData.scope.function || '—' }}
+                        </div>
                     </div>
 
                     <div class="q-mb-lg text-body2 text-primary text-weight-medium">
@@ -94,7 +100,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="dc in mitsi.datacenters" :key="dc.id">
+                            <tr v-for="dc in surveyData.datacenters" :key="dc.id">
                                 <td>{{ dc.generalInfo.abbreviation }}</td>
                                 <td>{{ dc.generalInfo.name }}</td>
                                 <td>{{ dc.generalInfo.comment || '—' }}</td>
@@ -131,10 +137,11 @@
 </template>
 
 <script setup lang="ts">
+import { useSurveyDataStore } from 'src/stores/surveyData';
+
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
-import { useMitsiStore } from 'src/stores/mitsi';
 import { buildFunctionalUnitSentence } from 'src/utils/format';
 
 import ReportSheet from 'src/components/report/ReportSheet.vue';
@@ -143,10 +150,11 @@ import ResultsOperationalSection from 'src/components/results/ResultsOperational
 import ResultsTotalSection from 'src/components/results/ResultsTotalSection.vue';
 import ResultsFunctionalUnitSection from 'src/components/results/ResultsFunctionalUnitSection.vue';
 
+const surveyData = useSurveyDataStore();
+
 const { t, locale } = useI18n();
 const router = useRouter();
-const mitsi = useMitsiStore();
-const fuSentence = computed(() => buildFunctionalUnitSentence(t, mitsi.scope.functionalUnit));
+const fuSentence = computed(() => buildFunctionalUnitSentence(t, surveyData.scope.functionalUnit));
 
 const reportDate = computed(() => {
     const df = new Intl.DateTimeFormat(locale.value, {

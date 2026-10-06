@@ -1,10 +1,4 @@
-/**
- * MITSI — Pinia store (single source of truth)
- *
- * Holds the whole assessment state, persists client-side via the Quasar
- * LocalStorage plugin, and exposes the actions/computed totals used across
- * all blocks.
- */
+/** Editable survey inputs, validation, progress, and browser persistence. */
 import { LocalStorage } from 'quasar';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
@@ -13,7 +7,6 @@ import { z } from 'zod';
 import {
     MITSI_SCHEMA_VERSION,
     MITSI_STORAGE_KEY,
-    type BlockKey,
     type BlockStatus,
     type Datacenter,
     type HardwareItem,
@@ -28,41 +21,20 @@ import {
     DatacenterEnergyDraftSchema,
     DatacenterDraftSchema,
     DatacenterGeneralInfoSchema,
-    HardwareCategorySchema,
     HardwareItemDraftSchema,
     HardwareItemSchema,
     MitsiStateDraftSchema,
     MitsiStateSchema,
     MonitoringPeriodSchema,
     ScopeSchema,
-    type HardwareCategory,
+    ScopeDraftSchema,
 } from 'src/models/schema';
-import {
-    calculateFunctionalUnitEmissions,
-    calculateOperationalEmissions,
-    countResources,
-    rowSubtotal,
-    sum,
-} from 'src/utils/math';
-
 export type DatacenterDeletionBlock = { hardwareRowCount: number };
 
 export type RemoveDatacenterResult =
     | { removed: true }
     | { removed: false; reason: 'not_found' }
     | { removed: false; reason: 'in_use'; usage: DatacenterDeletionBlock };
-
-export type DatacenterOperationalResult = {
-    datacenter: Datacenter;
-    co2Period: number | null;
-    co2Lifespan: number | null;
-};
-
-export type EnergyCoverage = {
-    completeDatacenters: number;
-    totalDatacenters: number;
-    isComplete: boolean;
-};
 
 /** Loaded assessments must declare their version instead of receiving a creation default. */
 const PersistedAssessmentSchema = MitsiStateDraftSchema.extend({
@@ -76,25 +48,13 @@ const StoredDraftSchema = z.object({
 });
 type StoredDraft = z.infer<typeof StoredDraftSchema>;
 
-/** One hardware row as returned by embodiedByCategory (Results tables + charts). */
-export interface EmbodiedRow {
-    id: string;
-    name: string;
-    description: string;
-    number: number;
-    co2PerUnit: number;
-    co2RowTotal: number;
-    excluded: boolean;
+function statusFor(requiredInputsAreValid: boolean, hasUserInput: boolean): BlockStatus {
+    if (requiredInputsAreValid) return 'complete';
+    if (hasUserInput) return 'partial';
+    return 'not_started';
 }
 
-/** One category group: rows plus the accounted total. */
-export interface EmbodiedGroup {
-    category: HardwareCategory;
-    rows: EmbodiedRow[];
-    categoryTotal: number;
-}
-
-export const useMitsiStore = defineStore('mitsi', () => {
+export const useSurveyDataStore = defineStore('surveyData', () => {
     const initial = MitsiStateDraftSchema.parse({});
     const scope = ref<Scope>(initial.scope);
     const hardware = ref<HardwareItem[]>(initial.hardware);
@@ -126,166 +86,6 @@ export const useMitsiStore = defineStore('mitsi', () => {
             datacenters.value.length === 0,
     );
 
-    /**
-     * Whether a second-hand row is excluded from the embodied total — i.e. it is
-     * second-hand AND second-hand embodied emissions are not being accounted for.
-     * Single definition of the rule, reused by the getters and the inventory page.
-     */
-    function isSecondHandExcluded(row: HardwareItem): boolean {
-        return row.isSecondHand && !includeSecondHandEmbodied.value;
-    }
-
-    /** Embodied emissions (kg CO2-eq), honouring the second-hand setting. */
-    const totalEmbodied = computed<number>(() =>
-        sum(hardware.value.filter((h) => !isSecondHandExcluded(h)).map(rowSubtotal)),
-    );
-
-    /** Count of hardware rows excluded because second-hand & not accounted. */
-    const secondHandExcludedCount = computed<number>(
-        () => hardware.value.filter(isSecondHandExcluded).length,
-    );
-
-    /**
-     * Direct v-model edits can be incomplete or invalid until saved. Canonical
-     * parsing checks calculation readiness and normalizes cleared optional PUE.
-     * Keep unready datacenters visible with unavailable estimates.
-     */
-    const operationalPerDc = computed<DatacenterOperationalResult[]>(() => {
-        const period = MonitoringPeriodSchema.safeParse(monitoringPeriod.value);
-        const lifespan = ScopeSchema.shape.lifespanYears.safeParse(scope.value.lifespanYears);
-        return datacenters.value.map((dc) => {
-            const energy = DatacenterEnergySchema.safeParse(dc.energy);
-            if (!energy.success || !period.success) {
-                return { datacenter: dc, co2Period: null, co2Lifespan: null };
-            }
-            return {
-                datacenter: dc,
-                ...calculateOperationalEmissions({
-                    energy: energy.data,
-                    monitoringPeriod: period.data,
-                    lifespanYears: lifespan.success ? lifespan.data : null,
-                }),
-            };
-        });
-    });
-
-    /** Sum available lifespan estimates; no measurements is different from zero. */
-    const totalOperational = computed<number | null>(() => {
-        const values = operationalPerDc.value
-            .map((dc) => dc.co2Lifespan)
-            .filter((value): value is number => value !== null);
-        return values.length ? sum(values) : null;
-    });
-
-    const energyCoverage = computed<EnergyCoverage>(() => {
-        const completeDatacenters = operationalPerDc.value.filter(
-            (dc) => dc.co2Lifespan !== null,
-        ).length;
-        const totalDatacenters = datacenters.value.length;
-        return {
-            completeDatacenters,
-            totalDatacenters,
-            isComplete:
-                isScopeValid.value &&
-                totalDatacenters > 0 &&
-                completeDatacenters === totalDatacenters,
-        };
-    });
-
-    /** Underlying services emissions over the lifespan (kg CO2-eq). */
-    const totalUnderlying = computed<number>(() =>
-        includeUnderlyingServices.value
-            ? sum(underlyingServices.value.map((service) => service.co2EstimateKg || 0))
-            : 0,
-    );
-
-    const hasEmbodiedContribution = computed(() =>
-        hardware.value.some(
-            (row) =>
-                HardwareItemSchema.shape.quantity.safeParse(row.quantity).success &&
-                HardwareItemSchema.shape.impactManufacturingDistributionEol.safeParse(
-                    row.impactManufacturingDistributionEol,
-                ).success,
-        ),
-    );
-
-    const totalLifespan = computed<number | null>(() => {
-        const hasUnderlying =
-            includeUnderlyingServices.value && underlyingServices.value.length > 0;
-        if (!hasEmbodiedContribution.value && totalOperational.value === null && !hasUnderlying)
-            return null;
-        const total = totalEmbodied.value + (totalOperational.value ?? 0) + totalUnderlying.value;
-        return Number.isFinite(total) ? total : null;
-    });
-
-    /** Count only accounted hardware, honoring the second-hand setting. */
-    const resourcesInService = computed<number>(() =>
-        countResources(
-            hardware.value.filter((row) => !isSecondHandExcluded(row)),
-            scope.value.functionalUnit.resourceType,
-        ),
-    );
-
-    /** Validate draft inputs before calling the pure functional-unit calculation. */
-    const perFunctionalUnit = computed<number | null>(() => {
-        const functionalUnit = ScopeSchema.shape.functionalUnit.safeParse(
-            scope.value.functionalUnit,
-        );
-        const lifespan = ScopeSchema.shape.lifespanYears.safeParse(scope.value.lifespanYears);
-        const resources = resourcesInService.value;
-        const total = totalLifespan.value;
-        if (!functionalUnit.success || !lifespan.success || total === null) return null;
-        if (!Number.isFinite(resources) || resources <= 0 || functionalUnit.data.usageDuration <= 0)
-            return null;
-
-        return calculateFunctionalUnitEmissions({
-            totalEmissions: total,
-            lifespanYears: lifespan.data,
-            resourcesInService: resources,
-            functionalUnit: functionalUnit.data,
-        });
-    });
-
-    /** Embodied rows grouped by category for the Results tables (spec: one table
-     *  per category used): per-element CO₂ and per-row cumulated CO₂; rows whose
-     *  second-hand embodied emissions are not accounted are flagged `excluded`
-     *  so the page can strike them through. Category values come from the schema
-     *  enum at runtime — a new schema category automatically appears in Results. */
-    const embodiedByCategory = computed<EmbodiedGroup[]>(() =>
-        HardwareCategorySchema.options
-            .map((category) => {
-                const rows = hardware.value
-                    .filter((h) => h.category === category)
-                    .map((h) => ({
-                        id: h.id,
-                        name: h.name,
-                        description: h.description ?? '',
-                        number: h.quantity,
-                        co2PerUnit: h.impactManufacturingDistributionEol,
-                        co2RowTotal: rowSubtotal(h),
-                        excluded: isSecondHandExcluded(h),
-                    }));
-                return {
-                    category,
-                    rows,
-                    categoryTotal: sum(
-                        rows.filter((row) => !row.excluded).map((row) => row.co2RowTotal),
-                    ),
-                };
-            })
-            .filter((g) => g.rows.length > 0),
-    );
-
-    /** kg CO2-eq per ONE resource of the FU fleet over the whole lifespan
-     *  (Excel Results: total ÷ resourcesInService). */
-    const totalPerResource = computed<number | null>(() =>
-        totalLifespan.value !== null &&
-        Number.isFinite(resourcesInService.value) &&
-        resourcesInService.value > 0
-            ? totalLifespan.value / resourcesInService.value
-            : null,
-    );
-
     /** True when a hardware row carries every field needed for the totals. */
     const hardwareRowValid = (h: HardwareItem): boolean => HardwareItemSchema.safeParse(h).success;
 
@@ -297,11 +97,6 @@ export const useMitsiStore = defineStore('mitsi', () => {
     const hardwareRowsComplete = computed<boolean>(
         () => hardware.value.length > 0 && hardware.value.every(hardwareRowValid),
     );
-    const resultsComplete = computed(
-        () => isScopeValid.value && hardwareRowsComplete.value && energyCoverage.value.isComplete,
-    );
-    const resultsPartial = computed(() => totalLifespan.value !== null && !resultsComplete.value);
-
     /** Empty cleared inputs count as untouched; an explicit numeric zero counts as entered. */
     const energyStarted = computed(() => {
         const period = monitoringPeriod.value;
@@ -320,26 +115,60 @@ export const useMitsiStore = defineStore('mitsi', () => {
         );
     });
 
-    /** Per-block completion, reflecting mandatory-field completion, not row presence. */
-    const blockStatus = computed<Record<BlockKey, BlockStatus>>(() => ({
-        scope: isScopeValid.value ? 'complete' : 'not_started',
-        inventory:
-            hardware.value.length === 0
-                ? 'not_started'
-                : hardwareRowsComplete.value && isScopeValid.value
-                  ? 'complete'
-                  : 'partial',
-        energy: energyCoverage.value.isComplete
-            ? 'complete'
-            : energyStarted.value
-              ? 'partial'
-              : 'not_started',
-        results: resultsComplete.value
-            ? 'complete'
-            : totalLifespan.value !== null
-              ? 'partial'
-              : 'not_started',
-    }));
+    // Compare against separate defaults: editable refs must never mutate the baseline.
+    const scopeDefaults = ScopeDraftSchema.parse({});
+    const scopeHasUserInput = computed(() => {
+        const current = scope.value;
+        const fu = current.functionalUnit;
+        const defaultFu = scopeDefaults.functionalUnit;
+        return (
+            current.organizationName !== scopeDefaults.organizationName ||
+            current.assessors !== scopeDefaults.assessors ||
+            current.serviceName !== scopeDefaults.serviceName ||
+            current.function !== scopeDefaults.function ||
+            current.lifespanYears !== scopeDefaults.lifespanYears ||
+            fu.timeUnit !== defaultFu.timeUnit ||
+            fu.usageDuration !== defaultFu.usageDuration ||
+            fu.resourceCount !== defaultFu.resourceCount ||
+            fu.resourceType !== defaultFu.resourceType ||
+            current.includedItems.length > 0 ||
+            current.excludedItems.length > 0 ||
+            datacenters.value.length > 0
+        );
+    });
+    const hardwareHasUserInput = computed(() => hardware.value.length > 0);
+    const hasUserInput = computed(
+        () =>
+            scopeHasUserInput.value ||
+            hardwareHasUserInput.value ||
+            energyStarted.value ||
+            includeSecondHandEmbodied.value !== initial.includeSecondHandEmbodied ||
+            includeUnderlyingServices.value !== initial.includeUnderlyingServices ||
+            underlyingServices.value.length > 0,
+    );
+
+    const energyInputsValid = computed(
+        () =>
+            isScopeValid.value &&
+            MonitoringPeriodSchema.safeParse(monitoringPeriod.value).success &&
+            datacenters.value.every((dc) => DatacenterEnergySchema.safeParse(dc.energy).success),
+    );
+
+    const scopeStatus = computed(() => statusFor(isScopeValid.value, scopeHasUserInput.value));
+    const hardwareInventoryStatus = computed(() =>
+        statusFor(isScopeValid.value && hardwareRowsComplete.value, hardwareHasUserInput.value),
+    );
+    const energyConsumptionStatus = computed(() =>
+        statusFor(energyInputsValid.value, energyStarted.value),
+    );
+    const resultsStatus = computed(() =>
+        statusFor(
+            scopeStatus.value === 'complete' &&
+                hardwareInventoryStatus.value === 'complete' &&
+                energyConsumptionStatus.value === 'complete',
+            hasUserInput.value,
+        ),
+    );
 
     // ── Persistence (client-side, Quasar LocalStorage) ───────────────────────
     function loadFromStorage(): void {
@@ -488,21 +317,11 @@ export const useMitsiStore = defineStore('mitsi', () => {
         exportedAt,
         isScopeValid,
         isStoreEmpty,
-        isSecondHandExcluded,
-        totalEmbodied,
-        secondHandExcludedCount,
-        totalOperational,
-        energyCoverage,
-        resultsPartial,
-        totalUnderlying,
-        totalLifespan,
-        resourcesInService,
-        perFunctionalUnit,
-        operationalPerDc,
-        embodiedByCategory,
-        totalPerResource,
-        blockStatus,
         missingMandatoryHardware,
+        scopeStatus,
+        hardwareInventoryStatus,
+        energyConsumptionStatus,
+        resultsStatus,
         loadFromStorage,
         saveToStorage,
         reset,

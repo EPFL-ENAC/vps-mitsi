@@ -6,7 +6,7 @@
             dense
             hide-pagination
             :pagination="{ rowsPerPage: 0 }"
-            :rows="mitsi.operationalPerDc"
+            :rows="surveyResults.operationalPerDc"
             :columns="operationalColumns"
             :row-key="(row: DatacenterOperationalResult) => row.datacenter.id"
             class="results-table"
@@ -31,7 +31,7 @@
                     <q-td></q-td>
                     <q-td class="text-right">
                         <strong>{{
-                            formatResult(mitsi.totalOperational, operationalResultOptions)
+                            formatResult(surveyResults.totalOperational, operationalResultOptions)
                         }}</strong>
                     </q-td>
                 </q-tr>
@@ -44,8 +44,8 @@
                 {{ $t('resultsChartPieByDatacenter') }}
             </div>
             <DatacentersPieChart
-                :rows="mitsi.operationalPerDc"
-                :total="mitsi.totalOperational"
+                :rows="surveyResults.operationalPerDc"
+                :total="surveyResults.totalOperational"
                 metric="lifespan"
             />
         </div>
@@ -53,12 +53,16 @@
 </template>
 
 <script setup lang="ts">
+import { useSurveyResultsStore } from 'src/stores/surveyResults';
+import type { DatacenterOperationalResult } from 'src/stores/surveyResults';
+
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { QTableColumn } from 'quasar';
-import { useMitsiStore, type DatacenterOperationalResult } from 'src/stores/mitsi';
 import { formatDatacenterName, formatKg, formatPueInclusion, formatResult } from 'src/utils/format';
 import DatacentersPieChart from 'src/components/results/DatacentersPieChart.vue';
+
+const surveyResults = useSurveyResultsStore();
 
 withDefaults(
     defineProps<{
@@ -68,14 +72,13 @@ withDefaults(
 );
 
 const { t } = useI18n();
-const mitsi = useMitsiStore();
 const operationalResultOptions = computed(() => ({
     missingLabel: t('mainNotApplicable'),
-    partialLabel: mitsi.energyCoverage.isComplete
+    partialLabel: surveyResults.energyCoverage.isComplete
         ? ''
         : t('resultsEnergyCoverage', {
-              complete: mitsi.energyCoverage.completeDatacenters,
-              total: mitsi.energyCoverage.totalDatacenters,
+              complete: surveyResults.energyCoverage.completeDatacenters,
+              total: surveyResults.energyCoverage.totalDatacenters,
           }),
 }));
 

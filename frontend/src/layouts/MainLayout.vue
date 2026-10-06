@@ -104,13 +104,18 @@
 </template>
 
 <script setup lang="ts">
+import { useSurveyDataStore } from 'src/stores/surveyData';
+import { useSurveyResultsStore } from 'src/stores/surveyResults';
+
 import { computed, ref } from 'vue';
 import { useQuasar, date, exportFile } from 'quasar';
 import { useI18n } from 'vue-i18n';
 
 import type { BlockKey, BlockStatus } from 'src/models/mitsi';
-import { useMitsiStore } from 'src/stores/mitsi';
 import { formatResult } from 'src/utils/format';
+
+const surveyData = useSurveyDataStore();
+const surveyResults = useSurveyResultsStore();
 
 interface BlockDef {
     labelKey: string;
@@ -123,24 +128,23 @@ const { t, locale } = useI18n();
 const epflLogoUrl = `${import.meta.env.BASE_URL}epfl.svg`;
 
 const leftDrawerOpen = ref(false);
-const mitsi = useMitsiStore();
 const operationalResultOptions = computed(() => ({
     missingLabel: t('mainNotApplicable'),
-    partialLabel: mitsi.energyCoverage.isComplete
+    partialLabel: surveyResults.energyCoverage.isComplete
         ? ''
         : t('resultsEnergyCoverage', {
-              complete: mitsi.energyCoverage.completeDatacenters,
-              total: mitsi.energyCoverage.totalDatacenters,
+              complete: surveyResults.energyCoverage.completeDatacenters,
+              total: surveyResults.energyCoverage.totalDatacenters,
           }),
 }));
 const combinedResultOptions = computed(() => ({
     missingLabel: t('mainNotApplicable'),
-    partialLabel: mitsi.resultsPartial ? t('resultsPartial') : '',
+    partialLabel: surveyData.resultsStatus === 'partial' ? t('resultsPartial') : '',
 }));
 const $q = useQuasar();
 
 function saveAssessment(): void {
-    if (!mitsi.saveToStorage()) {
+    if (!surveyData.saveToStorage()) {
         $q.notify({ type: 'negative', message: t('mainSaveFailed') });
     }
 }
@@ -149,7 +153,7 @@ function saveAssessment(): void {
 function onFilePicked(file: File | null): void {
     if (!file) return;
 
-    if (mitsi.isStoreEmpty) {
+    if (surveyData.isStoreEmpty) {
         readAndImport(file);
         return;
     }
@@ -170,7 +174,7 @@ function readAndImport(file: File): void {
     reader.onload = () => {
         const result = reader.result;
         if (typeof result !== 'string') return;
-        if (mitsi.importJson(result)) {
+        if (surveyData.importJson(result)) {
             $q.notify({ type: 'positive', message: t('mainImportSuccess') });
         } else {
             $q.notify({ type: 'negative', message: t('mainImportFailed') });
@@ -186,7 +190,7 @@ function readAndImport(file: File): void {
 function exportAssessment(): void {
     const status = exportFile(
         `mitsi-assessment-${date.formatDate(new Date(), 'YYYY-MM-DD_HH-mm-ss')}.json`,
-        mitsi.exportJson(),
+        surveyData.exportJson(),
         { mimeType: 'application/json' },
     );
     if (status === true) {
@@ -197,31 +201,30 @@ function exportAssessment(): void {
 }
 
 const assessmentBlocks = computed<Record<BlockKey, BlockDef>>(() => {
-    const status = mitsi.blockStatus;
     return {
         scope: {
             labelKey: 'mainNavScope',
             to: '/scope',
             icon: 'scope',
-            status: status.scope,
+            status: surveyData.scopeStatus,
         },
         inventory: {
             labelKey: 'mainNavInventory',
             to: '/inventory',
             icon: 'dns',
-            status: status.inventory,
+            status: surveyData.hardwareInventoryStatus,
         },
         energy: {
             labelKey: 'mainNavEnergy',
             to: '/energy',
             icon: 'bolt',
-            status: status.energy,
+            status: surveyData.energyConsumptionStatus,
         },
         results: {
             labelKey: 'mainNavResults',
             to: '/results',
             icon: 'insights',
-            status: status.results,
+            status: surveyData.resultsStatus,
         },
     };
 });
@@ -239,15 +242,15 @@ function completionLabelKey(status: BlockStatus): string {
 
 /** Embodied emissions in tonnes, or a dash until the scope is valid. */
 const embodiedText = computed<string>(() =>
-    mitsi.isScopeValid
-        ? `${(mitsi.totalEmbodied / 1000).toFixed(1)} ${t('mainUnitTonnes')}`
+    surveyData.isScopeValid
+        ? `${(surveyResults.totalEmbodied / 1000).toFixed(1)} ${t('mainUnitTonnes')}`
         : t('mainNotApplicable'),
 );
 
 /** Operational emissions in tonnes, or a dash until the scope is valid. */
 const operationalText = computed<string>(() =>
-    mitsi.isScopeValid
-        ? formatResult(mitsi.totalOperational, {
+    surveyData.isScopeValid
+        ? formatResult(surveyResults.totalOperational, {
               ...operationalResultOptions.value,
               formatValue: (value) => `${(value / 1000).toFixed(1)} ${t('mainUnitTonnes')}`,
           })
@@ -256,8 +259,8 @@ const operationalText = computed<string>(() =>
 
 /** Total over the lifespan in tonnes of CO2-eq, or a dash until the scope is valid. */
 const totalLifespanText = computed<string>(() =>
-    mitsi.isScopeValid
-        ? formatResult(mitsi.totalLifespan, {
+    surveyData.isScopeValid
+        ? formatResult(surveyResults.totalLifespan, {
               ...combinedResultOptions.value,
               formatValue: (value) => `${(value / 1000).toFixed(1)} ${t('mainUnitTonnesCo2e')}`,
           })
@@ -266,25 +269,25 @@ const totalLifespanText = computed<string>(() =>
 
 /** Per-functional-unit emissions in grams of CO2-eq, or a dash when not computable. */
 const perFunctionalUnitText = computed<string>(() =>
-    formatResult(mitsi.perFunctionalUnit, {
+    formatResult(surveyResults.perFunctionalUnit, {
         ...combinedResultOptions.value,
         formatValue: (value) => `${(value * 1000).toFixed(2)} ${t('mainUnitGramsCo2e')}`,
     }),
 );
 
 const savedText = computed<string>(() =>
-    mitsi.savedAt === null
+    surveyData.savedAt === null
         ? t('mainFooterNeverSaved')
         : t('mainFooterSavedAt', {
               dateTime: new Intl.DateTimeFormat(locale.value, {
                   dateStyle: 'medium',
                   timeStyle: 'medium',
-              }).format(mitsi.savedAt),
+              }).format(surveyData.savedAt),
           }),
 );
 const exportedText = computed<string | null>(() =>
-    mitsi.exportedAt
-        ? t('mainFooterExportedAt', { timeAgo: formatTimeAgo(mitsi.exportedAt) })
+    surveyData.exportedAt
+        ? t('mainFooterExportedAt', { timeAgo: formatTimeAgo(surveyData.exportedAt) })
         : null,
 );
 

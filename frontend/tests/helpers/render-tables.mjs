@@ -27,7 +27,8 @@ import {
     QSpace,
 } from 'quasar';
 import HardwareInventoryTable from '../../src/components/inventory/HardwareInventoryTable.vue';
-import { useMitsiStore } from '../../src/stores/mitsi.ts';
+import { useSurveyDataStore } from '../../src/stores/surveyData.ts';
+import { useSurveyResultsStore } from '../../src/stores/surveyResults.ts';
 import en from '../../src/i18n/en-GB/index.ts';
 
 /** Exercise real Quasar controls and inspect their public props/events in SSR. */
@@ -48,7 +49,7 @@ export async function renderTables(
     app.use(router);
     await router.push('/');
     await router.isReady();
-    const store = useMitsiStore(pinia);
+    const store = useSurveyDataStore(pinia);
     setupStore(store);
     app.mixin({
         created() {
@@ -97,6 +98,7 @@ export async function renderTables(
     return {
         html,
         store,
+        results: useSurveyResultsStore(pinia),
         dialogs,
         tables: instances.filter((instance) => instance.$options.name === 'QTable'),
         inputs: instances.filter((instance) => instance.$options.name === 'QInput'),

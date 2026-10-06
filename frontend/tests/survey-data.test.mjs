@@ -2,18 +2,19 @@ import assert from 'node:assert/strict';
 import { beforeEach, afterEach, mock, test } from 'node:test';
 import { createPinia, setActivePinia } from 'pinia';
 import { LocalStorage } from 'quasar';
-import { useMitsiStore } from '../src/stores/mitsi.ts';
+import { useSurveyDataStore } from '../src/stores/surveyData.ts';
 import { MITSI_STORAGE_KEY } from '../src/models/mitsi.ts';
 import {
     BoundaryItemDraftSchema,
     DatacenterEnergyDraftSchema,
-    DatacenterDraftSchema,
     HardwareItemDraftSchema,
     MITSI_SCHEMA_VERSION,
     MitsiStateDraftSchema,
     ScopeDraftSchema,
     UnderlyingServiceDraftSchema,
 } from '../src/models/schema.ts';
+
+import { setupScope, validHardware } from './helpers/survey-fixtures.mjs';
 
 let stored;
 beforeEach(() => {
@@ -27,35 +28,8 @@ beforeEach(() => {
 });
 afterEach(() => mock.restoreAll());
 
-function validScope() {
-    return ScopeDraftSchema.parse({
-        organizationName: 'EPFL',
-        assessors: 'Assessor',
-        serviceName: 'Service',
-        function: 'Research',
-    });
-}
-function setupScope(store) {
-    store.scope = validScope();
-    store.datacenters.push(
-        DatacenterDraftSchema.parse({
-            id: 'dc1',
-            generalInfo: { name: 'Datacenter', abbreviation: 'DC' },
-        }),
-    );
-}
-function validHardware() {
-    return HardwareItemDraftSchema.parse({
-        id: 'h1',
-        datacenterId: 'dc1',
-        name: 'Server',
-        quantity: 1,
-        impactManufacturing: 0,
-    });
-}
-
 test('blank and partially edited assessments survive save and reload, including unassigned rows', () => {
-    const store = useMitsiStore();
+    const store = useSurveyDataStore();
     assert.equal(store.saveToStorage(), true);
     store.addDatacenter();
     store.addBoundaryItem('included');
@@ -64,7 +38,7 @@ test('blank and partially edited assessments survive save and reload, including 
     assert.equal(store.saveToStorage(), true);
     const snapshot = store.exportJson();
     setActivePinia(createPinia());
-    const restored = useMitsiStore();
+    const restored = useSurveyDataStore();
     restored.loadFromStorage();
     assert.equal(restored.exportJson(), snapshot);
     assert.equal(restored.hardware.length, 1);
@@ -76,7 +50,7 @@ test('blank and partially edited assessments survive save and reload, including 
 test('save timestamps survive reload and only advance on successful persistence', () => {
     let now = 1_790_000_000_000;
     mock.method(Date, 'now', () => now);
-    const store = useMitsiStore();
+    const store = useSurveyDataStore();
     store.loadFromStorage();
     assert.equal(store.savedAt, null);
     assert.equal(store.saveToStorage(), true);
@@ -96,7 +70,7 @@ test('save timestamps survive reload and only advance on successful persistence'
     assert.equal(JSON.parse(stored.get(MITSI_STORAGE_KEY)).savedAt, firstSavedAt);
 
     setActivePinia(createPinia());
-    const restored = useMitsiStore();
+    const restored = useSurveyDataStore();
     restored.loadFromStorage();
     assert.equal(restored.savedAt, firstSavedAt);
     assert.equal(restored.scope.organizationName, '');
@@ -108,13 +82,13 @@ test('save timestamps survive reload and only advance on successful persistence'
 test('import persists its local save time and restores it on reload', () => {
     const now = 1_790_000_000_000;
     mock.method(Date, 'now', () => now);
-    const store = useMitsiStore();
+    const store = useSurveyDataStore();
     const assessment = MitsiStateDraftSchema.parse({ scope: { organizationName: 'Imported' } });
     assert.equal(store.importJson(JSON.stringify({ ...assessment, savedAt: 123 })), true);
     assert.equal(store.savedAt, now);
     assert.deepEqual(JSON.parse(stored.get(MITSI_STORAGE_KEY)), { assessment, savedAt: now });
     setActivePinia(createPinia());
-    const restored = useMitsiStore();
+    const restored = useSurveyDataStore();
     restored.loadFromStorage();
     assert.equal(restored.savedAt, now);
     assert.equal(restored.scope.organizationName, 'Imported');
@@ -124,7 +98,7 @@ test('legacy drafts load without an invented timestamp and use the wrapper on th
     const assessment = MitsiStateDraftSchema.parse({ scope: { organizationName: 'Legacy' } });
     const legacy = JSON.stringify(assessment);
     stored.set(MITSI_STORAGE_KEY, legacy);
-    const store = useMitsiStore();
+    const store = useSurveyDataStore();
     store.savedAt = 123;
     store.loadFromStorage();
     assert.equal(store.savedAt, null);
@@ -136,7 +110,7 @@ test('legacy drafts load without an invented timestamp and use the wrapper on th
 
 test('missing or invalid timestamp metadata does not discard valid assessments', () => {
     const assessment = MitsiStateDraftSchema.parse({ scope: { organizationName: 'Keep me' } });
-    const store = useMitsiStore();
+    const store = useSurveyDataStore();
     for (const savedAt of [undefined, null, '123', -1, 1.5, {}, 8_640_000_000_000_001]) {
         const json = JSON.stringify({ assessment, savedAt });
         stored.set(MITSI_STORAGE_KEY, json);
@@ -153,7 +127,7 @@ test('missing or invalid timestamp metadata does not discard valid assessments',
 });
 
 test('hardware creation uses draft defaults and gives each row its own id', () => {
-    const store = useMitsiStore();
+    const store = useSurveyDataStore();
     store.addHardwareItem();
     store.addHardwareItem();
     const [first, second] = store.hardware;
@@ -168,7 +142,7 @@ test('hardware creation uses draft defaults and gives each row its own id', () =
 });
 
 test('invalid saves and exports preserve previous storage and timestamps', () => {
-    const store = useMitsiStore();
+    const store = useSurveyDataStore();
     store.hardware.push(validHardware());
     assert.equal(store.saveToStorage(), true);
     store.exportJson();
@@ -185,7 +159,7 @@ test('invalid saves and exports preserve previous storage and timestamps', () =>
 });
 
 test('storage failures return false and do not mark the assessment saved', () => {
-    const store = useMitsiStore();
+    const store = useSurveyDataStore();
     assert.equal(store.saveToStorage(), true);
     const savedAt = store.savedAt;
     const previous = stored.get(MITSI_STORAGE_KEY);
@@ -203,7 +177,7 @@ test('storage failures return false and do not mark the assessment saved', () =>
 });
 
 test('save and export normalize cleared numerics without turning invalid values into defaults', () => {
-    const store = useMitsiStore();
+    const store = useSurveyDataStore();
     store.scope.lifespanYears = '';
     store.hardware.push({ ...validHardware(), quantity: null });
     store.addDatacenter();
@@ -218,7 +192,7 @@ test('save and export normalize cleared numerics without turning invalid values 
 });
 
 test('imports reject invalid values and future versions without changing state or storage', () => {
-    const store = useMitsiStore();
+    const store = useSurveyDataStore();
     store.scope.organizationName = 'Keep me';
     store.saveToStorage();
     const previous = stored.get(MITSI_STORAGE_KEY);
@@ -238,7 +212,7 @@ test('imports reject invalid values and future versions without changing state o
 });
 
 test('orphan references are filtered only at load/import, while draft placeholders survive', () => {
-    const store = useMitsiStore();
+    const store = useSurveyDataStore();
     setupScope(store);
     store.hardware.push(
         validHardware(),
@@ -255,11 +229,11 @@ test('orphan references are filtered only at load/import, while draft placeholde
 });
 
 test('completion validates all canonical scope and hardware fields', () => {
-    const store = useMitsiStore();
+    const store = useSurveyDataStore();
     setupScope(store);
     store.hardware.push(validHardware());
     assert.equal(store.isScopeValid, true);
-    assert.equal(store.blockStatus.inventory, 'complete');
+    assert.equal(store.hardwareInventoryStatus, 'complete');
     store.scope.assessors = '';
     assert.equal(store.isScopeValid, false);
     store.scope.assessors = 'Assessor';
@@ -279,36 +253,36 @@ test('completion validates all canonical scope and hardware fields', () => {
         { cpuQuantity: -1 },
     ]) {
         store.hardware[0] = { ...validHardware(), ...patch };
-        assert.equal(store.blockStatus.inventory, 'partial');
+        assert.equal(store.hardwareInventoryStatus, 'partial');
         assert.equal(store.missingMandatoryHardware, 1);
     }
 });
 
 test('energy and results completion require a valid monitoring period and optional PUE', () => {
-    const store = useMitsiStore();
+    const store = useSurveyDataStore();
     setupScope(store);
     store.datacenters[0].energy = DatacenterEnergyDraftSchema.parse({
         carbonIntensity: 1,
         energyConsumption: 0,
     });
-    assert.equal(store.blockStatus.energy, 'complete');
-    assert.equal(store.blockStatus.results, 'partial');
+    assert.equal(store.energyConsumptionStatus, 'complete');
+    assert.equal(store.resultsStatus, 'partial');
     for (const patch of [{ value: 0.5 }, { unit: 'unknown' }]) {
         store.monitoringPeriod = { value: 1, unit: 'day', comment: '', ...patch };
-        assert.equal(store.blockStatus.energy, 'partial');
-        assert.equal(store.blockStatus.results, 'not_started');
+        assert.equal(store.energyConsumptionStatus, 'partial');
+        assert.equal(store.resultsStatus, 'partial');
     }
     store.monitoringPeriod = { value: 1, unit: 'day', comment: '' };
     store.datacenters[0].energy.pue = -1;
-    assert.equal(store.blockStatus.energy, 'partial');
+    assert.equal(store.energyConsumptionStatus, 'partial');
     store.datacenters[0].energy.pue = '';
-    assert.equal(store.blockStatus.energy, 'complete');
+    assert.equal(store.energyConsumptionStatus, 'complete');
     store.datacenters[0].energy.carbonIntensity = 0;
-    assert.equal(store.blockStatus.energy, 'partial');
+    assert.equal(store.energyConsumptionStatus, 'partial');
 });
 
 test('datacenter lifecycle owns energy and checks current hardware references', () => {
-    const store = useMitsiStore();
+    const store = useSurveyDataStore();
     const a = store.addDatacenter();
     const b = store.addDatacenter();
     assert.notEqual(a, b);
@@ -341,175 +315,8 @@ test('datacenter lifecycle owns energy and checks current hardware references', 
     assert.equal(store.getDatacenterDeletionBlock('missing'), null);
 });
 
-test('scope completion ignores energy; energy progress follows entry, not datacenter creation', () => {
-    const store = useMitsiStore();
-    setupScope(store);
-    assert.equal(store.isScopeValid, true);
-    assert.equal(store.blockStatus.energy, 'not_started');
-    assert.equal(store.totalOperational, null);
-    assert.equal(store.totalLifespan, null);
-    assert.equal(store.blockStatus.results, 'not_started');
-    store.datacenters[0].energy.energyConsumption = 0;
-    assert.equal(store.blockStatus.energy, 'partial');
-    assert.equal(store.totalOperational, null);
-    store.datacenters[0].energy.carbonIntensity = -1;
-    assert.equal(store.isScopeValid, true);
-    assert.equal(store.saveToStorage(), false);
-    store.clearDatacenterEnergy('dc1');
-    assert.equal(store.blockStatus.energy, 'not_started');
-    store.datacenters[0].energy.pue = '';
-    assert.equal(store.blockStatus.energy, 'not_started');
-    store.monitoringPeriod.value = 2;
-    assert.equal(store.blockStatus.energy, 'partial');
-    store.monitoringPeriod.value = 1;
-    store.monitoringPeriod.comment = 'Measured';
-    assert.equal(store.blockStatus.energy, 'partial');
-    store.monitoringPeriod.comment = '';
-    assert.equal(store.blockStatus.energy, 'not_started');
-    store.datacenters[0].generalInfo.name = '';
-    assert.equal(store.isScopeValid, false);
-    store.datacenters = [];
-    assert.equal(store.isScopeValid, false);
-});
-
-test('partial totals include only computable energy and react to direct nested edits', () => {
-    const store = useMitsiStore();
-    setupScope(store);
-    store.scope.functionalUnit.resourceType = 'CPU';
-    store.monitoringPeriod.unit = 'year';
-    store.hardware.push({
-        ...validHardware(),
-        cpuQuantity: 1,
-        impactManufacturingDistributionEol: 50,
-    });
-    const a = store.datacenters[0];
-    a.energy.carbonIntensity = 1000;
-    a.energy.energyConsumption = 100;
-    store.datacenters.push(
-        DatacenterDraftSchema.parse({
-            id: 'b',
-            generalInfo: { name: 'B', abbreviation: 'B' },
-        }),
-    );
-    assert.deepEqual(store.operationalPerDc, [
-        { datacenter: a, co2Period: 100, co2Lifespan: 100 },
-        { datacenter: store.datacenters[1], co2Period: null, co2Lifespan: null },
-    ]);
-    assert.deepEqual(store.energyCoverage, {
-        completeDatacenters: 1,
-        totalDatacenters: 2,
-        isComplete: false,
-    });
-    assert.equal(store.totalOperational, 100);
-    assert.equal(store.totalLifespan, 150);
-    assert.equal(store.totalPerResource, 150);
-    assert.equal(store.perFunctionalUnit, 150 / 8760);
-    assert.equal(store.resultsPartial, true);
-    assert.equal(store.blockStatus.results, 'partial');
-    const b = store.datacenters[1];
-    b.energy.carbonIntensity = 1000;
-    b.energy.energyConsumption = 200;
-    assert.equal(store.totalOperational, 300);
-    assert.equal(store.totalLifespan, 350);
-    assert.equal(store.blockStatus.energy, 'complete');
-    assert.equal(store.blockStatus.results, 'complete');
-    assert.equal(store.resultsPartial, false);
-    a.energy.pue = 2;
-    assert.equal(store.totalOperational, 400);
-    a.energy.pue = 0; // Preserve the existing PUE fallback.
-    assert.equal(store.totalOperational, 300);
-    a.energy.pue = '';
-    assert.equal(store.totalOperational, 300);
-    store.clearDatacenterEnergy('dc1');
-    assert.equal(store.totalOperational, 200);
-    assert.equal(store.resultsPartial, true);
-    store.clearDatacenterEnergy('b');
-    assert.equal(store.totalOperational, null);
-    assert.equal(store.totalLifespan, 50);
-    assert.equal(store.blockStatus.results, 'partial');
-});
-
-test('invalid shared inputs withhold energy estimates and real zero results remain computable', () => {
-    const store = useMitsiStore();
-    setupScope(store);
-    store.scope.functionalUnit.resourceType = 'CPU';
-    store.hardware.push({ ...validHardware(), cpuQuantity: 1 });
-    store.datacenters[0].energy.carbonIntensity = 100;
-    store.datacenters[0].energy.energyConsumption = 0;
-    assert.equal(store.totalOperational, 0);
-    assert.equal(store.totalLifespan, 0);
-    assert.equal(store.perFunctionalUnit, 0);
-    assert.equal(store.totalPerResource, 0);
-    assert.equal(store.blockStatus.results, 'complete');
-    store.monitoringPeriod.value = 0;
-    assert.equal(store.totalOperational, null);
-    assert.equal(store.operationalPerDc[0].co2Period, null);
-    assert.equal(store.resultsPartial, true);
-    store.monitoringPeriod.value = 1;
-    store.scope.lifespanYears = 0;
-    assert.equal(store.operationalPerDc[0].co2Period, 0);
-    assert.equal(store.operationalPerDc[0].co2Lifespan, null);
-    assert.equal(store.totalOperational, null);
-    assert.equal(store.perFunctionalUnit, null);
-    store.scope.lifespanYears = 1;
-    store.hardware[0].cpuQuantity = 0;
-    assert.equal(store.perFunctionalUnit, null);
-    assert.equal(store.totalPerResource, null);
-});
-
-test('cleared nested energy survives persistence and reset restores fresh assessment defaults', () => {
-    const store = useMitsiStore();
-    setupScope(store);
-    store.datacenters[0].energy.energyConsumption = 12;
-    store.clearDatacenterEnergy('dc1');
-    const json = store.exportJson();
-    const state = JSON.parse(json);
-    assert.equal('energy' in state, false);
-    assert.equal('datacenters' in state.scope, false);
-    assert.equal('datacenterId' in state.datacenters[0].energy, false);
-    assert.equal(store.importJson(json), true);
-    assert.equal(store.datacenters[0].energy.energyConsumption, null);
-    assert.equal(store.datacenters.length, 1);
-    const defaults = MitsiStateDraftSchema.parse({});
-    for (let attempt = 0; attempt < 2; attempt++) {
-        store.scope.organizationName = 'Edited';
-        store.scope.functionalUnit.resourceCount = 3;
-        store.addBoundaryItem('included');
-        store.addBoundaryItem('excluded');
-        store.addHardwareItem();
-        store.addDatacenter();
-        store.monitoringPeriod.value = 7;
-        store.includeSecondHandEmbodied = true;
-        store.includeUnderlyingServices = true;
-        store.underlyingServices.push(UnderlyingServiceDraftSchema.parse({ co2EstimateKg: 12 }));
-        assert.equal(store.blockStatus.energy, 'partial');
-        assert.equal(store.saveToStorage(), true);
-        store.exportJson();
-        assert.ok(store.savedAt);
-        assert.ok(store.exportedAt);
-        assert.equal(stored.has(MITSI_STORAGE_KEY), true);
-
-        const previousScope = store.scope;
-        const previousPeriod = store.monitoringPeriod;
-        store.reset();
-        for (const [key, value] of Object.entries(defaults)) {
-            if (key !== 'schemaVersion') assert.deepEqual(store[key], value, key);
-        }
-        assert.notEqual(store.scope, previousScope);
-        assert.notEqual(store.scope.functionalUnit, previousScope.functionalUnit);
-        assert.notEqual(store.scope.includedItems, previousScope.includedItems);
-        assert.notEqual(store.monitoringPeriod, previousPeriod);
-        assert.equal(store.savedAt, null);
-        assert.equal(store.exportedAt, null);
-        assert.equal(stored.has(MITSI_STORAGE_KEY), false);
-        assert.equal(store.totalOperational, null);
-        assert.equal(store.totalLifespan, null);
-        assert.equal(store.blockStatus.energy, 'not_started');
-    }
-});
-
 test('unsupported stored versions are ignored without modifying state or storage', () => {
-    const store = useMitsiStore();
+    const store = useSurveyDataStore();
     store.scope.organizationName = 'Keep me';
     for (const raw of [
         {},
@@ -524,4 +331,149 @@ test('unsupported stored versions are ignored without modifying state or storage
         assert.equal(store.scope.organizationName, 'Keep me');
         assert.equal(stored.get(MITSI_STORAGE_KEY), json);
     }
+});
+
+test('fresh and saved defaults have no progress and never instantiate the results store', () => {
+    const pinia = createPinia();
+    const data = useSurveyDataStore(pinia);
+    const statuses = () => [
+        data.scopeStatus,
+        data.hardwareInventoryStatus,
+        data.energyConsumptionStatus,
+        data.resultsStatus,
+    ];
+    assert.deepEqual(statuses(), Array(4).fill('not_started'));
+    data.saveToStorage();
+    data.exportJson();
+    data.loadFromStorage();
+    assert.deepEqual(statuses(), Array(4).fill('not_started'));
+    data.scope.organizationName = 'EPFL';
+    assert.equal(data.scopeStatus, 'partial');
+    assert.equal(data.resultsStatus, 'partial');
+    data.scope.organizationName = '';
+    assert.deepEqual(statuses(), Array(4).fill('not_started'));
+    assert.deepEqual(Object.keys(pinia.state.value), ['surveyData']);
+});
+
+test('each scope input marks current progress and restoring defaults clears it', () => {
+    const data = useSurveyDataStore();
+    const edits = [
+        (scope) => {
+            scope.organizationName = 'EPFL';
+        },
+        (scope) => {
+            scope.assessors = 'Assessor';
+        },
+        (scope) => {
+            scope.serviceName = 'Service';
+        },
+        (scope) => {
+            scope.function = 'Research';
+        },
+        (scope) => {
+            scope.lifespanYears = 2;
+        },
+        (scope) => {
+            scope.functionalUnit.timeUnit = 'day';
+        },
+        (scope) => {
+            scope.functionalUnit.usageDuration = 2;
+        },
+        (scope) => {
+            scope.functionalUnit.resourceCount = 2;
+        },
+        (scope) => {
+            scope.functionalUnit.resourceType = 'CPU';
+        },
+        (scope) => {
+            scope.includedItems.push(BoundaryItemDraftSchema.parse({}));
+        },
+        (scope) => {
+            scope.excludedItems.push(BoundaryItemDraftSchema.parse({}));
+        },
+    ];
+    for (const edit of edits) {
+        edit(data.scope);
+        assert.equal(data.scopeStatus, 'partial');
+        assert.equal(data.resultsStatus, 'partial');
+        data.scope = ScopeDraftSchema.parse({});
+        assert.equal(data.scopeStatus, 'not_started');
+        assert.equal(data.resultsStatus, 'not_started');
+    }
+    const id = data.addDatacenter();
+    assert.equal(data.scopeStatus, 'partial');
+    assert.equal(data.energyConsumptionStatus, 'not_started');
+    data.removeDatacenter(id);
+    assert.equal(data.scopeStatus, 'not_started');
+});
+
+test('section statuses follow input validity, invalidation, clearing, and reset', () => {
+    const data = useSurveyDataStore();
+    data.addHardwareItem();
+    assert.equal(data.hardwareInventoryStatus, 'partial');
+    assert.equal(data.resultsStatus, 'partial');
+    data.hardware = [];
+    assert.equal(data.hardwareInventoryStatus, 'not_started');
+    assert.equal(data.resultsStatus, 'not_started');
+
+    setupScope(data);
+    data.hardware = [validHardware()];
+    data.datacenters[0].energy = DatacenterEnergyDraftSchema.parse({
+        carbonIntensity: 100,
+        energyConsumption: 0,
+    });
+    assert.equal(data.scopeStatus, 'complete');
+    assert.equal(data.hardwareInventoryStatus, 'complete');
+    assert.equal(data.energyConsumptionStatus, 'complete');
+    assert.equal(data.resultsStatus, 'complete');
+
+    data.scope.assessors = '';
+    assert.equal(data.scopeStatus, 'partial');
+    assert.equal(data.hardwareInventoryStatus, 'partial');
+    assert.equal(data.energyConsumptionStatus, 'partial');
+    assert.equal(data.resultsStatus, 'partial');
+    data.scope.assessors = 'Assessor';
+    data.hardware[0].quantity = 0;
+    assert.equal(data.hardwareInventoryStatus, 'partial');
+    assert.equal(data.resultsStatus, 'partial');
+    data.hardware[0].quantity = 1;
+    assert.equal(data.resultsStatus, 'complete');
+
+    data.monitoringPeriod.value = 0;
+    assert.equal(data.energyConsumptionStatus, 'partial');
+    data.monitoringPeriod.value = 1;
+    assert.equal(data.resultsStatus, 'complete');
+    data.clearDatacenterEnergy('dc1');
+    assert.equal(data.energyConsumptionStatus, 'not_started');
+    assert.equal(data.resultsStatus, 'partial');
+    data.datacenters[0].energy.energyConsumption = 0;
+    assert.equal(data.energyConsumptionStatus, 'partial');
+    for (const cleared of ['', null, undefined]) {
+        data.datacenters[0].energy.energyConsumption = cleared;
+        assert.equal(data.energyConsumptionStatus, 'not_started');
+    }
+    data.reset();
+    assert.equal(data.scopeStatus, 'not_started');
+    assert.equal(data.hardwareInventoryStatus, 'not_started');
+    assert.equal(data.energyConsumptionStatus, 'not_started');
+    assert.equal(data.resultsStatus, 'not_started');
+});
+
+test('results progress includes standalone energy inputs, settings, and underlying services', () => {
+    const data = useSurveyDataStore();
+    data.monitoringPeriod.comment = 'Measured';
+    assert.equal(data.energyConsumptionStatus, 'partial');
+    assert.equal(data.resultsStatus, 'partial');
+    data.monitoringPeriod.comment = '';
+    assert.equal(data.resultsStatus, 'not_started');
+    for (const setting of ['includeSecondHandEmbodied', 'includeUnderlyingServices']) {
+        data[setting] = true;
+        assert.equal(data.resultsStatus, 'partial');
+        data[setting] = false;
+        assert.equal(data.resultsStatus, 'not_started');
+    }
+    data.underlyingServices.push(UnderlyingServiceDraftSchema.parse({}));
+    assert.equal(data.resultsStatus, 'partial');
+    data.underlyingServices = [];
+    assert.equal(data.resultsStatus, 'not_started');
 });

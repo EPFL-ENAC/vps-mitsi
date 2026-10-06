@@ -4,6 +4,8 @@
 </template>
 
 <script setup lang="ts">
+import type { EmbodiedGroup } from 'src/stores/surveyResults';
+
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import VChart from 'vue-echarts';
@@ -12,7 +14,6 @@ import { TreemapChart, type TreemapSeriesOption } from 'echarts/charts';
 import { TooltipComponent, type TooltipComponentOption } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { palette } from 'src/utils/charts';
-import type { EmbodiedGroup } from 'src/stores/mitsi';
 import { formatKg } from 'src/utils/format';
 
 echarts.use([TreemapChart, TooltipComponent, CanvasRenderer]);

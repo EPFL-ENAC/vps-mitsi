@@ -1,6 +1,6 @@
 <template>
     <q-table
-        :rows="mitsi.datacenters"
+        :rows="surveyData.datacenters"
         :columns="columns"
         :table-colspan="columns.length + 1"
         row-key="id"
@@ -69,17 +69,20 @@
 </template>
 
 <script setup lang="ts">
+import { useSurveyDataStore } from 'src/stores/surveyData';
+
 import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInput.vue';
 import { computed } from 'vue';
 import { useQuasar, type QTableColumn } from 'quasar';
 import type { z } from 'zod';
 import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
 import { useI18n } from 'vue-i18n';
-import { useMitsiStore } from 'src/stores/mitsi';
 import { formatDatacenterName } from 'src/utils/format';
 import { createSchemaColumn } from 'src/utils/tables';
 import { DatacenterEnergySchema } from 'src/models/schema';
 import type { Datacenter, DatacenterEnergy } from 'src/models/mitsi';
+
+const surveyData = useSurveyDataStore();
 
 interface EnergyColumn extends QTableColumn<Datacenter> {
     name: keyof DatacenterEnergy | 'datacenter';
@@ -87,7 +90,6 @@ interface EnergyColumn extends QTableColumn<Datacenter> {
     zod?: z.ZodType;
 }
 
-const mitsi = useMitsiStore();
 const { t } = useI18n();
 const $q = useQuasar();
 
@@ -135,7 +137,7 @@ function clearEnergy(dc: Datacenter): void {
         }),
         cancel: true,
         persistent: true,
-    }).onOk(() => mitsi.clearDatacenterEnergy(dc.id));
+    }).onOk(() => surveyData.clearDatacenterEnergy(dc.id));
 }
 </script>
 

@@ -186,7 +186,7 @@ test('results preserve translated report headers, excluded totals and missing op
     assert.match(result.html, /DC — Test datacenter/);
     assert.match(result.html, /data-kind="number"[^>]*>—<\/td>/);
     assert.match(result.html, /<th scope="row"/);
-    assert.equal(result.store.totalEmbodied, 0);
+    assert.equal(result.results.totalEmbodied, 0);
 });
 
 test('select and toggle edits write through to the store', async () => {
