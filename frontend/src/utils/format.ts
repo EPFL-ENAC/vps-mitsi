@@ -1,4 +1,5 @@
-import type { Datacenter } from 'src/models/mitsi';
+import type { Datacenter, Scope } from 'src/models/mitsi';
+import { DatacenterEnergySchema } from 'src/models/schema';
 
 /** Show both names when available, with the ID as the unfinished-draft fallback. */
 export function formatDatacenterName(dc: Pick<Datacenter, 'id' | 'generalInfo'>): string {
@@ -38,4 +39,29 @@ export function formatResult(
  *  → 'compute_server', '2.5 inch' → '2_5_inch', 'HDD' → 'HDD'. */
 export function normalizeKey(v: string): string {
     return v.replace(/[^A-Za-z0-9]+/g, '_');
+}
+
+/** Assemble the functional unit using the locale's word order and time-unit label. */
+export function buildFunctionalUnitSentence(
+    t: (key: string, params?: Record<string, unknown>) => string,
+    fu: Scope['functionalUnit'],
+): string {
+    return t('scopeFuSentence', {
+        duration: fu.usageDuration,
+        unit: t('scopeTimeUnit_' + normalizeKey(fu.timeUnit)),
+        count: fu.resourceCount,
+        type: fu.resourceType,
+    });
+}
+
+/** Omitted or zero PUE applies no multiplier; invalid drafts have no result yet. */
+export function formatPueInclusion(
+    t: (key: string, params?: Record<string, unknown>) => string,
+    pue: Datacenter['energy']['pue'],
+): string {
+    const parsed = DatacenterEnergySchema.shape.pue.safeParse(pue);
+    if (!parsed.success) return t('mainNotApplicable');
+    return parsed.data === null || parsed.data === 0
+        ? t('resultsPueNotIncluded')
+        : t('resultsPueIncluded', { value: parsed.data });
 }

@@ -1,6 +1,7 @@
 import { createSSRApp, h } from 'vue';
 import { renderToString } from 'vue/server-renderer';
 import { createPinia } from 'pinia';
+import { createMemoryHistory, createRouter } from 'vue-router';
 import { createI18n } from 'vue-i18n';
 import {
     Quasar,
@@ -21,6 +22,9 @@ import {
     QSeparator,
     QBanner,
     QTooltip,
+    QToolbar,
+    QToolbarTitle,
+    QSpace,
 } from 'quasar';
 import HardwareInventoryTable from '../../src/components/inventory/HardwareInventoryTable.vue';
 import { useMitsiStore } from '../../src/stores/mitsi.ts';
@@ -37,6 +41,13 @@ export async function renderTables(
     const context = { req: { headers: {} } };
     const pinia = createPinia();
     app.use(pinia);
+    const router = createRouter({
+        history: createMemoryHistory(),
+        routes: [{ path: '/:pathMatch(.*)*', component: { render: () => null } }],
+    });
+    app.use(router);
+    await router.push('/');
+    await router.isReady();
     const store = useMitsiStore(pinia);
     setupStore(store);
     app.mixin({
@@ -65,6 +76,9 @@ export async function renderTables(
                 QSeparator,
                 QBanner,
                 QTooltip,
+                QToolbar,
+                QToolbarTitle,
+                QSpace,
             },
         },
         context,

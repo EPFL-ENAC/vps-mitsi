@@ -6,8 +6,10 @@ import EnergyDatacentersTable from '../src/components/energy/EnergyDatacentersTa
 import EnergyMonitoringPeriodForm from '../src/components/energy/EnergyMonitoringPeriodForm.vue';
 import HardwareInventoryTable from '../src/components/inventory/HardwareInventoryTable.vue';
 import ResultsPage from '../src/pages/ResultsPage.vue';
+import ReportPreviewPage from '../src/pages/ReportPreviewPage.vue';
 import ScopePage from '../src/pages/ScopePage.vue';
 import {
+    ScopeDraftSchema,
     DatacenterDraftSchema,
     DatacenterEnergySchema,
     DatacenterGeneralInfoSchema,
@@ -215,4 +217,50 @@ test('select and toggle edits write through to the store', async () => {
     resourceType.$emit('update:modelValue', 'GPU');
     assert.equal(scope.store.scope.functionalUnit.timeUnit, 'day');
     assert.equal(scope.store.scope.functionalUnit.resourceType, 'GPU');
+});
+
+test('results and report share partial totals, PUE labels, functional units and stable row keys', async () => {
+    for (const component of [ResultsPage, ReportPreviewPage]) {
+        const result = await renderTables(component, {
+            setupStore(store) {
+                store.scope = ScopeDraftSchema.parse({
+                    organizationName: 'EPFL',
+                    assessors: 'Assessor',
+                    serviceName: 'Research service',
+                    function: 'Research',
+                    functionalUnit: {
+                        timeUnit: 'day',
+                        usageDuration: 2,
+                        resourceCount: 3,
+                        resourceType: 'CPU',
+                    },
+                });
+                store.monitoringPeriod.unit = 'year';
+                store.datacenters = [
+                    DatacenterDraftSchema.parse({
+                        id: 'ready',
+                        generalInfo: { name: 'Ready', abbreviation: 'R' },
+                        energy: { carbonIntensity: 1000, energyConsumption: 100, pue: 1.5 },
+                    }),
+                    DatacenterDraftSchema.parse({
+                        id: 'draft',
+                        generalInfo: { name: 'Draft', abbreviation: 'D' },
+                    }),
+                ];
+            },
+        });
+        assert.match(result.html, /150\.00 \(Partial — 1 of 2 datacenters\)/);
+        assert.match(result.html, /150\.00 \(Partial\)/);
+        assert.match(result.html, /included \(1\.5\)/);
+        assert.match(result.html, /not included/);
+        assert.match(result.html, /Usage of 2 day of the service with 3 CPU/);
+        const table = result.tables.find((table) =>
+            table.columns.some((column) => column.name === 'pue'),
+        );
+        assert.deepEqual(table.rows.map(table.rowKey), ['ready', 'draft']);
+        if (component === ReportPreviewPage) {
+            assert.equal((result.html.match(/class="report-sheet"/g) || []).length, 5);
+            assert.match(result.html, /Research service/);
+        }
+    }
 });

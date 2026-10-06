@@ -37,6 +37,7 @@ export default {
     mainNavInventory: 'Hardware inventory',
     mainNavEnergy: 'Energy consumption',
     mainNavResults: 'Results',
+    mainNavReport: 'Report',
     mainStatusComplete: 'Complete',
     mainStatusPartial: 'In progress',
     mainStatusNotStarted: 'Not started',
@@ -279,6 +280,8 @@ export default {
         co2PerUnit: 'CO₂ estimation (kg CO₂-eq) for 1 IT element',
         co2RowTotal: 'CO₂ cumulated (kg CO₂-eq)',
     },
+    resultsPueIncluded: 'included ({value})',
+    resultsPueNotIncluded: 'not included',
     resultsCategoryTotal: 'Category total',
     resultsTotalEmbodied: 'Total embodied',
     resultsPartial: 'Partial',
@@ -286,6 +289,7 @@ export default {
     resultsOperationalTitle: 'Operational emissions',
     resultsOperationalColumns: {
         datacenterId: 'Datacenter',
+        pue: 'PUE',
         co2Period: 'CO₂ estimation (kg CO₂-eq) for the monitoring period',
         co2Lifespan: 'CO₂ estimation (kg CO₂-eq) for the whole lifespan',
     },
@@ -306,7 +310,12 @@ export default {
     resultsChartPieByDatacenter: 'Operational emissions by datacenter',
     resultsChartSplitTitle: 'Emissions repartition',
     resultsColPercent: '%',
-    // --- Validation messages (Zod → Quasar; see composables/useValidation.ts) ---
+    resultsGenerateReport: 'Generate report',
+    // --- Report (printable; see src/pages/ReportPreviewPage.vue) ---
+    reportToolbarTitle: 'Report',
+    reportPrint: 'Print',
+    reportGeneratedOn: 'Generated on {date}',
+    // --- Validation messages (Zod -> Quasar; see composables/useValidation.ts) ---
     validation: {
         invalid_type: {
             number: 'Must be a number.',

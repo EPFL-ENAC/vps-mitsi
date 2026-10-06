@@ -392,8 +392,8 @@ test('partial totals include only computable energy and react to direct nested e
         }),
     );
     assert.deepEqual(store.operationalPerDc, [
-        { datacenterId: 'dc1', co2Period: 100, co2Lifespan: 100 },
-        { datacenterId: 'b', co2Period: null, co2Lifespan: null },
+        { datacenter: a, co2Period: 100, co2Lifespan: 100 },
+        { datacenter: store.datacenters[1], co2Period: null, co2Lifespan: null },
     ]);
     assert.deepEqual(store.energyCoverage, {
         completeDatacenters: 1,

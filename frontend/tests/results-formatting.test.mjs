@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { formatResult } from '../src/utils/format.ts';
+import { createI18n } from 'vue-i18n';
+import en from '../src/i18n/en-GB/index.ts';
+import { FunctionalUnitSchema } from '../src/models/schema.ts';
+import {
+    buildFunctionalUnitSentence,
+    formatPueInclusion,
+    formatResult,
+} from '../src/utils/format.ts';
 
 test('missing results use the supplied label without formatting or a partial suffix', () => {
     assert.equal(
@@ -36,4 +43,39 @@ test('custom unit formatting works with complete and partial results', () => {
         formatResult(100, { ...options, partialLabel: 'Partial — 1 of 2 datacenters' }),
         '0.1 t (Partial — 1 of 2 datacenters)',
     );
+});
+
+test('functional-unit text uses the current translated sentence and time unit', () => {
+    const { t, locale } = createI18n({
+        legacy: false,
+        locale: 'en',
+        messages: {
+            en,
+            alternate: {
+                scopeFuSentence: '{count} {type}: {duration} {unit}',
+                scopeTimeUnit_day: 'days',
+            },
+        },
+    }).global;
+    const fu = FunctionalUnitSchema.parse({
+        timeUnit: 'day',
+        usageDuration: 2,
+        resourceCount: 3,
+        resourceType: 'CPU',
+    });
+    assert.equal(buildFunctionalUnitSentence(t, fu), 'Usage of 2 day of the service with 3 CPU');
+    locale.value = 'alternate';
+    assert.equal(buildFunctionalUnitSentence(t, fu), '3 CPU: 2 days');
+});
+
+test('PUE labels follow schema normalization and the calculation convention', () => {
+    const { t } = createI18n({ legacy: false, locale: 'en', messages: { en } }).global;
+    for (const pue of [null, '', 0]) {
+        assert.equal(formatPueInclusion(t, pue), 'not included');
+    }
+    assert.equal(formatPueInclusion(t, 1), 'included (1)');
+    assert.equal(formatPueInclusion(t, 1.5), 'included (1.5)');
+    for (const pue of [-1, 'invalid', NaN]) {
+        assert.equal(formatPueInclusion(t, pue), '—');
+    }
 });
