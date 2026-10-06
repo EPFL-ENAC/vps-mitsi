@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { renderInventoryTable } from './helpers/inventory-table.mjs';
+import { renderInventoryTable } from './helpers/render-tables.mjs';
 import {
     DatacenterDraftSchema,
     HardwareItemDraftSchema,

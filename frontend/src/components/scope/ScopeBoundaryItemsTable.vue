@@ -67,6 +67,7 @@ import type { BoundaryItem } from 'src/models/mitsi';
 import { useI18n } from 'vue-i18n';
 
 import { BoundaryItemSchema } from 'src/models/schema';
+import { createSchemaColumn } from 'src/utils/tables';
 import { useMitsiStore } from 'src/stores/mitsi';
 
 interface BoundaryColumn extends QTableColumn<BoundaryItem> {
@@ -86,28 +87,31 @@ const items = computed(() =>
     props.kind === 'included' ? mitsi.scope.includedItems : mitsi.scope.excludedItems,
 );
 
+type ColumnSpec = Omit<BoundaryColumn, 'name' | 'label' | 'zod'> & {
+    label?: string;
+};
+
+const schemaColumn = createSchemaColumn(BoundaryItemSchema.shape, (field) =>
+    t(`scopeBoundaryColumns.${field}`),
+);
+
+function column(spec: ColumnSpec): BoundaryColumn {
+    const { label, ...options } = spec;
+
+    return {
+        ...schemaColumn(spec.field, label),
+        ...options,
+    };
+}
+
 const columns = computed<BoundaryColumn[]>(() => [
-    {
-        name: 'type',
-        field: 'type',
-        label: t('scopeBoundaryColumns.type'),
-        kind: 'text',
-        zod: BoundaryItemSchema.shape.type,
-    },
-    {
-        name: 'purpose',
-        field: 'purpose',
-        label: t('scopeBoundaryColumns.purpose'),
-        kind: 'text',
-        zod: BoundaryItemSchema.shape.purpose,
-    },
-    {
-        name: 'reason',
+    column({ field: 'type', kind: 'text' }),
+    column({ field: 'purpose', kind: 'text' }),
+    column({
         field: 'reason',
-        label: t(`scopeBoundaryColumns.${props.kind}.reason`),
         kind: 'text',
-        zod: BoundaryItemSchema.shape.reason,
-    },
+        label: t(`scopeBoundaryColumns.${props.kind}.reason`),
+    }),
 ]);
 
 function addItem(): void {

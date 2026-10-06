@@ -19,6 +19,22 @@
                     {{ $t('mainTagline') }}
                 </span>
                 <q-btn unelevated color="primary" :label="$t('mainSave')" @click="saveAssessment" />
+                <q-btn
+                    unelevated
+                    color="primary"
+                    class="q-ml-sm"
+                    :label="$t('mainExport')"
+                    @click="exportAssessment"
+                />
+                <q-file
+                    :model-value="null"
+                    accept=".json,application/json"
+                    dense
+                    outlined
+                    class="q-ml-sm"
+                    :label="$t('mainImport')"
+                    @update:model-value="onFilePicked"
+                />
             </q-toolbar>
         </q-header>
 
@@ -84,7 +100,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { useQuasar } from 'quasar';
+import { useQuasar, date, exportFile } from 'quasar';
 import { useI18n } from 'vue-i18n';
 
 import type { BlockKey, BlockStatus } from 'src/models/mitsi';
@@ -121,6 +137,57 @@ const $q = useQuasar();
 function saveAssessment(): void {
     if (!mitsi.saveToStorage()) {
         $q.notify({ type: 'negative', message: t('mainSaveFailed') });
+    }
+}
+
+/** QFile returns a File object directly, empty draft results in immediate import, while one containing data triggers warning */
+function onFilePicked(file: File | null): void {
+    if (!file) return;
+
+    if (mitsi.isStoreEmpty) {
+        readAndImport(file);
+        return;
+    }
+
+    $q.dialog({
+        title: t('mainImportWarningTitle'),
+        message: t('mainImportWarning'),
+        cancel: true,
+        persistent: true,
+    }).onOk(() => {
+        readAndImport(file);
+    });
+}
+
+/** Reads the file and gives text to the store */
+function readAndImport(file: File): void {
+    const reader = new FileReader();
+    reader.onload = () => {
+        const result = reader.result;
+        if (typeof result !== 'string') return;
+        if (mitsi.importJson(result)) {
+            $q.notify({ type: 'positive', message: t('mainImportSuccess') });
+        } else {
+            $q.notify({ type: 'negative', message: t('mainImportFailed') });
+        }
+    };
+    reader.onerror = () => {
+        $q.notify({ type: 'negative', message: t('mainImportFailed') });
+    };
+    reader.readAsText(file);
+}
+
+/** Downloads whole assessment as a JSON file, named with the current date-time. */
+function exportAssessment(): void {
+    const status = exportFile(
+        `mitsi-assessment-${date.formatDate(new Date(), 'YYYY-MM-DD_HH-mm-ss')}.json`,
+        mitsi.exportJson(),
+        { mimeType: 'application/json' },
+    );
+    if (status === true) {
+        $q.notify({ type: 'positive', message: t('mainExportSuccess') });
+    } else {
+        $q.notify({ type: 'negative', message: t('mainExportFailed') });
     }
 }
 

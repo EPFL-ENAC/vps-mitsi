@@ -83,8 +83,7 @@
                     <!-- Datacenter select (store-driven options, value = id) -->
                     <template v-else-if="col.kind === 'datacenter'">
                         <q-select
-                            :model-value="props.row.datacenterId"
-                            @update:model-value="(v) => (props.row.datacenterId = String(v ?? ''))"
+                            v-model="props.row.datacenterId"
                             :options="col.options"
                             emit-value
                             map-options
@@ -98,8 +97,7 @@
                     <!-- Schema enum select (translated options) -->
                     <template v-else-if="col.kind === 'enum'">
                         <q-select
-                            :model-value="props.row[col.field]"
-                            @update:model-value="(v) => (props.row[col.field] = v)"
+                            v-model="props.row[col.field]"
                             :options="col.options"
                             emit-value
                             map-options
@@ -112,10 +110,7 @@
 
                     <!-- Toggle (2nd hand) — a real switch, not an input -->
                     <template v-else-if="col.kind === 'toggle'">
-                        <q-toggle
-                            :model-value="props.row[col.field]"
-                            @update:model-value="(v) => (props.row[col.field] = !!v)"
-                        />
+                        <q-toggle v-model="props.row[col.field]" />
                     </template>
 
                     <!-- Number -->
@@ -167,10 +162,10 @@ import { useI18n } from 'vue-i18n';
 import { useQuasar, type QTableColumn } from 'quasar';
 import type { z } from 'zod';
 
-import type { HardwareItem } from 'src/models/mitsi';
-import type { VisibilityMode } from 'src/models/inventory-columns';
+import type { HardwareItem, VisibilityMode } from 'src/models/mitsi';
 import { formatDatacenterName, formatKg, normalizeKey } from 'src/utils/format';
 import { rowSubtotal } from 'src/utils/math';
+import { createSchemaColumn } from 'src/utils/tables';
 import {
     HardwareCategorySchema,
     HardwareItemSchema,
@@ -218,113 +213,72 @@ const datacenterOptions = computed<{ label: string; value: string }[]>(() =>
     })),
 );
 
+type ColumnSpec = Omit<InventoryColumn, 'name' | 'label' | 'field' | 'zod'> & {
+    field: keyof HardwareItem;
+    /** Derived schema fields opt out of validation; they are never edited. */
+    zod?: undefined;
+};
+
+const schemaColumn = createSchemaColumn(HardwareItemSchema.shape, (field) =>
+    t(`inventoryColumns.${field}`),
+);
+
+function column(spec: ColumnSpec): InventoryColumn {
+    return {
+        ...schemaColumn(spec.field),
+        ...spec,
+    };
+}
+
+function enumOptions(values: readonly string[], keyPrefix: string) {
+    return values.map((value) => ({ label: t(keyPrefix + normalizeKey(value)), value }));
+}
+
 const columns = computed<InventoryColumn[]>(() => [
-    // ── General ──────────────────────────────────────────────────────────
-    {
-        name: 'category',
+    column({
         field: 'category',
-        label: t('inventoryColumns.category'),
         group: 'general',
         mode: 'simple',
         kind: 'enum',
         sortable: true,
-        zod: HardwareItemSchema.shape.category,
-        options: HardwareCategorySchema.options.map((value) => ({
-            label: t('inventoryCategory_' + normalizeKey(value)),
-            value,
-        })),
-    },
-    {
-        name: 'name',
-        field: 'name',
-        label: t('inventoryColumns.name'),
-        group: 'general',
-        mode: 'simple',
-        kind: 'text',
-        sortable: true,
-        zod: HardwareItemSchema.shape.name,
-    },
-    {
-        name: 'rackUnit',
-        field: 'rackUnit',
-        label: t('inventoryColumns.rackUnit'),
-        group: 'general',
-        mode: 'advanced',
-        kind: 'number',
-        zod: HardwareItemSchema.shape.rackUnit,
-    },
-    {
-        name: 'quantity',
+        options: enumOptions(HardwareCategorySchema.options, 'inventoryCategory_'),
+    }),
+    column({ field: 'name', group: 'general', mode: 'simple', kind: 'text', sortable: true }),
+    column({ field: 'rackUnit', group: 'general', mode: 'advanced', kind: 'number' }),
+    column({
         field: 'quantity',
-        label: t('inventoryColumns.quantity'),
         group: 'general',
         mode: 'simple',
         kind: 'number',
         calc: true,
         sortable: true,
-        zod: HardwareItemSchema.shape.quantity,
-    },
-    {
-        name: 'description',
-        field: 'description',
-        label: t('inventoryColumns.description'),
-        group: 'general',
-        mode: 'normal',
-        kind: 'text',
-        zod: HardwareItemSchema.shape.description,
-    },
-    {
-        name: 'datacenterId',
+    }),
+    column({ field: 'description', group: 'general', mode: 'normal', kind: 'text' }),
+    column({
         field: 'datacenterId',
-        label: t('inventoryColumns.datacenterId'),
         group: 'general',
         mode: 'simple',
         kind: 'datacenter',
-        zod: HardwareItemSchema.shape.datacenterId,
         options: datacenterOptions.value,
-    },
-    {
-        name: 'isSecondHand',
-        field: 'isSecondHand',
-        label: t('inventoryColumns.isSecondHand'),
-        group: 'general',
-        mode: 'simple',
-        kind: 'toggle',
-        calc: true,
-        zod: HardwareItemSchema.shape.isSecondHand,
-    },
+    }),
+    column({ field: 'isSecondHand', group: 'general', mode: 'simple', kind: 'toggle', calc: true }),
 
-    // ── Impact (∑) ───────────────────────────────────────────────────────
-    {
-        name: 'impactManufacturing',
+    column({
         field: 'impactManufacturing',
-        label: t('inventoryColumns.impactManufacturing'),
         group: 'impact',
         mode: 'normal',
         kind: 'number',
         sortable: true,
-        zod: HardwareItemSchema.shape.impactManufacturing,
-    },
-    {
-        name: 'impactManufacturingDistributionEol',
+    }),
+    column({
         field: 'impactManufacturingDistributionEol',
-        label: t('inventoryColumns.impactManufacturingDistributionEol'),
         group: 'impact',
         mode: 'simple',
         kind: 'number',
         calc: true,
         sortable: true,
-        zod: HardwareItemSchema.shape.impactManufacturingDistributionEol,
-    },
-    {
-        name: 'resilioDbHash',
-        field: 'resilioDbHash',
-        label: t('inventoryColumns.resilioDbHash'),
-        group: 'impact',
-        mode: 'normal',
-        kind: 'text',
-        zod: HardwareItemSchema.shape.resilioDbHash,
-    },
+    }),
+    column({ field: 'resilioDbHash', group: 'impact', mode: 'normal', kind: 'text' }),
     {
         name: 'subtotal',
         field: 'subtotal',
@@ -339,231 +293,68 @@ const columns = computed<InventoryColumn[]>(() => [
         sort: (_a, _b, rowA, rowB) => rowSubtotal(rowA) - rowSubtotal(rowB),
     },
 
-    // ── CPU ──────────────────────────────────────────────────────────────
-    {
-        name: 'cpuName',
-        field: 'cpuName',
-        label: t('inventoryColumns.cpuName'),
-        group: 'cpu',
-        mode: 'normal',
-        kind: 'text',
-        zod: HardwareItemSchema.shape.cpuName,
-    },
-    {
-        name: 'cpuQuantity',
-        field: 'cpuQuantity',
-        label: t('inventoryColumns.cpuQuantity'),
-        group: 'cpu',
-        mode: 'simple',
-        kind: 'number',
-        zod: HardwareItemSchema.shape.cpuQuantity,
-    },
-    {
-        name: 'cpuLithography',
-        field: 'cpuLithography',
-        label: t('inventoryColumns.cpuLithography'),
-        group: 'cpu',
-        mode: 'advanced',
-        kind: 'number',
-        zod: HardwareItemSchema.shape.cpuLithography,
-    },
-    {
-        name: 'cpuDieSize',
-        field: 'cpuDieSize',
-        label: t('inventoryColumns.cpuDieSize'),
-        group: 'cpu',
-        mode: 'advanced',
-        kind: 'number',
-        zod: HardwareItemSchema.shape.cpuDieSize,
-    },
-    {
-        name: 'cpuCores',
-        field: 'cpuCores',
-        label: t('inventoryColumns.cpuCores'),
-        group: 'cpu',
-        mode: 'advanced',
-        kind: 'number',
-        zod: HardwareItemSchema.shape.cpuCores,
-    },
+    column({ field: 'cpuName', group: 'cpu', mode: 'normal', kind: 'text' }),
+    column({ field: 'cpuQuantity', group: 'cpu', mode: 'simple', kind: 'number' }),
+    column({ field: 'cpuLithography', group: 'cpu', mode: 'advanced', kind: 'number' }),
+    column({ field: 'cpuDieSize', group: 'cpu', mode: 'advanced', kind: 'number' }),
+    column({ field: 'cpuCores', group: 'cpu', mode: 'advanced', kind: 'number' }),
 
-    // ── Memory ───────────────────────────────────────────────────────────
-    {
-        name: 'memoryQuantity',
-        field: 'memoryQuantity',
-        label: t('inventoryColumns.memoryQuantity'),
-        group: 'memory',
-        mode: 'simple',
-        kind: 'number',
-        zod: HardwareItemSchema.shape.memoryQuantity,
-    },
-    {
-        name: 'memorySizeGb',
-        field: 'memorySizeGb',
-        label: t('inventoryColumns.memorySizeGb'),
-        group: 'memory',
-        mode: 'simple',
-        kind: 'number',
-        zod: HardwareItemSchema.shape.memorySizeGb,
-    },
-    {
-        name: 'memoryTotalGb',
+    column({ field: 'memoryQuantity', group: 'memory', mode: 'simple', kind: 'number' }),
+    column({ field: 'memorySizeGb', group: 'memory', mode: 'simple', kind: 'number' }),
+    column({
         field: 'memoryTotalGb',
-        label: t('inventoryColumns.memoryTotalGb'),
         group: 'memory',
         mode: 'advanced',
         kind: 'derived',
         zod: undefined,
         derived: (row) => (row.memoryQuantity || 0) * (row.memorySizeGb || 0),
-    },
+    }),
 
-    // ── Storage ──────────────────────────────────────────────────────────
-    {
-        name: 'storageType',
+    column({
         field: 'storageType',
-        label: t('inventoryColumns.storageType'),
         group: 'storage',
         mode: 'advanced',
         kind: 'enum',
-        zod: HardwareItemSchema.shape.storageType,
-        options: StorageTypeSchema.options.map((value) => ({
-            label: t('inventoryStorageType_' + normalizeKey(value)),
-            value,
-        })),
-    },
-    {
-        name: 'storageQuantity',
-        field: 'storageQuantity',
-        label: t('inventoryColumns.storageQuantity'),
-        group: 'storage',
-        mode: 'simple',
-        kind: 'number',
-        zod: HardwareItemSchema.shape.storageQuantity,
-    },
-    {
-        name: 'storageSize',
-        field: 'storageSize',
-        label: t('inventoryColumns.storageSize'),
-        group: 'storage',
-        mode: 'simple',
-        kind: 'number',
-        zod: HardwareItemSchema.shape.storageSize,
-    },
-    {
-        name: 'storageTotal',
+        options: enumOptions(StorageTypeSchema.options, 'inventoryStorageType_'),
+    }),
+    column({ field: 'storageQuantity', group: 'storage', mode: 'simple', kind: 'number' }),
+    column({ field: 'storageSize', group: 'storage', mode: 'simple', kind: 'number' }),
+    column({
         field: 'storageTotal',
-        label: t('inventoryColumns.storageTotal'),
         group: 'storage',
         mode: 'advanced',
         kind: 'derived',
         zod: undefined,
         derived: (row) => (row.storageQuantity || 0) * (row.storageSize || 0),
-    },
-    {
-        name: 'storageTechnology',
+    }),
+    column({
         field: 'storageTechnology',
-        label: t('inventoryColumns.storageTechnology'),
         group: 'storage',
         mode: 'advanced',
         kind: 'enum',
-        zod: HardwareItemSchema.shape.storageTechnology,
-        options: StorageTechnologySchema.options.map((value) => ({
-            label: t('inventoryStorageTechnology_' + normalizeKey(value)),
-            value,
-        })),
-    },
-    {
-        name: 'storageCasing',
+        options: enumOptions(StorageTechnologySchema.options, 'inventoryStorageTechnology_'),
+    }),
+    column({
         field: 'storageCasing',
-        label: t('inventoryColumns.storageCasing'),
         group: 'storage',
         mode: 'advanced',
         kind: 'enum',
-        zod: HardwareItemSchema.shape.storageCasing,
-        options: StorageCasingSchema.options.map((value) => ({
-            label: t('inventoryStorageCasing_' + normalizeKey(value)),
-            value,
-        })),
-    },
+        options: enumOptions(StorageCasingSchema.options, 'inventoryStorageCasing_'),
+    }),
 
-    // ── GPU ──────────────────────────────────────────────────────────────
-    {
-        name: 'gpuName',
-        field: 'gpuName',
-        label: t('inventoryColumns.gpuName'),
-        group: 'gpu',
-        mode: 'normal',
-        kind: 'text',
-        zod: HardwareItemSchema.shape.gpuName,
-    },
-    {
-        name: 'gpuQuantity',
-        field: 'gpuQuantity',
-        label: t('inventoryColumns.gpuQuantity'),
-        group: 'gpu',
-        mode: 'simple',
-        kind: 'number',
-        zod: HardwareItemSchema.shape.gpuQuantity,
-    },
-    {
-        name: 'gpuLithography',
-        field: 'gpuLithography',
-        label: t('inventoryColumns.gpuLithography'),
-        group: 'gpu',
-        mode: 'advanced',
-        kind: 'number',
-        zod: HardwareItemSchema.shape.gpuLithography,
-    },
-    {
-        name: 'gpuDieSize',
-        field: 'gpuDieSize',
-        label: t('inventoryColumns.gpuDieSize'),
-        group: 'gpu',
-        mode: 'advanced',
-        kind: 'number',
-        zod: HardwareItemSchema.shape.gpuDieSize,
-    },
-    {
-        name: 'gpuMemory',
-        field: 'gpuMemory',
-        label: t('inventoryColumns.gpuMemory'),
-        group: 'gpu',
-        mode: 'normal',
-        kind: 'number',
-        zod: HardwareItemSchema.shape.gpuMemory,
-    },
+    column({ field: 'gpuName', group: 'gpu', mode: 'normal', kind: 'text' }),
+    column({ field: 'gpuQuantity', group: 'gpu', mode: 'simple', kind: 'number' }),
+    column({ field: 'gpuLithography', group: 'gpu', mode: 'advanced', kind: 'number' }),
+    column({ field: 'gpuDieSize', group: 'gpu', mode: 'advanced', kind: 'number' }),
+    column({ field: 'gpuMemory', group: 'gpu', mode: 'normal', kind: 'number' }),
 
-    // ── Network & PSU ────────────────────────────────────────────────────
-    {
-        name: 'networkPorts',
-        field: 'networkPorts',
-        label: t('inventoryColumns.networkPorts'),
-        group: 'network',
-        mode: 'normal',
-        kind: 'number',
-        zod: HardwareItemSchema.shape.networkPorts,
-    },
-    {
-        name: 'psuQuantity',
-        field: 'psuQuantity',
-        label: t('inventoryColumns.psuQuantity'),
-        group: 'network',
-        mode: 'advanced',
-        kind: 'number',
-        zod: HardwareItemSchema.shape.psuQuantity,
-    },
-    {
-        name: 'psuPower',
-        field: 'psuPower',
-        label: t('inventoryColumns.psuPower'),
-        group: 'network',
-        mode: 'advanced',
-        kind: 'number',
-        zod: HardwareItemSchema.shape.psuPower,
-    },
+    column({ field: 'networkPorts', group: 'network', mode: 'normal', kind: 'number' }),
+    column({ field: 'psuQuantity', group: 'network', mode: 'advanced', kind: 'number' }),
+    column({ field: 'psuPower', group: 'network', mode: 'advanced', kind: 'number' }),
 ]);
 
 const visibleColumns = computed(() =>
-    columns.value.filter((column) => MODE_RANK[column.mode] <= MODE_RANK[props.mode]),
+    columns.value.filter((col) => MODE_RANK[col.mode] <= MODE_RANK[props.mode]),
 );
 
 /** Group sub-headers, spans matched to the columns rendered in this mode. */
@@ -571,7 +362,7 @@ const groupRows = computed(() =>
     GROUPS.map((name) => ({
         name,
         label: t(`inventoryGroups.${name}`),
-        span: visibleColumns.value.filter((column) => column.group === name).length,
+        span: visibleColumns.value.filter((col) => col.group === name).length,
     })).filter((group) => group.span > 0),
 );
 
