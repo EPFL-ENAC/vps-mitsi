@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { z } from 'zod';
 import { numberInputAttributes } from '../src/utils/number-input.ts';
 import { DatacenterEnergySchema, HardwareItemSchema } from '../src/models/schema.ts';
-import { renderInventoryTable } from './helpers/inventory-table.mjs';
+import { renderInventoryTable } from './helpers/render-tables.mjs';
 
 test('native bounds distinguish integers, decimals and unbounded numbers', () => {
     assert.deepEqual(numberInputAttributes(z.number().int().min(1).max(10)), {
