@@ -32,7 +32,11 @@ const routes: RouteRecordRaw[] = [
             },
         ],
     },
-
+    {
+        path: '/report',
+        name: 'report',
+        component: () => import('pages/ReportPreviewPage.vue'),
+    },
     {
         path: '/:catchAll(.*)*',
         component: () => import('pages/ErrorNotFound.vue'),
