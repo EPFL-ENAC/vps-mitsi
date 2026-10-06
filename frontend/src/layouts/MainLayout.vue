@@ -114,7 +114,7 @@ interface BlockDef {
     status: BlockStatus;
 }
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const epflLogoUrl = `${import.meta.env.BASE_URL}epfl.svg`;
 
 const leftDrawerOpen = ref(false);
@@ -268,9 +268,14 @@ const perFunctionalUnitText = computed<string>(() =>
 );
 
 const savedText = computed<string>(() =>
-    mitsi.savedAt
-        ? t('mainFooterSavedAt', { timeAgo: formatTimeAgo(mitsi.savedAt) })
-        : t('mainFooterDraftSaved'),
+    mitsi.savedAt === null
+        ? t('mainFooterNeverSaved')
+        : t('mainFooterSavedAt', {
+              dateTime: new Intl.DateTimeFormat(locale.value, {
+                  dateStyle: 'medium',
+                  timeStyle: 'medium',
+              }).format(mitsi.savedAt),
+          }),
 );
 const exportedText = computed<string | null>(() =>
     mitsi.exportedAt

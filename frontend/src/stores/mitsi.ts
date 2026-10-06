@@ -8,6 +8,7 @@
 import { LocalStorage } from 'quasar';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
+import { z } from 'zod';
 
 import {
     MITSI_SCHEMA_VERSION,
@@ -62,6 +63,18 @@ export type EnergyCoverage = {
     totalDatacenters: number;
     isComplete: boolean;
 };
+
+/** Loaded assessments must declare their version instead of receiving a creation default. */
+const PersistedAssessmentSchema = MitsiStateDraftSchema.extend({
+    schemaVersion: MitsiStateSchema.shape.schemaVersion,
+});
+
+/** Browser persistence metadata stays separate from the exported assessment. */
+const StoredDraftSchema = z.object({
+    assessment: PersistedAssessmentSchema,
+    savedAt: z.number().int().min(0).max(8.64e15).nullable().catch(null),
+});
+type StoredDraft = z.infer<typeof StoredDraftSchema>;
 
 /** One hardware row as returned by embodiedByCategory (Results tables + charts). */
 export interface EmbodiedRow {
@@ -330,16 +343,28 @@ export const useMitsiStore = defineStore('mitsi', () => {
 
     // ── Persistence (client-side, Quasar LocalStorage) ───────────────────────
     function loadFromStorage(): void {
-        const state = parseState(LocalStorage.getItem(MITSI_STORAGE_KEY));
-        if (state) applyState(state);
+        const raw: unknown = LocalStorage.getItem(MITSI_STORAGE_KEY);
+        const draft = StoredDraftSchema.safeParse(raw);
+        const state = parseState(draft.success ? draft.data.assessment : raw);
+        if (!state) return;
+        applyState(state);
+        savedAt.value = draft.success ? draft.data.savedAt : null;
+    }
+
+    function persistDraft(assessment: MitsiState): void {
+        const timestamp = Date.now();
+        LocalStorage.set(MITSI_STORAGE_KEY, {
+            assessment,
+            savedAt: timestamp,
+        } satisfies StoredDraft);
+        savedAt.value = timestamp;
     }
 
     function saveToStorage(): boolean {
         const parsed = MitsiStateDraftSchema.safeParse(buildState());
         if (!parsed.success) return false;
         try {
-            LocalStorage.set(MITSI_STORAGE_KEY, parsed.data);
-            savedAt.value = Date.now();
+            persistDraft(parsed.data);
             return true;
         } catch {
             return false;
@@ -365,9 +390,8 @@ export const useMitsiStore = defineStore('mitsi', () => {
         try {
             const state = parseState(JSON.parse(json) as unknown);
             if (!state) return false;
-            LocalStorage.set(MITSI_STORAGE_KEY, state);
+            persistDraft(state);
             applyState(state);
-            savedAt.value = Date.now();
             return true;
         } catch {
             return false;
@@ -428,9 +452,7 @@ export const useMitsiStore = defineStore('mitsi', () => {
     }
 
     function parseState(raw: unknown): MitsiState | null {
-        // Creation defaults must not make unversioned or older persisted data look current.
-        if (!MitsiStateSchema.pick({ schemaVersion: true }).safeParse(raw).success) return null;
-        const parsed = MitsiStateDraftSchema.safeParse(raw);
+        const parsed = PersistedAssessmentSchema.safeParse(raw);
         if (!parsed.success) return null;
         const state = parsed.data;
         const dcIds = new Set(state.datacenters.map((dc) => dc.id));

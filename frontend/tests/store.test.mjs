@@ -73,6 +73,85 @@ test('blank and partially edited assessments survive save and reload, including 
     assert.equal(restored.isScopeValid, false);
 });
 
+test('save timestamps survive reload and only advance on successful persistence', () => {
+    let now = 1_790_000_000_000;
+    mock.method(Date, 'now', () => now);
+    const store = useMitsiStore();
+    store.loadFromStorage();
+    assert.equal(store.savedAt, null);
+    assert.equal(store.saveToStorage(), true);
+    const firstSavedAt = now;
+    assert.equal(store.savedAt, firstSavedAt);
+    assert.deepEqual(JSON.parse(stored.get(MITSI_STORAGE_KEY)), {
+        assessment: JSON.parse(store.exportJson()),
+        savedAt: firstSavedAt,
+    });
+
+    now += 60_000;
+    store.scope.organizationName = 'Edited';
+    const exported = JSON.parse(store.exportJson());
+    assert.equal('savedAt' in exported, false);
+    assert.equal('assessment' in exported, false);
+    assert.equal(store.savedAt, firstSavedAt);
+    assert.equal(JSON.parse(stored.get(MITSI_STORAGE_KEY)).savedAt, firstSavedAt);
+
+    setActivePinia(createPinia());
+    const restored = useMitsiStore();
+    restored.loadFromStorage();
+    assert.equal(restored.savedAt, firstSavedAt);
+    assert.equal(restored.scope.organizationName, '');
+    assert.equal(restored.saveToStorage(), true);
+    assert.equal(restored.savedAt, now);
+    assert.equal(JSON.parse(stored.get(MITSI_STORAGE_KEY)).savedAt, now);
+});
+
+test('import persists its local save time and restores it on reload', () => {
+    const now = 1_790_000_000_000;
+    mock.method(Date, 'now', () => now);
+    const store = useMitsiStore();
+    const assessment = MitsiStateDraftSchema.parse({ scope: { organizationName: 'Imported' } });
+    assert.equal(store.importJson(JSON.stringify({ ...assessment, savedAt: 123 })), true);
+    assert.equal(store.savedAt, now);
+    assert.deepEqual(JSON.parse(stored.get(MITSI_STORAGE_KEY)), { assessment, savedAt: now });
+    setActivePinia(createPinia());
+    const restored = useMitsiStore();
+    restored.loadFromStorage();
+    assert.equal(restored.savedAt, now);
+    assert.equal(restored.scope.organizationName, 'Imported');
+});
+
+test('legacy drafts load without an invented timestamp and use the wrapper on their next save', () => {
+    const assessment = MitsiStateDraftSchema.parse({ scope: { organizationName: 'Legacy' } });
+    const legacy = JSON.stringify(assessment);
+    stored.set(MITSI_STORAGE_KEY, legacy);
+    const store = useMitsiStore();
+    store.savedAt = 123;
+    store.loadFromStorage();
+    assert.equal(store.savedAt, null);
+    assert.equal(store.scope.organizationName, 'Legacy');
+    assert.equal(stored.get(MITSI_STORAGE_KEY), legacy);
+    assert.equal(store.saveToStorage(), true);
+    assert.deepEqual(JSON.parse(stored.get(MITSI_STORAGE_KEY)).assessment, assessment);
+});
+
+test('missing or invalid timestamp metadata does not discard valid assessments', () => {
+    const assessment = MitsiStateDraftSchema.parse({ scope: { organizationName: 'Keep me' } });
+    const store = useMitsiStore();
+    for (const savedAt of [undefined, null, '123', -1, 1.5, {}, 8_640_000_000_000_001]) {
+        const json = JSON.stringify({ assessment, savedAt });
+        stored.set(MITSI_STORAGE_KEY, json);
+        store.savedAt = 123;
+        store.scope.organizationName = '';
+        store.loadFromStorage();
+        assert.equal(store.savedAt, null);
+        assert.equal(store.scope.organizationName, 'Keep me');
+        assert.equal(stored.get(MITSI_STORAGE_KEY), json);
+    }
+    stored.set(MITSI_STORAGE_KEY, JSON.stringify({ assessment, savedAt: 0 }));
+    store.loadFromStorage();
+    assert.equal(store.savedAt, 0);
+});
+
 test('hardware creation uses draft defaults and gives each row its own id', () => {
     const store = useMitsiStore();
     store.addHardwareItem();
@@ -119,6 +198,8 @@ test('storage failures return false and do not mark the assessment saved', () =>
     assert.equal(stored.get(MITSI_STORAGE_KEY), previous);
     assert.equal(store.importJson(JSON.stringify({ schemaVersion: MITSI_SCHEMA_VERSION })), false);
     assert.equal(store.scope.organizationName, 'Edited');
+    assert.equal(store.savedAt, savedAt);
+    assert.equal(stored.get(MITSI_STORAGE_KEY), previous);
 });
 
 test('save and export normalize cleared numerics without turning invalid values into defaults', () => {
@@ -133,7 +214,7 @@ test('save and export normalize cleared numerics without turning invalid values 
     assert.equal(snapshot.scope.lifespanYears, 1);
     assert.equal(snapshot.hardware[0].quantity, 0);
     assert.equal(snapshot.datacenters[0].energy.pue, null);
-    assert.deepEqual(JSON.parse(stored.get(MITSI_STORAGE_KEY)), snapshot);
+    assert.deepEqual(JSON.parse(stored.get(MITSI_STORAGE_KEY)).assessment, snapshot);
 });
 
 test('imports reject invalid values and future versions without changing state or storage', () => {
@@ -430,7 +511,13 @@ test('cleared nested energy survives persistence and reset restores fresh assess
 test('unsupported stored versions are ignored without modifying state or storage', () => {
     const store = useMitsiStore();
     store.scope.organizationName = 'Keep me';
-    for (const raw of [{}, { schemaVersion: 3 }, { schemaVersion: 5 }]) {
+    for (const raw of [
+        {},
+        { schemaVersion: 3 },
+        { schemaVersion: 5 },
+        { assessment: { schemaVersion: 3 }, savedAt: 123 },
+        { assessment: { schemaVersion: 5 }, savedAt: 123 },
+    ]) {
         const json = JSON.stringify(raw);
         stored.set(MITSI_STORAGE_KEY, json);
         store.loadFromStorage();

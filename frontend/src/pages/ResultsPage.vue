@@ -220,7 +220,7 @@
                     </tr>
                 </tbody>
             </q-markup-table>
-          
+
             <!-- split pie embodied/operational/underlying -->
             <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
                 {{ $t('resultsChartSplitTitle') }}
@@ -274,9 +274,8 @@ import AssessmentSection from 'src/components/AssessmentSection.vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMitsiStore } from 'src/stores/mitsi';
-  
+
 import { formatDatacenterName, formatKg, formatResult, normalizeKey } from 'src/utils/format';
-import { useResultFormatting } from 'src/composables/useResultFormatting';
 import EmbodiedTreemapChart from 'src/components/results/EmbodiedTreemapChart.vue';
 import DatacentersPieChart from 'src/components/results/DatacentersPieChart.vue';
 import TotalSplitPieChart from 'src/components/results/TotalSplitPieChart.vue';
