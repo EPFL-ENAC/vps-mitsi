@@ -1,22 +1,20 @@
 /** Reactive assessment calculations derived from the editable survey data. */
 import { defineStore } from 'pinia';
 import { computed } from 'vue';
-import type { Datacenter, HardwareItem } from 'src/models/mitsi';
+import { DatacenterEnergySchema, type Datacenter } from 'src/models/Datacenter/schema';
 import {
-    DatacenterEnergySchema,
+    type HardwareItem,
     HardwareCategorySchema,
     HardwareItemSchema,
-    MonitoringPeriodSchema,
-    ScopeSchema,
     type HardwareCategory,
-} from 'src/models/schema';
-import {
-    calculateFunctionalUnitEmissions,
-    calculateOperationalEmissions,
-    countResources,
-    rowSubtotal,
-    sum,
-} from 'src/utils/math';
+} from 'src/models/HardwareItem/schema';
+
+import { MonitoringPeriodSchema } from 'src/models/MonitoringPeriod/schema';
+import { ScopeSchema } from 'src/models/Scope/schema';
+import { calculatePeriodEmissions } from 'src/models/Datacenter/utils';
+import { rowSubtotal } from 'src/models/HardwareItem/utils';
+import { unitsPerYear } from 'src/models/TimeUnit/utils';
+import { sum } from 'src/utils/math';
 import { useSurveyDataStore } from 'src/stores/surveyData';
 
 export type DatacenterOperationalResult = {
@@ -86,13 +84,14 @@ export const useSurveyResultsStore = defineStore('surveyResults', () => {
             if (!energy.success || !period.success) {
                 return { datacenter: dc, co2Period: null, co2Lifespan: null };
             }
+            const co2Period = calculatePeriodEmissions(energy.data);
+            const monitoringYears = period.data.value / unitsPerYear(period.data.unit);
             return {
                 datacenter: dc,
-                ...calculateOperationalEmissions({
-                    energy: energy.data,
-                    monitoringPeriod: period.data,
-                    lifespanYears: lifespan.success ? lifespan.data : null,
-                }),
+                co2Period,
+                co2Lifespan: lifespan.success
+                    ? co2Period * (lifespan.data / monitoringYears)
+                    : null,
             };
         });
     });
@@ -113,10 +112,7 @@ export const useSurveyResultsStore = defineStore('surveyResults', () => {
         return {
             completeDatacenters,
             totalDatacenters,
-            isComplete:
-                data.isScopeValid &&
-                totalDatacenters > 0 &&
-                completeDatacenters === totalDatacenters,
+            isComplete: data.isScopeValid && completeDatacenters === totalDatacenters,
         };
     });
 
@@ -142,18 +138,22 @@ export const useSurveyResultsStore = defineStore('surveyResults', () => {
         if (!hasEmbodiedContribution.value && totalOperational.value === null && !hasUnderlying)
             return null;
         const total = totalEmbodied.value + (totalOperational.value ?? 0) + totalUnderlying.value;
+        // Raw inventory edits can produce NaN even when another hardware row is valid.
         return Number.isFinite(total) ? total : null;
     });
 
     /** Count only accounted hardware, honoring the second-hand setting. */
-    const resourcesInService = computed<number>(() =>
-        countResources(
-            data.hardware.filter((row) => !isSecondHandExcluded(row)),
-            data.scope.functionalUnit.resourceType,
-        ),
-    );
+    const resourcesInService = computed<number>(() => {
+        // CPU fleet for CPU functional units; GPU fleet otherwise, as in the workbook.
+        const cpu = data.scope.functionalUnit.resourceType.trim().toLowerCase() === 'cpu';
+        return sum(
+            data.hardware
+                .filter((row) => !isSecondHandExcluded(row))
+                .map((row) => row.quantity * (cpu ? row.cpuQuantity : row.gpuQuantity)),
+        );
+    });
 
-    /** Validate draft inputs before calling the pure functional-unit calculation. */
+    /** Combine valid functional-unit inputs with the assessment lifespan and accounted fleet. */
     const perFunctionalUnit = computed<number | null>(() => {
         const functionalUnit = ScopeSchema.shape.functionalUnit.safeParse(
             data.scope.functionalUnit,
@@ -165,12 +165,11 @@ export const useSurveyResultsStore = defineStore('surveyResults', () => {
         if (!Number.isFinite(resources) || resources <= 0 || functionalUnit.data.usageDuration <= 0)
             return null;
 
-        return calculateFunctionalUnitEmissions({
-            totalEmissions: total,
-            lifespanYears: lifespan.data,
-            resourcesInService: resources,
-            functionalUnit: functionalUnit.data,
-        });
+        const fu = functionalUnit.data;
+        const uses =
+            (lifespan.data * unitsPerYear(fu.timeUnit) * resources) /
+            (fu.usageDuration * fu.resourceCount);
+        return total / uses;
     });
 
     /** Embodied rows grouped by category for the Results tables (spec: one table

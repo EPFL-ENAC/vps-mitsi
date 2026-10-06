@@ -7,7 +7,8 @@ import { Quasar } from 'quasar';
 import { z } from 'zod';
 import ZodValidatedNumberInput from '../src/components/inputs/ZodValidatedNumberInput.vue';
 import ZodValidatedTextInput from '../src/components/inputs/ZodValidatedTextInput.vue';
-import { DatacenterEnergySchema, HardwareItemSchema } from '../src/models/schema.ts';
+import { DatacenterEnergySchema } from '../src/models/Datacenter/schema.ts';
+import { HardwareItemSchema } from '../src/models/HardwareItem/schema.ts';
 import en from '../src/i18n/en-GB/index.ts';
 
 /** Render the real Quasar input and capture its public API, without a DOM stub. */

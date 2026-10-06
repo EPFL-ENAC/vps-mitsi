@@ -1,7 +1,7 @@
 /**
  * MITSI — Quasar form validation via Zod (silent adapter).
  *
- * Adapts canonical entity fields from src/models/schema.ts to Quasar rules.
+ * Adapts canonical entity fields from src/models/<Entity>/schema.ts to Quasar rules.
  * Components pass field schemas directly; this adapter supplies translated
  * validation messages and normalizes empty inputs.
  */

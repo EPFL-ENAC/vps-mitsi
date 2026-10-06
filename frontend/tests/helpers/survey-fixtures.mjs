@@ -1,8 +1,6 @@
-import {
-    ScopeDraftSchema,
-    DatacenterDraftSchema,
-    HardwareItemDraftSchema,
-} from '../../src/models/schema.ts';
+import { ScopeDraftSchema } from '../../src/models/Scope/schema.ts';
+import { DatacenterDraftSchema } from '../../src/models/Datacenter/schema.ts';
+import { HardwareItemDraftSchema } from '../../src/models/HardwareItem/schema.ts';
 
 function validScope() {
     return ScopeDraftSchema.parse({

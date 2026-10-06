@@ -52,7 +52,7 @@ import { useSurveyDataStore } from 'src/stores/surveyData';
 import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInput.vue';
 import { useI18n } from 'vue-i18n';
 import { useValidation } from 'src/composables/useValidation';
-import { MonitoringPeriodSchema, MonitoringUnitSchema } from 'src/models/schema';
+import { MonitoringPeriodSchema, MonitoringUnitSchema } from 'src/models/MonitoringPeriod/schema';
 import { normalizeKey } from 'src/utils/format';
 
 const surveyData = useSurveyDataStore();

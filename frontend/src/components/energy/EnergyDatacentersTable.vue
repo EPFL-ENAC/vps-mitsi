@@ -79,8 +79,11 @@ import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.v
 import { useI18n } from 'vue-i18n';
 import { formatDatacenterName } from 'src/utils/format';
 import { createSchemaColumn } from 'src/utils/tables';
-import { DatacenterEnergySchema } from 'src/models/schema';
-import type { Datacenter, DatacenterEnergy } from 'src/models/mitsi';
+import {
+    DatacenterEnergySchema,
+    type Datacenter,
+    type DatacenterEnergy,
+} from 'src/models/Datacenter/schema';
 
 const surveyData = useSurveyDataStore();
 

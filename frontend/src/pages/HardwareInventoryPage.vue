@@ -85,7 +85,7 @@ import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import HardwareInventoryTable from 'src/components/inventory/HardwareInventoryTable.vue';
-import type { VisibilityMode } from 'src/models/mitsi';
+import type { VisibilityMode } from 'src/types/ui';
 import { formatKg } from 'src/utils/format';
 
 const surveyData = useSurveyDataStore();

@@ -3,14 +3,14 @@ import { beforeEach, afterEach, mock, test } from 'node:test';
 import { createPinia, setActivePinia } from 'pinia';
 import { LocalStorage } from 'quasar';
 import { useSurveyResultsStore } from '../src/stores/surveyResults.ts';
-import { useSurveyDataStore } from '../src/stores/surveyData.ts';
-import { MITSI_STORAGE_KEY } from '../src/models/mitsi.ts';
+import { useSurveyDataStore, MITSI_STORAGE_KEY } from '../src/stores/surveyData.ts';
+
 import {
     DatacenterEnergyDraftSchema,
     DatacenterDraftSchema,
-    MitsiStateDraftSchema,
-    UnderlyingServiceDraftSchema,
-} from '../src/models/schema.ts';
+} from '../src/models/Datacenter/schema.ts';
+import { MitsiStateDraftSchema } from '../src/models/MitsiState/schema.ts';
+import { UnderlyingServiceDraftSchema } from '../src/models/UnderlyingService/schema.ts';
 
 import { setupScope, validHardware } from './helpers/survey-fixtures.mjs';
 
@@ -25,6 +25,49 @@ beforeEach(() => {
     mock.method(LocalStorage, 'remove', (key) => stored.delete(key));
 });
 afterEach(() => mock.restoreAll());
+
+test('energy calculations validate drafts in the store without mutating inputs', () => {
+    const data = useSurveyDataStore();
+    const results = useSurveyResultsStore();
+    setupScope(data);
+    data.monitoringPeriod.unit = 'year';
+    const dc = data.datacenters[0];
+    const energy = DatacenterEnergyDraftSchema.parse({
+        energyConsumption: 100,
+        carbonIntensity: 500,
+    });
+
+    for (const draft of [
+        DatacenterEnergyDraftSchema.parse({}),
+        ...[
+            { energyConsumption: null },
+            { energyConsumption: '' },
+            { energyConsumption: -1 },
+            { carbonIntensity: null },
+            { carbonIntensity: 0 },
+            { carbonIntensity: '500' },
+            { pue: -1 },
+            { pue: NaN },
+        ].map((patch) => ({ ...energy, ...patch })),
+    ]) {
+        dc.energy = Object.freeze(draft);
+        assert.deepEqual(results.operationalPerDc, [
+            { datacenter: dc, co2Period: null, co2Lifespan: null },
+        ]);
+        assert.equal(results.totalOperational, null);
+        assert.equal(dc.energy, draft);
+    }
+
+    for (const pue of ['', undefined, null]) {
+        const draft = Object.freeze({ ...energy, pue });
+        dc.energy = draft;
+        assert.deepEqual(results.operationalPerDc, [
+            { datacenter: dc, co2Period: 50, co2Lifespan: 50 },
+        ]);
+        assert.equal(dc.energy, draft);
+        assert.equal(dc.energy.pue, pue);
+    }
+});
 
 test('scope completion ignores energy; energy progress follows entry, not datacenter creation', () => {
     const store = useSurveyDataStore();
@@ -141,6 +184,37 @@ test('invalid shared inputs withhold energy estimates and real zero results rema
     store.hardware[0].cpuQuantity = 0;
     assert.equal(results.perFunctionalUnit, null);
     assert.equal(results.totalPerResource, null);
+});
+
+test('unfinished hardware edits withhold invalid totals and resource ratios until corrected', () => {
+    const data = useSurveyDataStore();
+    const results = useSurveyResultsStore();
+    setupScope(data);
+    data.scope.functionalUnit.resourceType = 'CPU';
+    data.hardware = ['valid', 'editing'].map((id) => ({
+        ...validHardware(),
+        id,
+        cpuQuantity: 1,
+        impactManufacturingDistributionEol: 50,
+    }));
+
+    data.hardware[1].quantity = undefined;
+    assert.ok(Number.isNaN(results.totalEmbodied));
+    assert.equal(results.totalLifespan, null);
+    assert.equal(results.perFunctionalUnit, null);
+    assert.equal(results.totalPerResource, null);
+
+    data.hardware[1].quantity = 1;
+    data.hardware[1].cpuQuantity = undefined;
+    assert.equal(results.totalLifespan, 100);
+    assert.ok(Number.isNaN(results.resourcesInService));
+    assert.equal(results.perFunctionalUnit, null);
+    assert.equal(results.totalPerResource, null);
+
+    data.hardware[1].cpuQuantity = 1;
+    assert.equal(results.resourcesInService, 2);
+    assert.equal(results.totalPerResource, 50);
+    assert.equal(results.perFunctionalUnit, 100 / (8760 * 2));
 });
 
 test('cleared nested energy survives persistence and reset restores fresh assessment defaults', () => {
@@ -320,4 +394,71 @@ test('reading calculations never persists or normalizes the editable inputs in p
     assert.equal(LocalStorage.set.mock.callCount(), 0);
     assert.equal(LocalStorage.getItem.mock.callCount(), 0);
     assert.equal(LocalStorage.remove.mock.callCount(), 0);
+});
+
+test('operational totals combine local energy with monitoring units and lifespan', () => {
+    const data = useSurveyDataStore();
+    const results = useSurveyResultsStore();
+    setupScope(data);
+    data.scope.lifespanYears = 2;
+    data.datacenters[0].energy = DatacenterEnergyDraftSchema.parse({
+        energyConsumption: 3000,
+        carbonIntensity: 400,
+        pue: 1.5,
+    });
+    data.monitoringPeriod.value = 30;
+    assert.equal(results.operationalPerDc[0].co2Period, 1800);
+    assert.ok(Math.abs(results.totalOperational - 43800) < 1e-8);
+    for (const [unit, value] of [
+        ['day', 365],
+        ['week', 52],
+        ['month', 12],
+        ['year', 1],
+    ]) {
+        data.monitoringPeriod.unit = unit;
+        data.monitoringPeriod.value = value;
+        assert.equal(results.operationalPerDc[0].co2Period, 1800);
+        assert.equal(results.totalOperational, 3600);
+    }
+});
+
+test('resource selection and functional-unit scaling are composed from current assessment inputs', () => {
+    const data = useSurveyDataStore();
+    const results = useSurveyResultsStore();
+    setupScope(data);
+    data.scope.lifespanYears = 2;
+    data.scope.functionalUnit = {
+        resourceType: ' CPU ',
+        timeUnit: 'hour',
+        usageDuration: 2,
+        resourceCount: 2,
+    };
+    data.hardware = [
+        {
+            ...validHardware(),
+            quantity: 44,
+            cpuQuantity: 4,
+            gpuQuantity: 8,
+            impactManufacturingDistributionEol: 17520,
+        },
+    ];
+    assert.equal(results.totalEmbodied, 770880);
+    assert.equal(results.resourcesInService, 176);
+    assert.equal(results.perFunctionalUnit, 1);
+    data.scope.functionalUnit.timeUnit = 'minute';
+    data.scope.functionalUnit.usageDuration = 120;
+    assert.equal(results.perFunctionalUnit, 1);
+    data.scope.lifespanYears = 4;
+    assert.equal(results.perFunctionalUnit, 0.5);
+    data.scope.lifespanYears = 2;
+    for (const resourceType of ['GPU', 'other']) {
+        data.scope.functionalUnit.resourceType = resourceType;
+        assert.equal(results.resourcesInService, 352);
+        assert.equal(results.perFunctionalUnit, 0.5);
+    }
+    data.hardware[0].impactManufacturingDistributionEol = 0;
+    assert.equal(results.perFunctionalUnit, 0);
+    data.hardware = [];
+    assert.equal(results.resourcesInService, 0);
+    assert.equal(results.perFunctionalUnit, null);
 });

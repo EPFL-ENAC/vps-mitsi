@@ -2,23 +2,26 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     BoundaryItemDraftSchema,
+    ScopeDraftSchema,
+    ScopeSchema,
+} from '../src/models/Scope/schema.ts';
+import {
     DatacenterDraftSchema,
     DatacenterGeneralInfoDraftSchema,
     DatacenterGeneralInfoSchema,
     DatacenterEnergyDraftSchema,
     DatacenterEnergySchema,
-    FunctionalUnitDraftSchema,
-    HardwareItemDraftSchema,
-    HardwareItemSchema,
+} from '../src/models/Datacenter/schema.ts';
+import { FunctionalUnitDraftSchema } from '../src/models/FunctionalUnit/schema.ts';
+import { HardwareItemDraftSchema, HardwareItemSchema } from '../src/models/HardwareItem/schema.ts';
+import {
     MITSI_SCHEMA_VERSION,
     MitsiStateDraftSchema,
     MitsiStateSchema,
-    MonitoringPeriodDraftSchema,
-    ScopeDraftSchema,
-    ScopeSchema,
-    UnderlyingServiceDraftSchema,
-    nullableNumber,
-} from '../src/models/schema.ts';
+} from '../src/models/MitsiState/schema.ts';
+import { MonitoringPeriodDraftSchema } from '../src/models/MonitoringPeriod/schema.ts';
+import { UnderlyingServiceDraftSchema } from '../src/models/UnderlyingService/schema.ts';
+import { nullableNumber } from '../src/models/shared/schema.ts';
 
 const jsonRoundTrip = (value) => JSON.parse(JSON.stringify(value));
 

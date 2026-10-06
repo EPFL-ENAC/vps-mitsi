@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createI18n } from 'vue-i18n';
 import en from '../src/i18n/en-GB/index.ts';
-import { FunctionalUnitSchema } from '../src/models/schema.ts';
+import { FunctionalUnitSchema } from '../src/models/FunctionalUnit/schema.ts';
 import {
     buildFunctionalUnitSentence,
     formatPueInclusion,

@@ -1,5 +1,5 @@
-import type { Datacenter, Scope } from 'src/models/mitsi';
-import { DatacenterEnergySchema } from 'src/models/schema';
+import { type Datacenter, DatacenterEnergySchema } from 'src/models/Datacenter/schema';
+import type { Scope } from 'src/models/Scope/schema';
 
 /** Show both names when available, with the ID as the unfinished-draft fallback. */
 export function formatDatacenterName(dc: Pick<Datacenter, 'id' | 'generalInfo'>): string {

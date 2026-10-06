@@ -69,8 +69,12 @@ import { computed } from 'vue';
 import { useQuasar, type QTableColumn } from 'quasar';
 import type { z } from 'zod';
 
-import type { Datacenter, DatacenterGeneralInfo } from 'src/models/mitsi';
-import { DatacenterGeneralInfoSchema } from 'src/models/schema';
+import {
+    type Datacenter,
+    type DatacenterGeneralInfo,
+    DatacenterGeneralInfoSchema,
+} from 'src/models/Datacenter/schema';
+
 import { formatDatacenterName } from 'src/utils/format';
 import { createSchemaColumn } from 'src/utils/tables';
 

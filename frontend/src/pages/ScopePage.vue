@@ -179,7 +179,9 @@ import { useI18n } from 'vue-i18n';
 import ScopeDatacentersTable from 'src/components/scope/ScopeDatacentersTable.vue';
 import ScopeBoundaryItemsTable from 'src/components/scope/ScopeBoundaryItemsTable.vue';
 import { useValidation } from 'src/composables/useValidation';
-import { FunctionalUnitSchema, ScopeSchema, TimeUnitSchema } from 'src/models/schema';
+import { FunctionalUnitSchema } from 'src/models/FunctionalUnit/schema';
+import { ScopeSchema } from 'src/models/Scope/schema';
+import { TimeUnitSchema } from 'src/models/TimeUnit/schema';
 import { normalizeKey } from 'src/utils/format';
 
 const surveyData = useSurveyDataStore();

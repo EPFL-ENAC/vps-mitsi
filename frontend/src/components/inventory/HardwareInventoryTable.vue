@@ -167,16 +167,18 @@ import { useI18n } from 'vue-i18n';
 import { useQuasar, type QTableColumn } from 'quasar';
 import type { z } from 'zod';
 
-import type { HardwareItem, VisibilityMode } from 'src/models/mitsi';
-import { formatDatacenterName, formatKg, normalizeKey } from 'src/utils/format';
-import { createSchemaColumn } from 'src/utils/tables';
 import {
+    type HardwareItem,
     HardwareCategorySchema,
     HardwareItemSchema,
     StorageCasingSchema,
     StorageTechnologySchema,
     StorageTypeSchema,
-} from 'src/models/schema';
+} from 'src/models/HardwareItem/schema';
+import type { VisibilityMode } from 'src/types/ui';
+import { formatDatacenterName, formatKg, normalizeKey } from 'src/utils/format';
+import { createSchemaColumn } from 'src/utils/tables';
+
 import { useValidation } from 'src/composables/useValidation';
 
 const surveyData = useSurveyDataStore();

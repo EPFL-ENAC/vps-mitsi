@@ -2,17 +2,13 @@ import assert from 'node:assert/strict';
 import { beforeEach, afterEach, mock, test } from 'node:test';
 import { createPinia, setActivePinia } from 'pinia';
 import { LocalStorage } from 'quasar';
-import { useSurveyDataStore } from '../src/stores/surveyData.ts';
-import { MITSI_STORAGE_KEY } from '../src/models/mitsi.ts';
-import {
-    BoundaryItemDraftSchema,
-    DatacenterEnergyDraftSchema,
-    HardwareItemDraftSchema,
-    MITSI_SCHEMA_VERSION,
-    MitsiStateDraftSchema,
-    ScopeDraftSchema,
-    UnderlyingServiceDraftSchema,
-} from '../src/models/schema.ts';
+import { useSurveyDataStore, MITSI_STORAGE_KEY } from '../src/stores/surveyData.ts';
+
+import { BoundaryItemDraftSchema, ScopeDraftSchema } from '../src/models/Scope/schema.ts';
+import { DatacenterEnergyDraftSchema } from '../src/models/Datacenter/schema.ts';
+import { HardwareItemDraftSchema } from '../src/models/HardwareItem/schema.ts';
+import { MITSI_SCHEMA_VERSION, MitsiStateDraftSchema } from '../src/models/MitsiState/schema.ts';
+import { UnderlyingServiceDraftSchema } from '../src/models/UnderlyingService/schema.ts';
 
 import { setupScope, validHardware } from './helpers/survey-fixtures.mjs';
 

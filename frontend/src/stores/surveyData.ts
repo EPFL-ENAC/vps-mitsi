@@ -6,29 +6,35 @@ import { z } from 'zod';
 
 import {
     MITSI_SCHEMA_VERSION,
-    MITSI_STORAGE_KEY,
-    type BlockStatus,
-    type Datacenter,
-    type HardwareItem,
     type MitsiState,
-    type MonitoringPeriod,
-    type Scope,
-    type UnderlyingService,
-} from 'src/models/mitsi';
+    MitsiStateDraftSchema,
+    MitsiStateSchema,
+} from 'src/models/MitsiState/schema';
+import type { BlockStatus } from 'src/types/ui';
 import {
-    BoundaryItemDraftSchema,
+    type Datacenter,
     DatacenterEnergySchema,
     DatacenterEnergyDraftSchema,
     DatacenterDraftSchema,
     DatacenterGeneralInfoSchema,
+} from 'src/models/Datacenter/schema';
+import {
+    type HardwareItem,
     HardwareItemDraftSchema,
     HardwareItemSchema,
-    MitsiStateDraftSchema,
-    MitsiStateSchema,
-    MonitoringPeriodSchema,
+} from 'src/models/HardwareItem/schema';
+import { type MonitoringPeriod, MonitoringPeriodSchema } from 'src/models/MonitoringPeriod/schema';
+import {
+    type Scope,
+    BoundaryItemDraftSchema,
     ScopeSchema,
     ScopeDraftSchema,
-} from 'src/models/schema';
+} from 'src/models/Scope/schema';
+import type { UnderlyingService } from 'src/models/UnderlyingService/schema';
+
+/** Storage key used for browser persistence. */
+export const MITSI_STORAGE_KEY = 'mitsi-assessment';
+
 export type DatacenterDeletionBlock = { hardwareRowCount: number };
 
 export type RemoveDatacenterResult =
@@ -95,7 +101,7 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
     );
 
     const hardwareRowsComplete = computed<boolean>(
-        () => hardware.value.length > 0 && hardware.value.every(hardwareRowValid),
+        () => hardware.value.length > 0 && missingMandatoryHardware.value === 0,
     );
     /** Empty cleared inputs count as untouched; an explicit numeric zero counts as entered. */
     const energyStarted = computed(() => {

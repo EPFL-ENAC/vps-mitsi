@@ -5,13 +5,11 @@ import { renderToString } from 'vue/server-renderer';
 import { createI18n } from 'vue-i18n';
 import { useValidation } from '../src/composables/useValidation.ts';
 import { renderInventoryTable } from './helpers/render-tables.mjs';
-import {
-    DatacenterEnergySchema,
-    HardwareItemSchema,
-    FunctionalUnitSchema,
-    MonitoringPeriodSchema,
-    ScopeSchema,
-} from '../src/models/schema.ts';
+import { DatacenterEnergySchema } from '../src/models/Datacenter/schema.ts';
+import { HardwareItemSchema } from '../src/models/HardwareItem/schema.ts';
+import { FunctionalUnitSchema } from '../src/models/FunctionalUnit/schema.ts';
+import { MonitoringPeriodSchema } from '../src/models/MonitoringPeriod/schema.ts';
+import { ScopeSchema } from '../src/models/Scope/schema.ts';
 import en from '../src/i18n/en-GB/index.ts';
 
 async function validationRules() {

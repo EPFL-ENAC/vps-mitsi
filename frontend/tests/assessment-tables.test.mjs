@@ -8,14 +8,13 @@ import HardwareInventoryTable from '../src/components/inventory/HardwareInventor
 import ResultsPage from '../src/pages/ResultsPage.vue';
 import ReportPreviewPage from '../src/pages/ReportPreviewPage.vue';
 import ScopePage from '../src/pages/ScopePage.vue';
+import { ScopeDraftSchema, BoundaryItemDraftSchema } from '../src/models/Scope/schema.ts';
 import {
-    ScopeDraftSchema,
     DatacenterDraftSchema,
     DatacenterEnergySchema,
     DatacenterGeneralInfoSchema,
-    BoundaryItemDraftSchema,
-    HardwareItemDraftSchema,
-} from '../src/models/schema.ts';
+} from '../src/models/Datacenter/schema.ts';
+import { HardwareItemDraftSchema } from '../src/models/HardwareItem/schema.ts';
 import en from '../src/i18n/en-GB/index.ts';
 import { renderTables } from './helpers/render-tables.mjs';
 

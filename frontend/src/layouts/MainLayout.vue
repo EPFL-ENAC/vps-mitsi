@@ -111,7 +111,7 @@ import { computed, ref } from 'vue';
 import { useQuasar, date, exportFile } from 'quasar';
 import { useI18n } from 'vue-i18n';
 
-import type { BlockKey, BlockStatus } from 'src/models/mitsi';
+import type { BlockKey, BlockStatus } from 'src/types/ui';
 import { formatResult } from 'src/utils/format';
 
 const surveyData = useSurveyDataStore();

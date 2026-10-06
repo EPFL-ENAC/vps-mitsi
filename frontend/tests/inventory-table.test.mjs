@@ -1,11 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { renderInventoryTable } from './helpers/render-tables.mjs';
-import {
-    DatacenterDraftSchema,
-    HardwareItemDraftSchema,
-    HardwareItemSchema,
-} from '../src/models/schema.ts';
+import { DatacenterDraftSchema } from '../src/models/Datacenter/schema.ts';
+import { HardwareItemDraftSchema, HardwareItemSchema } from '../src/models/HardwareItem/schema.ts';
 import en from '../src/i18n/en-GB/index.ts';
 
 test('advanced inventory covers all display fields exactly once', async () => {
