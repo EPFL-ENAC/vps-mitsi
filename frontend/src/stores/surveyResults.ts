@@ -1,24 +1,41 @@
 /** Reactive assessment calculations derived from the editable survey data. */
 import { defineStore } from 'pinia';
 import { computed } from 'vue';
-import { DatacenterEnergySchema, type Datacenter } from 'src/models/Datacenter/schema';
+import { z } from 'zod';
+import {
+    DatacenterEnergySchema,
+    type Datacenter,
+    type PueInclusion,
+} from 'src/models/Datacenter/schema';
 import {
     type HardwareItem,
     HardwareCategorySchema,
     HardwareItemSchema,
+    HardwareImpactMeasurementsSchema,
+    HardwareMemoryMeasurementsSchema,
+    HardwareStorageMeasurementsSchema,
+    HardwareCpuFleetMeasurementsSchema,
+    HardwareGpuFleetMeasurementsSchema,
     type HardwareCategory,
 } from 'src/models/HardwareItem/schema';
-
+import { UnderlyingServiceSchema } from 'src/models/UnderlyingService/schema';
 import { MonitoringPeriodSchema } from 'src/models/MonitoringPeriod/schema';
 import { ScopeSchema } from 'src/models/Scope/schema';
 import { calculatePeriodEmissions } from 'src/models/Datacenter/utils';
-import { rowSubtotal } from 'src/models/HardwareItem/utils';
+import {
+    rowSubtotal as calculateRowSubtotal,
+    memoryTotal as calculateMemoryTotal,
+    storageTotal as calculateStorageTotal,
+    cpuFleetTotal,
+    gpuFleetTotal,
+} from 'src/models/HardwareItem/utils';
 import { unitsPerYear } from 'src/models/TimeUnit/utils';
 import { sum } from 'src/utils/math';
 import { useSurveyDataStore } from 'src/stores/surveyData';
 
 export type DatacenterOperationalResult = {
     datacenter: Datacenter;
+    pueInclusion: PueInclusion;
     co2Period: number | null;
     co2Lifespan: number | null;
 };
@@ -29,79 +46,135 @@ export type EnergyCoverage = {
     isComplete: boolean;
 };
 
-/** One hardware row as returned by embodiedByCategory (Results tables + charts). */
 export interface EmbodiedRow {
     id: string;
     name: string;
     description: string;
-    number: number;
-    co2PerUnit: number;
-    co2RowTotal: number;
+    number: number | null;
+    co2PerUnit: number | null;
+    co2RowTotal: number | null;
     excluded: boolean;
 }
 
-/** One category group: rows plus the accounted total. */
 export interface EmbodiedGroup {
     category: HardwareCategory;
     rows: EmbodiedRow[];
-    categoryTotal: number;
+    categoryTotal: number | null;
+}
+
+const NumberResultSchema = z.number();
+const PositiveResultSchema = z.number().positive();
+const CompleteValuesSchema = z.array(NumberResultSchema);
+const UnderlyingEstimatesSchema = z.array(UnderlyingServiceSchema.shape.co2EstimateKg);
+
+/** Finite arithmetic results only; overflow is unavailable rather than a measurement. */
+function numberResult(value: unknown): number | null {
+    const parsed = NumberResultSchema.safeParse(value);
+    return parsed.success ? parsed.data : null;
+}
+
+/** Validation belongs to the store; calculation functions receive trusted inputs. */
+function validatedCalculation<S extends z.ZodType>(
+    schema: S,
+    input: unknown,
+    calculate: (input: z.output<S>) => number,
+): number | null {
+    const parsed = schema.safeParse(input);
+    return parsed.success ? numberResult(calculate(parsed.data)) : null;
+}
+
+/** An empty collection sums to zero; an incomplete collection has no total yet. */
+function completeSum(values: readonly (number | null)[]): number | null {
+    const parsed = CompleteValuesSchema.safeParse(values);
+    return parsed.success ? numberResult(sum(parsed.data)) : null;
+}
+
+function pueInclusion(value: Datacenter['energy']['pue']): PueInclusion {
+    const parsed = DatacenterEnergySchema.shape.pue.safeParse(value);
+    if (!parsed.success) return { status: 'unavailable' };
+    return parsed.data === null
+        ? { status: 'omitted' }
+        : { status: 'included', value: parsed.data };
 }
 
 export const useSurveyResultsStore = defineStore('surveyResults', () => {
     const data = useSurveyDataStore();
     const rowsCount = computed(() => data.hardware.length);
-    const elementsCount = computed(() => sum(data.hardware.map((row) => row.quantity || 0)));
+    const elementsCount = computed(() =>
+        completeSum(data.hardware.map((row) => hardwareQuantity(row))),
+    );
 
-    /**
-     * Whether a second-hand row is excluded from the embodied total — i.e. it is
-     * second-hand AND second-hand embodied emissions are not being accounted for.
-     * Single definition of the rule, reused by the getters and the inventory page.
-     */
+    function hardwareQuantity(row: HardwareItem): number | null {
+        return validatedCalculation(
+            HardwareItemSchema.shape.quantity,
+            row.quantity,
+            (value) => value,
+        );
+    }
+
+    function hardwareImpact(row: HardwareItem): number | null {
+        return validatedCalculation(
+            HardwareItemSchema.shape.impactManufacturingDistributionEol,
+            row.impactManufacturingDistributionEol,
+            (value) => value,
+        );
+    }
+
+    function rowSubtotal(row: HardwareItem): number | null {
+        return validatedCalculation(HardwareImpactMeasurementsSchema, row, calculateRowSubtotal);
+    }
+
+    function memoryTotal(row: HardwareItem): number | null {
+        return validatedCalculation(HardwareMemoryMeasurementsSchema, row, calculateMemoryTotal);
+    }
+
+    function storageTotal(row: HardwareItem): number | null {
+        return validatedCalculation(HardwareStorageMeasurementsSchema, row, calculateStorageTotal);
+    }
+
     function isSecondHandExcluded(row: HardwareItem): boolean {
         return row.isSecondHand && !data.includeSecondHandEmbodied;
     }
 
-    /** Embodied emissions (kg CO2-eq), honouring the second-hand setting. */
-    const totalEmbodied = computed<number>(() =>
-        sum(data.hardware.filter((h) => !isSecondHandExcluded(h)).map(rowSubtotal)),
+    const totalEmbodied = computed(() =>
+        completeSum(data.hardware.filter((row) => !isSecondHandExcluded(row)).map(rowSubtotal)),
     );
 
-    /** Count of hardware rows excluded because second-hand & not accounted. */
-    const secondHandExcludedCount = computed<number>(
+    const secondHandExcludedCount = computed(
         () => data.hardware.filter(isSecondHandExcluded).length,
     );
 
-    /**
-     * Direct v-model edits can be incomplete or invalid until saved. Canonical
-     * parsing checks calculation readiness and normalizes cleared optional PUE.
-     * Keep unready datacenters visible with unavailable estimates.
-     */
+    /** Keep unready datacenters visible; preserve existing operational partial aggregation. */
     const operationalPerDc = computed<DatacenterOperationalResult[]>(() => {
         const period = MonitoringPeriodSchema.safeParse(data.monitoringPeriod);
         const lifespan = ScopeSchema.shape.lifespanYears.safeParse(data.scope.lifespanYears);
         return data.datacenters.map((dc) => {
             const energy = DatacenterEnergySchema.safeParse(dc.energy);
+            const pue = pueInclusion(dc.energy.pue);
             if (!energy.success || !period.success) {
-                return { datacenter: dc, co2Period: null, co2Lifespan: null };
+                return { datacenter: dc, pueInclusion: pue, co2Period: null, co2Lifespan: null };
             }
-            const co2Period = calculatePeriodEmissions(energy.data);
-            const monitoringYears = period.data.value / unitsPerYear(period.data.unit);
+            const co2Period = numberResult(calculatePeriodEmissions(energy.data));
+            const monitoringYears = PositiveResultSchema.safeParse(
+                period.data.value / unitsPerYear(period.data.unit),
+            );
             return {
                 datacenter: dc,
+                pueInclusion: pue,
                 co2Period,
-                co2Lifespan: lifespan.success
-                    ? co2Period * (lifespan.data / monitoringYears)
-                    : null,
+                co2Lifespan:
+                    co2Period !== null && lifespan.success && monitoringYears.success
+                        ? numberResult(co2Period * (lifespan.data / monitoringYears.data))
+                        : null,
             };
         });
     });
 
-    /** Sum available lifespan estimates; no measurements is different from zero. */
-    const totalOperational = computed<number | null>(() => {
+    const totalOperational = computed(() => {
         const values = operationalPerDc.value
             .map((dc) => dc.co2Lifespan)
             .filter((value): value is number => value !== null);
-        return values.length ? sum(values) : null;
+        return values.length ? numberResult(sum(values)) : null;
     });
 
     const energyCoverage = computed<EnergyCoverage>(() => {
@@ -116,105 +189,108 @@ export const useSurveyResultsStore = defineStore('surveyResults', () => {
         };
     });
 
-    /** Underlying services emissions over the lifespan (kg CO2-eq). */
-    const totalUnderlying = computed<number>(() =>
+    const totalUnderlying = computed(() =>
         data.includeUnderlyingServices
-            ? sum(data.underlyingServices.map((service) => service.co2EstimateKg || 0))
+            ? validatedCalculation(
+                  UnderlyingEstimatesSchema,
+                  data.underlyingServices.map((service) => service.co2EstimateKg),
+                  sum,
+              )
             : 0,
     );
 
     const hasEmbodiedContribution = computed(() =>
-        data.hardware.some(
-            (row) =>
-                HardwareItemSchema.shape.quantity.safeParse(row.quantity).success &&
-                HardwareItemSchema.shape.impactManufacturingDistributionEol.safeParse(
-                    row.impactManufacturingDistributionEol,
-                ).success,
-        ),
+        data.hardware.some((row) => rowSubtotal(row) !== null),
     );
 
-    const totalLifespan = computed<number | null>(() => {
+    const totalLifespan = computed(() => {
+        const embodied = totalEmbodied.value;
+        const underlying = totalUnderlying.value;
+        const operational = totalOperational.value;
+        if (embodied === null || underlying === null) return null;
         const hasUnderlying = data.includeUnderlyingServices && data.underlyingServices.length > 0;
-        if (!hasEmbodiedContribution.value && totalOperational.value === null && !hasUnderlying)
-            return null;
-        const total = totalEmbodied.value + (totalOperational.value ?? 0) + totalUnderlying.value;
-        // Raw inventory edits can produce NaN even when another hardware row is valid.
-        return Number.isFinite(total) ? total : null;
+        if (!hasEmbodiedContribution.value && operational === null && !hasUnderlying) return null;
+        // Preserve existing operational partial behavior until the next sweep.
+        return numberResult(embodied + (operational ?? 0) + underlying);
     });
 
-    /** Count only accounted hardware, honoring the second-hand setting. */
-    const resourcesInService = computed<number>(() => {
-        // CPU fleet for CPU functional units; GPU fleet otherwise, as in the workbook.
+    const resourcesInService = computed(() => {
+        // Preserve workbook selection: CPU fleet for CPU units, GPU fleet otherwise.
         const cpu = data.scope.functionalUnit.resourceType.trim().toLowerCase() === 'cpu';
-        return sum(
+        return completeSum(
             data.hardware
                 .filter((row) => !isSecondHandExcluded(row))
-                .map((row) => row.quantity * (cpu ? row.cpuQuantity : row.gpuQuantity)),
+                .map((row) =>
+                    cpu
+                        ? validatedCalculation(
+                              HardwareCpuFleetMeasurementsSchema,
+                              row,
+                              cpuFleetTotal,
+                          )
+                        : validatedCalculation(
+                              HardwareGpuFleetMeasurementsSchema,
+                              row,
+                              gpuFleetTotal,
+                          ),
+                ),
         );
     });
 
-    /** Combine valid functional-unit inputs with the assessment lifespan and accounted fleet. */
-    const perFunctionalUnit = computed<number | null>(() => {
+    const perFunctionalUnit = computed(() => {
         const functionalUnit = ScopeSchema.shape.functionalUnit.safeParse(
             data.scope.functionalUnit,
         );
         const lifespan = ScopeSchema.shape.lifespanYears.safeParse(data.scope.lifespanYears);
-        const resources = resourcesInService.value;
+        const resources = PositiveResultSchema.safeParse(resourcesInService.value);
         const total = totalLifespan.value;
-        if (!functionalUnit.success || !lifespan.success || total === null) return null;
-        if (!Number.isFinite(resources) || resources <= 0 || functionalUnit.data.usageDuration <= 0)
+        if (!functionalUnit.success || !lifespan.success || !resources.success || total === null)
             return null;
-
         const fu = functionalUnit.data;
-        const uses =
-            (lifespan.data * unitsPerYear(fu.timeUnit) * resources) /
-            (fu.usageDuration * fu.resourceCount);
-        return total / uses;
+        const uses = PositiveResultSchema.safeParse(
+            (lifespan.data * unitsPerYear(fu.timeUnit) * resources.data) /
+                (fu.usageDuration * fu.resourceCount),
+        );
+        return uses.success ? numberResult(total / uses.data) : null;
     });
 
-    /** Embodied rows grouped by category for the Results tables (spec: one table
-     *  per category used): per-element CO₂ and per-row cumulated CO₂; rows whose
-     *  second-hand embodied emissions are not accounted are flagged `excluded`
-     *  so the page can strike them through. Category values come from the schema
-     *  enum at runtime — a new schema category automatically appears in Results. */
     const embodiedByCategory = computed<EmbodiedGroup[]>(() =>
         HardwareCategorySchema.options
             .map((category) => {
                 const rows = data.hardware
-                    .filter((h) => h.category === category)
-                    .map((h) => ({
-                        id: h.id,
-                        name: h.name,
-                        description: h.description ?? '',
-                        number: h.quantity,
-                        co2PerUnit: h.impactManufacturingDistributionEol,
-                        co2RowTotal: rowSubtotal(h),
-                        excluded: isSecondHandExcluded(h),
+                    .filter((row) => row.category === category)
+                    .map((row) => ({
+                        id: row.id,
+                        name: row.name,
+                        description: row.description ?? '',
+                        number: hardwareQuantity(row),
+                        co2PerUnit: hardwareImpact(row),
+                        co2RowTotal: rowSubtotal(row),
+                        excluded: isSecondHandExcluded(row),
                     }));
                 return {
                     category,
                     rows,
-                    categoryTotal: sum(
+                    categoryTotal: completeSum(
                         rows.filter((row) => !row.excluded).map((row) => row.co2RowTotal),
                     ),
                 };
             })
-            .filter((g) => g.rows.length > 0),
+            .filter((group) => group.rows.length > 0),
     );
 
-    /** kg CO2-eq per ONE resource of the FU fleet over the whole lifespan
-     *  (Excel Results: total ÷ resourcesInService). */
-    const totalPerResource = computed<number | null>(() =>
-        totalLifespan.value !== null &&
-        Number.isFinite(resourcesInService.value) &&
-        resourcesInService.value > 0
-            ? totalLifespan.value / resourcesInService.value
-            : null,
-    );
+    const totalPerResource = computed(() => {
+        const resources = PositiveResultSchema.safeParse(resourcesInService.value);
+        return totalLifespan.value !== null && resources.success
+            ? numberResult(totalLifespan.value / resources.data)
+            : null;
+    });
 
     return {
         isSecondHandExcluded,
+        hardwareImpact,
         rowSubtotal,
+        memoryTotal,
+        storageTotal,
         totalEmbodied,
         secondHandExcludedCount,
         totalOperational,

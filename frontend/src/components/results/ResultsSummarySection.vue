@@ -24,7 +24,7 @@
                     {{ $t('resultsSummaryLifespan') }}
                 </th>
                 <td data-kind="text">
-                    {{ $t('resultsLifespanYears', { n: surveyData.scope.lifespanYears }) }}
+                    {{ $t('resultsLifespanYears', { n: surveyData.scope.lifespanYears ?? '—' }) }}
                 </td>
             </tr>
         </tbody>

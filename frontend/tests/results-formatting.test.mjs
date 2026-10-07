@@ -68,14 +68,11 @@ test('functional-unit text uses the current translated sentence and time unit', 
     assert.equal(buildFunctionalUnitSentence(t, fu), '3 CPU: 2 days');
 });
 
-test('PUE labels follow schema normalization and the calculation convention', () => {
+test('PUE labels trust the store result and preserve explicit zero', () => {
     const { t } = createI18n({ legacy: false, locale: 'en', messages: { en } }).global;
-    for (const pue of [null, '', 0]) {
-        assert.equal(formatPueInclusion(t, pue), 'not included');
+    assert.equal(formatPueInclusion(t, { status: 'omitted' }), 'not included');
+    for (const value of [0, 1, 1.5]) {
+        assert.equal(formatPueInclusion(t, { status: 'included', value }), `included (${value})`);
     }
-    assert.equal(formatPueInclusion(t, 1), 'included (1)');
-    assert.equal(formatPueInclusion(t, 1.5), 'included (1.5)');
-    for (const pue of [-1, 'invalid', NaN]) {
-        assert.equal(formatPueInclusion(t, pue), '—');
-    }
+    assert.equal(formatPueInclusion(t, { status: 'unavailable' }), '—');
 });

@@ -163,7 +163,7 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
         name: 'number',
         label: t('resultsEmbodiedColumns.number'),
         align: 'right',
-        field: (row) => row.number,
+        field: (row) => row.number ?? '—',
         kind: 'number',
     },
     {

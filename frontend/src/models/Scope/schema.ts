@@ -39,7 +39,7 @@ export const ScopeDraftSchema = ScopeSchema.extend({
     functionalUnit: FunctionalUnitDraftSchema.default(() => FunctionalUnitDraftSchema.parse({})),
     includedItems: z.array(BoundaryItemDraftSchema).default(() => []),
     excludedItems: z.array(BoundaryItemDraftSchema).default(() => []),
-    lifespanYears: draftNumber(ScopeSchema.shape.lifespanYears, 1),
+    lifespanYears: draftNumber(ScopeSchema.shape.lifespanYears),
 });
 
 export type BoundaryItem = z.infer<typeof BoundaryItemDraftSchema>;

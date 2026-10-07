@@ -120,7 +120,7 @@ test('derived columns calculate from inputs and subtotal sorts by calculated val
     assert.equal(byName.storageTotal.derived(row), 2000);
     assert.equal(byName.subtotal.derived(row), 36);
     assert.equal(byName.subtotal.sort(undefined, undefined, row, { ...row, quantity: 1 }), 24);
-    assert.equal(byName.memoryTotalGb.derived({ ...row, memoryQuantity: null }), 0);
-    assert.equal(byName.storageTotal.derived({ ...row, storageSize: undefined }), 0);
+    assert.equal(byName.memoryTotalGb.derived({ ...row, memoryQuantity: null }), null);
+    assert.equal(byName.storageTotal.derived({ ...row, storageSize: undefined }), null);
     assert.match(html, /<tbody>/);
 });

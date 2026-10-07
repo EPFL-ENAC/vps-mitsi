@@ -11,8 +11,9 @@ export function draftField<
     return schema.or(z.literal(defaultValue)).default(defaultValue);
 }
 
-export function draftNumber<S extends z.ZodNumber>(schema: S, defaultValue: z.output<S> & number) {
-    return z.preprocess(emptyToUndefined, draftField(schema, defaultValue));
+/** Required numeric fields may be unanswered in a draft, never fabricated measurements. */
+export function draftNumber<S extends z.ZodNumber>(schema: S) {
+    return nullableNumber(schema);
 }
 
 /** Empty optional numbers are absent, including during whole-row validation. */

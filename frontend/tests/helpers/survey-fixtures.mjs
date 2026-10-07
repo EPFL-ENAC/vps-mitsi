@@ -8,10 +8,13 @@ function validScope() {
         assessors: 'Assessor',
         serviceName: 'Service',
         function: 'Research',
+        lifespanYears: 1,
+        functionalUnit: { usageDuration: 1, resourceCount: 1 },
     });
 }
 export function setupScope(store) {
     store.scope = validScope();
+    store.monitoringPeriod.value = 1;
     store.datacenters.push(
         DatacenterDraftSchema.parse({
             id: 'dc1',
@@ -26,5 +29,12 @@ export function validHardware() {
         name: 'Server',
         quantity: 1,
         impactManufacturing: 0,
+        impactManufacturingDistributionEol: 0,
+        cpuQuantity: 0,
+        memoryQuantity: 0,
+        memorySizeGb: 0,
+        storageQuantity: 0,
+        storageSize: 0,
+        gpuQuantity: 0,
     });
 }

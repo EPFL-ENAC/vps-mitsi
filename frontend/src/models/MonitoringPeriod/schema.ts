@@ -12,7 +12,7 @@ export const MonitoringPeriodSchema = z.object({
 
 export const MonitoringPeriodDraftSchema = MonitoringPeriodSchema.extend({
     unit: draftField(MonitoringPeriodSchema.shape.unit, 'day'),
-    value: draftNumber(MonitoringPeriodSchema.shape.value, 1),
+    value: draftNumber(MonitoringPeriodSchema.shape.value),
     comment: draftField(MonitoringPeriodSchema.shape.comment, ''),
 });
 

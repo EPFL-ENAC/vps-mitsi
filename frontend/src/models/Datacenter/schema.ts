@@ -20,7 +20,7 @@ export const DatacenterEnergySchema = z.object({
     location: z.string(),
     locationComment: z.string(),
     /** Carbon intensity of the grid mix (gCO₂/kWh). */
-    carbonIntensity: z.number().positive(),
+    carbonIntensity: z.number().min(0),
     carbonIntensityComment: z.string(),
     /** Optional; the report must note whether PUE was included. */
     pue: nullableNumber(z.number().min(0)),
@@ -65,3 +65,9 @@ export type EnergyMeasurements = Pick<
 >;
 
 export type Datacenter = z.infer<typeof DatacenterDraftSchema>;
+
+/** Validated PUE presentation, produced by the results store. */
+export type PueInclusion =
+    | { status: 'unavailable' }
+    | { status: 'omitted' }
+    | { status: 'included'; value: number };

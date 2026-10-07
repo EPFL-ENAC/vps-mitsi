@@ -11,8 +11,16 @@ const props = defineProps<{
     schema: z.ZodType;
 }>();
 
-// Vue's number modifier preserves empty strings and clearable null values.
-const model = defineModel<string | number | null | undefined>({ required: true });
+const model = defineModel<string | number | null | undefined>({
+    required: true,
+    set(value) {
+        if (value === '' || value === null || value === undefined) {
+            const empty = props.schema.safeParse(undefined);
+            return empty.success && empty.data === undefined ? undefined : null;
+        }
+        return value;
+    },
+});
 const { toValidationRule } = useValidation();
 
 const rules = computed(() => [toValidationRule(props.schema)]);

@@ -13,8 +13,8 @@ import {
 import { draftField } from 'src/models/shared/schema';
 
 /** Bumped whenever the persisted/exported JSON shape changes. */
-// v4: datacenters own their general information and energy data.
-export const MITSI_SCHEMA_VERSION = 4;
+// v5: unanswered numeric drafts are empty instead of numeric placeholders.
+export const MITSI_SCHEMA_VERSION = 5;
 
 /** Canonical whole-assessment validation; no default values or data filtering. */
 export const MitsiStateSchema = z.object({

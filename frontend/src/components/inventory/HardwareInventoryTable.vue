@@ -60,7 +60,7 @@
                     <template v-if="col.name === 'impactManufacturingDistributionEol'">
                         <template v-if="surveyResults.isSecondHandExcluded(props.row)">
                             <span class="inventory-strike">{{
-                                formatKg(props.row.impactManufacturingDistributionEol)
+                                formatKg(surveyResults.hardwareImpact(props.row))
                             }}</span>
                             <span class="inventory-dim">({{ $t('inventoryNotCounted') }})</span>
                         </template>
@@ -79,7 +79,9 @@
                         <template v-if="surveyResults.isSecondHandExcluded(props.row)">
                             <span class="inventory-dim">{{ $t('inventoryNotCounted') }}</span>
                         </template>
-                        <span v-else>{{ formatKg(col.derived ? col.derived(props.row) : 0) }}</span>
+                        <span v-else>{{
+                            formatKg(col.derived ? col.derived(props.row) : null)
+                        }}</span>
                     </template>
 
                     <!-- Datacenter select (store-driven options, value = id) -->
@@ -139,7 +141,7 @@
 
                     <!-- Other derived cells (memoryTotalGb / storageTotal) -->
                     <template v-else-if="col.kind === 'derived'">
-                        <span>{{ formatKg(col.derived ? col.derived(props.row) : 0) }}</span>
+                        <span>{{ formatKg(col.derived ? col.derived(props.row) : null) }}</span>
                     </template>
                 </q-td>
                 <q-td auto-width class="text-right">
@@ -197,7 +199,7 @@ interface InventoryColumn extends QTableColumn<HardwareItem, keyof HardwareItem 
     zod: z.ZodType | undefined;
     options?: { label: string; value: string }[];
     /** Quasar sets col.value in body slots, so use a separate name for the calculation. */
-    derived?: (row: HardwareItem) => number;
+    derived?: (row: HardwareItem) => number | null;
     sort?: (a: unknown, b: unknown, rowA: HardwareItem, rowB: HardwareItem) => number;
 }
 
@@ -297,8 +299,12 @@ const columns = computed<InventoryColumn[]>(() => [
         sortable: true,
         zod: undefined,
         derived: surveyResults.rowSubtotal,
-        sort: (_a, _b, rowA, rowB) =>
-            surveyResults.rowSubtotal(rowA) - surveyResults.rowSubtotal(rowB),
+        sort: (_a, _b, rowA, rowB) => {
+            const a = surveyResults.rowSubtotal(rowA);
+            const b = surveyResults.rowSubtotal(rowB);
+            if (a === null) return b === null ? 0 : 1;
+            return b === null ? -1 : a - b;
+        },
     },
 
     column({ field: 'cpuName', group: 'cpu', mode: 'normal', kind: 'text' }),
@@ -315,7 +321,7 @@ const columns = computed<InventoryColumn[]>(() => [
         mode: 'advanced',
         kind: 'derived',
         zod: undefined,
-        derived: (row) => (row.memoryQuantity || 0) * (row.memorySizeGb || 0),
+        derived: surveyResults.memoryTotal,
     }),
 
     column({
@@ -333,7 +339,7 @@ const columns = computed<InventoryColumn[]>(() => [
         mode: 'advanced',
         kind: 'derived',
         zod: undefined,
-        derived: (row) => (row.storageQuantity || 0) * (row.storageSize || 0),
+        derived: surveyResults.storageTotal,
     }),
     column({
         field: 'storageTechnology',

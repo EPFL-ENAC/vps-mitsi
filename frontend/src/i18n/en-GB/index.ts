@@ -145,7 +145,7 @@ export default {
         'Complete the “Scope of the assessment” block first to unlock the fields.',
     inventoryStats: '{rows} items · {elements} elements · {total} kgCO₂e',
     inventoryWarningBar:
-        '⚠ {n} rows are missing a mandatory value. Rows without an impact figure count as 0 kgCO₂e and are listed as incomplete in the report — they are not treated as carbon-free.',
+        '⚠ {n} rows are missing a mandatory value. Missing measurements are shown as unavailable; affected totals remain unavailable until the required values are supplied.',
     inventoryFooter: 'Total embodied — {n} second-hand element(s) excluded',
     inventoryModeSimple: 'Simple',
     inventoryModeNormal: 'Normal',

@@ -4,7 +4,7 @@
 </template>
 
 <script setup lang="ts">
-import type { EmbodiedGroup } from 'src/stores/surveyResults';
+import type { EmbodiedGroup, EmbodiedRow } from 'src/stores/surveyResults';
 
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -23,7 +23,7 @@ type ECOption = echarts.ComposeOption<TreemapSeriesOption | TooltipComponentOpti
 const props = withDefaults(
     defineProps<{
         groups: EmbodiedGroup[];
-        grandTotal: number;
+        grandTotal: number | null;
         variant?: 'element' | 'category';
     }>(),
     { variant: 'category' },
@@ -38,7 +38,10 @@ function toElementTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSerie
     return groups.flatMap((g, categoryIdx) => {
         const categoryColor = palette(categoryIdx);
         return g.rows
-            .filter((r) => !r.excluded && r.co2RowTotal > 0)
+            .filter(
+                (r): r is EmbodiedRow & { co2RowTotal: number } =>
+                    !r.excluded && r.co2RowTotal !== null && r.co2RowTotal > 0,
+            )
             .map((r) => ({
                 name: r.name,
                 value: r.co2RowTotal,
@@ -51,6 +54,7 @@ function toElementTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSerie
  *  Categories with no accounted children are omitted. */
 function toCategoryTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeriesOption['data']> {
     return groups
+        .filter((g): g is EmbodiedGroup & { categoryTotal: number } => g.categoryTotal !== null)
         .map((g, i) => {
             const categoryColor = palette(i);
             return {
@@ -58,7 +62,10 @@ function toCategoryTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeri
                 value: g.categoryTotal,
                 itemStyle: { color: categoryColor },
                 children: g.rows
-                    .filter((r) => !r.excluded && r.co2RowTotal > 0)
+                    .filter(
+                        (r): r is EmbodiedRow & { co2RowTotal: number } =>
+                            !r.excluded && r.co2RowTotal !== null && r.co2RowTotal > 0,
+                    )
                     .map((r) => ({
                         name: r.name,
                         value: r.co2RowTotal,
@@ -77,7 +84,9 @@ const chartData = computed(() =>
 );
 
 /** Determines whether the chart should render or show an empty fallback. */
-const hasData = computed(() => props.grandTotal > 0 && chartData.value.length > 0);
+const hasData = computed(
+    () => props.grandTotal !== null && props.grandTotal > 0 && chartData.value.length > 0,
+);
 
 /** Reactive ECharts option configuration. */
 const chartOption = computed<ECOption>(() => ({
@@ -87,7 +96,10 @@ const chartOption = computed<ECOption>(() => ({
             const item = Array.isArray(p) ? p[0] : p;
             if (!item) return '';
             const value = Number(item.value);
-            const pct = props.grandTotal > 0 ? (value / props.grandTotal) * 100 : 0;
+            const pct =
+                props.grandTotal !== null && props.grandTotal > 0
+                    ? (value / props.grandTotal) * 100
+                    : 0;
             return `${item.name}<br/>${formatKg(value)} (${pct.toFixed(1)}${t('resultsColPercent')})`;
         },
     },

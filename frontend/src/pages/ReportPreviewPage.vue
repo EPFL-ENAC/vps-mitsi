@@ -57,7 +57,7 @@
                                 <div class="text-h6">
                                     {{
                                         $t('resultsLifespanYears', {
-                                            n: surveyData.scope.lifespanYears,
+                                            n: surveyData.scope.lifespanYears ?? '—',
                                         })
                                     }}
                                 </div>

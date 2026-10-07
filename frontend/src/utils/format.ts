@@ -1,4 +1,4 @@
-import { type Datacenter, DatacenterEnergySchema } from 'src/models/Datacenter/schema';
+import type { Datacenter, PueInclusion } from 'src/models/Datacenter/schema';
 import type { Scope } from 'src/models/Scope/schema';
 
 /** Show both names when available, with the ID as the unfinished-draft fallback. */
@@ -47,21 +47,20 @@ export function buildFunctionalUnitSentence(
     fu: Scope['functionalUnit'],
 ): string {
     return t('scopeFuSentence', {
-        duration: fu.usageDuration,
+        duration: fu.usageDuration ?? '—',
         unit: t('scopeTimeUnit_' + normalizeKey(fu.timeUnit)),
-        count: fu.resourceCount,
+        count: fu.resourceCount ?? '—',
         type: fu.resourceType,
     });
 }
 
-/** Omitted or zero PUE applies no multiplier; invalid drafts have no result yet. */
+/** Format the store's validated PUE result without interpreting raw drafts. */
 export function formatPueInclusion(
     t: (key: string, params?: Record<string, unknown>) => string,
-    pue: Datacenter['energy']['pue'],
+    pue: PueInclusion,
 ): string {
-    const parsed = DatacenterEnergySchema.shape.pue.safeParse(pue);
-    if (!parsed.success) return t('mainNotApplicable');
-    return parsed.data === null || parsed.data === 0
+    if (pue.status === 'unavailable') return t('mainNotApplicable');
+    return pue.status === 'omitted'
         ? t('resultsPueNotIncluded')
-        : t('resultsPueIncluded', { value: parsed.data });
+        : t('resultsPueIncluded', { value: pue.value });
 }

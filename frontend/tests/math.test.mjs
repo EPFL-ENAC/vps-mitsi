@@ -14,9 +14,11 @@ test('measured energy emissions depend only on local energy fields', () => {
         pue: 1.5,
     });
     assert.equal(calculatePeriodEmissions(energy), 1800);
-    for (const pue of [null, 0, 1]) {
+    for (const pue of [null, 1]) {
         assert.equal(calculatePeriodEmissions(Object.freeze({ ...energy, pue })), 1200);
     }
+    assert.equal(calculatePeriodEmissions({ ...energy, pue: 0 }), 0);
+    assert.equal(calculatePeriodEmissions({ ...energy, carbonIntensity: 0 }), 0);
     assert.equal(calculatePeriodEmissions({ ...energy, energyConsumption: 0 }), 0);
 });
 

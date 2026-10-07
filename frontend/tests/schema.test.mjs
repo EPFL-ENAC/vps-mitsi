@@ -35,16 +35,16 @@ test('blank assessment and entity defaults retain their persisted shape', () => 
             function: '',
             functionalUnit: {
                 timeUnit: 'hour',
-                usageDuration: 1,
-                resourceCount: 1,
+                usageDuration: null,
+                resourceCount: null,
                 resourceType: '',
             },
             includedItems: [],
             excludedItems: [],
-            lifespanYears: 1,
+            lifespanYears: null,
         },
         hardware: [],
-        monitoringPeriod: { unit: 'day', value: 1, comment: '' },
+        monitoringPeriod: { unit: 'day', value: null, comment: '' },
         datacenters: [],
         includeSecondHandEmbodied: false,
         includeUnderlyingServices: false,
@@ -54,16 +54,17 @@ test('blank assessment and entity defaults retain their persisted shape', () => 
         id: '',
         category: 'server',
         name: '',
-        quantity: 0,
+        quantity: null,
         datacenterId: '',
         isSecondHand: false,
-        impactManufacturingDistributionEol: 0,
-        cpuQuantity: 0,
-        memoryQuantity: 0,
-        memorySizeGb: 0,
-        storageQuantity: 0,
-        storageSize: 0,
-        gpuQuantity: 0,
+        impactManufacturing: null,
+        impactManufacturingDistributionEol: null,
+        cpuQuantity: null,
+        memoryQuantity: null,
+        memorySizeGb: null,
+        storageQuantity: null,
+        storageSize: null,
+        gpuQuantity: null,
     });
     assert.deepEqual(jsonRoundTrip(DatacenterEnergyDraftSchema.parse({})), {
         comment: '',
@@ -80,7 +81,7 @@ test('blank assessment and entity defaults retain their persisted shape', () => 
         id: '',
         name: '',
         usageDescription: '',
-        co2EstimateKg: 0,
+        co2EstimateKg: null,
     });
 });
 
@@ -101,7 +102,7 @@ test('every draft can parse its own defaults after JSON serialization', () => {
     }
 });
 
-test('partial drafts retain blank required strings and exact numeric placeholders', () => {
+test('partial drafts retain blank required strings and empty numeric fields', () => {
     const partial = MitsiStateDraftSchema.parse({
         scope: {
             organizationName: 'EPFL',
@@ -126,18 +127,18 @@ test('default factories do not share nested objects or arrays', () => {
     first.datacenters.push(DatacenterDraftSchema.parse({ id: 'dc1' }));
     first.hardware.push(HardwareItemDraftSchema.parse({}));
     first.monitoringPeriod.value = 3;
-    assert.equal(second.scope.functionalUnit.usageDuration, 1);
+    assert.equal(second.scope.functionalUnit.usageDuration, null);
     assert.deepEqual(second.datacenters, []);
     assert.deepEqual(second.hardware, []);
-    assert.equal(second.monitoringPeriod.value, 1);
+    assert.equal(second.monitoringPeriod.value, null);
 });
 
-test('draft exceptions do not admit negative, fractional or mistyped quantities', () => {
+test('numeric drafts do not admit negative, fractional or mistyped quantities', () => {
     for (const quantity of [-1, 0.5, '2', Infinity, NaN]) {
         assert.equal(HardwareItemDraftSchema.safeParse({ quantity }).success, false);
         assert.equal(HardwareItemSchema.shape.quantity.safeParse(quantity).success, false);
     }
-    assert.equal(HardwareItemDraftSchema.safeParse({ quantity: 0 }).success, true);
+    assert.equal(HardwareItemDraftSchema.safeParse({ quantity: 0 }).success, false);
     assert.equal(HardwareItemSchema.shape.quantity.safeParse(0).success, false);
     for (const field of [
         'cpuQuantity',
@@ -171,13 +172,13 @@ test('invalid supplied values cannot fall back to defaults', () => {
 
 test('cleared numeric drafts normalize; optional PUE stays optional during validation', () => {
     for (const empty of ['', null, undefined]) {
-        assert.equal(HardwareItemDraftSchema.parse({ quantity: empty }).quantity, 0);
-        assert.equal(ScopeDraftSchema.parse({ lifespanYears: empty }).lifespanYears, 1);
+        assert.equal(HardwareItemDraftSchema.parse({ quantity: empty }).quantity, null);
+        assert.equal(ScopeDraftSchema.parse({ lifespanYears: empty }).lifespanYears, null);
         assert.equal(DatacenterEnergyDraftSchema.parse({ pue: empty }).pue, null);
         assert.equal(DatacenterEnergySchema.shape.pue.safeParse(empty).success, true);
         assert.equal(
             HardwareItemDraftSchema.parse({ impactManufacturing: empty }).impactManufacturing,
-            undefined,
+            null,
         );
         assert.equal(HardwareItemSchema.shape.impactManufacturing.safeParse(empty).success, false);
     }
@@ -189,6 +190,8 @@ test('scope validates its own fields independently of datacenters', () => {
         assessors: 'Assessor',
         serviceName: 'Service',
         function: 'Research',
+        lifespanYears: 1,
+        functionalUnit: { usageDuration: 1, resourceCount: 1 },
     });
     assert.equal(ScopeSchema.safeParse(valid).success, true);
     for (const patch of [
@@ -243,5 +246,5 @@ test('nullable numbers preserve bounds and distinguish missing values from zero'
         energyConsumption: 0,
     });
     assert.equal(DatacenterEnergySchema.safeParse(energy).success, true);
-    assert.equal(DatacenterEnergyDraftSchema.safeParse({ carbonIntensity: 0 }).success, false);
+    assert.equal(DatacenterEnergyDraftSchema.safeParse({ carbonIntensity: 0 }).success, true);
 });

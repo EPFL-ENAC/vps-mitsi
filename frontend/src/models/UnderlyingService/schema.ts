@@ -14,7 +14,7 @@ export const UnderlyingServiceDraftSchema = UnderlyingServiceSchema.extend({
     id: draftField(UnderlyingServiceSchema.shape.id, ''),
     name: draftField(UnderlyingServiceSchema.shape.name, ''),
     usageDescription: draftField(UnderlyingServiceSchema.shape.usageDescription, ''),
-    co2EstimateKg: draftNumber(UnderlyingServiceSchema.shape.co2EstimateKg, 0),
+    co2EstimateKg: draftNumber(UnderlyingServiceSchema.shape.co2EstimateKg),
 });
 
 export type UnderlyingService = z.infer<typeof UnderlyingServiceDraftSchema>;

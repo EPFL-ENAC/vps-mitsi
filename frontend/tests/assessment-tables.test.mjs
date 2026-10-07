@@ -127,7 +127,7 @@ test('energy inputs retain canonical validation and nested updates; clear requir
         assert.equal(column.zod, DatacenterEnergySchema.shape[column.name]);
     }
     const intensity = input(result, en.energyColumns.carbonIntensity);
-    assert.equal(typeof intensity.rules[0](0), 'string');
+    assert.equal(intensity.rules[0](0), true);
     intensity.$emit('update:modelValue', 125);
     input(result, en.energyColumns.comment).$emit('update:modelValue', 'Energy note');
     input(result, en.energyColumns.pue).$emit('update:modelValue', null);
@@ -227,6 +227,7 @@ test('results and report share partial totals, PUE labels, functional units and 
                     assessors: 'Assessor',
                     serviceName: 'Research service',
                     function: 'Research',
+                    lifespanYears: 1,
                     functionalUnit: {
                         timeUnit: 'day',
                         usageDuration: 2,
@@ -235,6 +236,7 @@ test('results and report share partial totals, PUE labels, functional units and 
                     },
                 });
                 store.monitoringPeriod.unit = 'year';
+                store.monitoringPeriod.value = 1;
                 store.datacenters = [
                     DatacenterDraftSchema.parse({
                         id: 'ready',

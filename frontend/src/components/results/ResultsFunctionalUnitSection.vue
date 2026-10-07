@@ -6,7 +6,7 @@
                     {{ $t('resultsFuNumber') }}
                 </th>
                 <td class="text-right" data-kind="number">
-                    {{ surveyResults.resourcesInService }}
+                    {{ surveyResults.resourcesInService ?? '—' }}
                 </td>
             </tr>
             <tr>

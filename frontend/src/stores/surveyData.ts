@@ -30,7 +30,10 @@ import {
     ScopeSchema,
     ScopeDraftSchema,
 } from 'src/models/Scope/schema';
-import type { UnderlyingService } from 'src/models/UnderlyingService/schema';
+import {
+    type UnderlyingService,
+    UnderlyingServiceSchema,
+} from 'src/models/UnderlyingService/schema';
 
 /** Storage key used for browser persistence. */
 export const MITSI_STORAGE_KEY = 'mitsi-assessment';
@@ -171,7 +174,11 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
         statusFor(
             scopeStatus.value === 'complete' &&
                 hardwareInventoryStatus.value === 'complete' &&
-                energyConsumptionStatus.value === 'complete',
+                energyConsumptionStatus.value === 'complete' &&
+                (!includeUnderlyingServices.value ||
+                    underlyingServices.value.every(
+                        (service) => UnderlyingServiceSchema.safeParse(service).success,
+                    )),
             hasUserInput.value,
         ),
     );

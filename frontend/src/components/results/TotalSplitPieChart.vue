@@ -27,7 +27,7 @@ type ECOption = echarts.ComposeOption<
 
 const props = withDefaults(
     defineProps<{
-        embodied: number;
+        embodied: number | null;
         operational: number | null;
         total: number | null;
         labels: { embodied: string; operational: string; underlying?: string };
@@ -42,6 +42,7 @@ const { t } = useI18n();
 /** Split pie: exactly two wedges in v1 (Embodied vs Operational). The optional
  *  underlying wedge appears only when supplied (v2, lead decision). */
 const data = computed(() => {
+    if (props.embodied === null) return [];
     const wedges = [
         { name: props.labels.embodied, value: props.embodied },
         { name: props.labels.operational, value: props.operational ?? 0 },
@@ -57,6 +58,7 @@ const data = computed(() => {
 });
 
 const chartOption = computed<ECOption>(() => {
+    if (props.embodied === null) return {};
     // Wedges sum to 100% over the shown contributions (underlying omitted in v1).
     const denom = props.embodied + (props.operational ?? 0) + (props.underlying ?? 0) || 1;
     return {

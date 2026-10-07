@@ -35,11 +35,12 @@ test('forms translate canonical errors and preserve optional empty values', asyn
     assert.equal(toValidationRule(ScopeSchema.shape.assessors)(''), 'This field is required.');
     assert.equal(toValidationRule(ScopeSchema.shape.lifespanYears)(0), 'Must be at least 1.');
     assert.equal(toValidationRule(MonitoringPeriodSchema.shape.value)(0.5), 'Must be at least 1.');
+    assert.equal(toValidationRule(DatacenterEnergySchema.shape.carbonIntensity)(0), true);
+    const pue = toValidationRule(DatacenterEnergySchema.shape.pue);
     assert.equal(
-        toValidationRule(DatacenterEnergySchema.shape.carbonIntensity)(0),
+        toValidationRule(FunctionalUnitSchema.shape.usageDuration)(0),
         'Must be greater than 0.',
     );
-    const pue = toValidationRule(DatacenterEnergySchema.shape.pue);
     for (const empty of ['', null, undefined]) assert.equal(pue(empty), true);
     assert.equal(pue(-1), 'Must be at least 0.');
     assert.equal(toValidationRule()(undefined), true);

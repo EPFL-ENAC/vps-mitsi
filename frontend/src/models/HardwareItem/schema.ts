@@ -74,21 +74,51 @@ export const HardwareItemDraftSchema = HardwareItemSchema.extend({
     id: draftField(HardwareItemSchema.shape.id, ''),
     category: draftField(HardwareItemSchema.shape.category, 'server'),
     name: draftField(HardwareItemSchema.shape.name, ''),
-    quantity: draftNumber(HardwareItemSchema.shape.quantity, 0),
+    quantity: draftNumber(HardwareItemSchema.shape.quantity),
     datacenterId: draftField(HardwareItemSchema.shape.datacenterId, ''),
     isSecondHand: draftField(HardwareItemSchema.shape.isSecondHand, false),
-    impactManufacturing: optionalNumber(HardwareItemSchema.shape.impactManufacturing),
+    impactManufacturing: draftNumber(HardwareItemSchema.shape.impactManufacturing),
     impactManufacturingDistributionEol: draftNumber(
         HardwareItemSchema.shape.impactManufacturingDistributionEol,
-        0,
     ),
-    cpuQuantity: draftNumber(HardwareItemSchema.shape.cpuQuantity, 0),
-    memoryQuantity: draftNumber(HardwareItemSchema.shape.memoryQuantity, 0),
-    memorySizeGb: draftNumber(HardwareItemSchema.shape.memorySizeGb, 0),
-    storageQuantity: draftNumber(HardwareItemSchema.shape.storageQuantity, 0),
-    storageSize: draftNumber(HardwareItemSchema.shape.storageSize, 0),
-    gpuQuantity: draftNumber(HardwareItemSchema.shape.gpuQuantity, 0),
+    cpuQuantity: draftNumber(HardwareItemSchema.shape.cpuQuantity),
+    memoryQuantity: draftNumber(HardwareItemSchema.shape.memoryQuantity),
+    memorySizeGb: draftNumber(HardwareItemSchema.shape.memorySizeGb),
+    storageQuantity: draftNumber(HardwareItemSchema.shape.storageQuantity),
+    storageSize: draftNumber(HardwareItemSchema.shape.storageSize),
+    gpuQuantity: draftNumber(HardwareItemSchema.shape.gpuQuantity),
 });
+
+export const HardwareImpactMeasurementsSchema = HardwareItemSchema.pick({
+    quantity: true,
+    impactManufacturingDistributionEol: true,
+});
+
+export const HardwareMemoryMeasurementsSchema = HardwareItemSchema.pick({
+    memoryQuantity: true,
+    memorySizeGb: true,
+});
+
+export const HardwareStorageMeasurementsSchema = HardwareItemSchema.pick({
+    storageQuantity: true,
+    storageSize: true,
+});
+
+export const HardwareCpuFleetMeasurementsSchema = HardwareItemSchema.pick({
+    quantity: true,
+    cpuQuantity: true,
+});
+
+export const HardwareGpuFleetMeasurementsSchema = HardwareItemSchema.pick({
+    quantity: true,
+    gpuQuantity: true,
+});
+
+export type HardwareImpactMeasurements = z.infer<typeof HardwareImpactMeasurementsSchema>;
+export type HardwareMemoryMeasurements = z.infer<typeof HardwareMemoryMeasurementsSchema>;
+export type HardwareStorageMeasurements = z.infer<typeof HardwareStorageMeasurementsSchema>;
+export type HardwareCpuFleetMeasurements = z.infer<typeof HardwareCpuFleetMeasurementsSchema>;
+export type HardwareGpuFleetMeasurements = z.infer<typeof HardwareGpuFleetMeasurementsSchema>;
 
 export type HardwareCategory = z.infer<typeof HardwareCategorySchema>;
 

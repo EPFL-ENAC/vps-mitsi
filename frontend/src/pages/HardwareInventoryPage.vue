@@ -34,7 +34,7 @@
                 {{
                     $t('inventoryStats', {
                         rows: surveyResults.rowsCount,
-                        elements: surveyResults.elementsCount,
+                        elements: surveyResults.elementsCount ?? '—',
                         total: formatKg(surveyResults.totalEmbodied),
                     })
                 }}

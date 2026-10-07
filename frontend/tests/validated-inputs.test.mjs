@@ -44,10 +44,19 @@ test('number inputs convert values without clamping, defaulting or losing clear 
     const { input, updates } = await renderInput(ZodValidatedNumberInput, {
         schema: HardwareItemSchema.shape.quantity,
     });
-    for (const value of ['2', '1.5', '-1', '', null]) input.$emit('update:modelValue', value);
-    assert.deepEqual(updates, [2, 1.5, -1, '', null]);
+    for (const value of ['2', '1.5', '-1', 0, 'invalid', '', null])
+        input.$emit('update:modelValue', value);
+    assert.deepEqual(updates, [2, 1.5, -1, 0, 'invalid', null, null]);
     assert.equal(input.rules[0](-1), 'Must be at least 1.');
     assert.equal(input.rules[0](1.5), 'Must be a whole number.');
+});
+
+test('optional numeric inputs normalize clearing to undefined and preserve zero', async () => {
+    const { input, updates } = await renderInput(ZodValidatedNumberInput, {
+        schema: HardwareItemSchema.shape.rackUnit,
+    });
+    for (const value of ['', null, undefined, 0]) input.$emit('update:modelValue', value);
+    assert.deepEqual(updates, [undefined, undefined, undefined, 0]);
 });
 
 test('schema attributes and validation override caller-supplied ones', async () => {

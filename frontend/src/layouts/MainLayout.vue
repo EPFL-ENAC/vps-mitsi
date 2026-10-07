@@ -242,7 +242,7 @@ function completionLabelKey(status: BlockStatus): string {
 
 /** Embodied emissions in tonnes, or a dash until the scope is valid. */
 const embodiedText = computed<string>(() =>
-    surveyData.isScopeValid
+    surveyData.isScopeValid && surveyResults.totalEmbodied !== null
         ? `${(surveyResults.totalEmbodied / 1000).toFixed(1)} ${t('mainUnitTonnes')}`
         : t('mainNotApplicable'),
 );

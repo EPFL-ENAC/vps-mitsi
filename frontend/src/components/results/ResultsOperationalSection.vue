@@ -98,7 +98,7 @@ const operationalColumns = computed<OperationalTableColumn[]>(() => [
         name: 'pue',
         label: t('resultsOperationalColumns.pue'),
         align: 'left',
-        field: (row) => formatPueInclusion(t, row.datacenter.energy.pue),
+        field: (row) => formatPueInclusion(t, row.pueInclusion),
         kind: 'text',
     },
     {

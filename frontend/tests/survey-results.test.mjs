@@ -44,7 +44,6 @@ test('energy calculations validate drafts in the store without mutating inputs',
             { energyConsumption: '' },
             { energyConsumption: -1 },
             { carbonIntensity: null },
-            { carbonIntensity: 0 },
             { carbonIntensity: '500' },
             { pue: -1 },
             { pue: NaN },
@@ -52,7 +51,12 @@ test('energy calculations validate drafts in the store without mutating inputs',
     ]) {
         dc.energy = Object.freeze(draft);
         assert.deepEqual(results.operationalPerDc, [
-            { datacenter: dc, co2Period: null, co2Lifespan: null },
+            {
+                datacenter: dc,
+                pueInclusion: { status: [-1, NaN].includes(draft.pue) ? 'unavailable' : 'omitted' },
+                co2Period: null,
+                co2Lifespan: null,
+            },
         ]);
         assert.equal(results.totalOperational, null);
         assert.equal(dc.energy, draft);
@@ -62,7 +66,7 @@ test('energy calculations validate drafts in the store without mutating inputs',
         const draft = Object.freeze({ ...energy, pue });
         dc.energy = draft;
         assert.deepEqual(results.operationalPerDc, [
-            { datacenter: dc, co2Period: 50, co2Lifespan: 50 },
+            { datacenter: dc, pueInclusion: { status: 'omitted' }, co2Period: 50, co2Lifespan: 50 },
         ]);
         assert.equal(dc.energy, draft);
         assert.equal(dc.energy.pue, pue);
@@ -73,6 +77,7 @@ test('scope completion ignores energy; energy progress follows entry, not datace
     const store = useSurveyDataStore();
     const results = useSurveyResultsStore();
     setupScope(store);
+    store.monitoringPeriod.value = null;
     assert.equal(store.isScopeValid, true);
     assert.equal(store.energyConsumptionStatus, 'not_started');
     assert.equal(results.totalOperational, null);
@@ -90,7 +95,7 @@ test('scope completion ignores energy; energy progress follows entry, not datace
     assert.equal(store.energyConsumptionStatus, 'not_started');
     store.monitoringPeriod.value = 2;
     assert.equal(store.energyConsumptionStatus, 'partial');
-    store.monitoringPeriod.value = 1;
+    store.monitoringPeriod.value = null;
     store.monitoringPeriod.comment = 'Measured';
     assert.equal(store.energyConsumptionStatus, 'partial');
     store.monitoringPeriod.comment = '';
@@ -122,8 +127,13 @@ test('partial totals include only computable energy and react to direct nested e
         }),
     );
     assert.deepEqual(results.operationalPerDc, [
-        { datacenter: a, co2Period: 100, co2Lifespan: 100 },
-        { datacenter: store.datacenters[1], co2Period: null, co2Lifespan: null },
+        { datacenter: a, pueInclusion: { status: 'omitted' }, co2Period: 100, co2Lifespan: 100 },
+        {
+            datacenter: store.datacenters[1],
+            pueInclusion: { status: 'omitted' },
+            co2Period: null,
+            co2Lifespan: null,
+        },
     ]);
     assert.deepEqual(results.energyCoverage, {
         completeDatacenters: 1,
@@ -144,8 +154,8 @@ test('partial totals include only computable energy and react to direct nested e
     assert.equal(store.resultsStatus, 'complete');
     a.energy.pue = 2;
     assert.equal(results.totalOperational, 400);
-    a.energy.pue = 0; // Preserve the existing PUE fallback.
-    assert.equal(results.totalOperational, 300);
+    a.energy.pue = 0;
+    assert.equal(results.totalOperational, 200);
     a.energy.pue = '';
     assert.equal(results.totalOperational, 300);
     store.clearDatacenterEnergy('dc1');
@@ -199,7 +209,7 @@ test('unfinished hardware edits withhold invalid totals and resource ratios unti
     }));
 
     data.hardware[1].quantity = undefined;
-    assert.ok(Number.isNaN(results.totalEmbodied));
+    assert.equal(results.totalEmbodied, null);
     assert.equal(results.totalLifespan, null);
     assert.equal(results.perFunctionalUnit, null);
     assert.equal(results.totalPerResource, null);
@@ -207,7 +217,7 @@ test('unfinished hardware edits withhold invalid totals and resource ratios unti
     data.hardware[1].quantity = 1;
     data.hardware[1].cpuQuantity = undefined;
     assert.equal(results.totalLifespan, 100);
-    assert.ok(Number.isNaN(results.resourcesInService));
+    assert.equal(results.resourcesInService, null);
     assert.equal(results.perFunctionalUnit, null);
     assert.equal(results.totalPerResource, null);
 
@@ -460,5 +470,207 @@ test('resource selection and functional-unit scaling are composed from current a
     assert.equal(results.perFunctionalUnit, 0);
     data.hardware = [];
     assert.equal(results.resourcesInService, 0);
+    assert.equal(results.perFunctionalUnit, null);
+});
+
+test('missing and invalid hardware inputs withhold aggregates without hiding valid zeros', () => {
+    const data = useSurveyDataStore();
+    const results = useSurveyResultsStore();
+    setupScope(data);
+    data.scope.functionalUnit.resourceType = 'CPU';
+    data.hardware = [
+        { ...validHardware(), cpuQuantity: 1, impactManufacturingDistributionEol: 50 },
+        { ...validHardware(), id: 'editing', cpuQuantity: 1 },
+    ];
+    const editing = data.hardware[1];
+    assert.equal(results.totalEmbodied, 50);
+    for (const missing of [null, undefined, '', NaN, Infinity, -1, '12']) {
+        editing.impactManufacturingDistributionEol = missing;
+        assert.equal(results.rowSubtotal(editing), null);
+        assert.equal(results.totalEmbodied, null);
+        assert.equal(results.embodiedByCategory[0].categoryTotal, null);
+        assert.equal(results.totalLifespan, null);
+        assert.equal(results.totalPerResource, null);
+        assert.equal(results.perFunctionalUnit, null);
+    }
+    editing.impactManufacturingDistributionEol = 0;
+    assert.equal(results.rowSubtotal(editing), 0);
+    assert.equal(results.totalEmbodied, 50);
+    for (const missing of [null, undefined, '', NaN, 0, -1, 0.5]) {
+        editing.quantity = missing;
+        assert.equal(results.elementsCount, null);
+        assert.equal(results.resourcesInService, null);
+        assert.equal(results.totalEmbodied, null);
+    }
+    editing.quantity = 1;
+    for (const missing of [null, undefined, '', NaN, -1, 0.5]) {
+        editing.cpuQuantity = missing;
+        assert.equal(results.resourcesInService, null);
+        assert.equal(results.totalPerResource, null);
+        assert.equal(results.perFunctionalUnit, null);
+    }
+    editing.cpuQuantity = 0;
+    assert.equal(results.resourcesInService, 1);
+    editing.isSecondHand = true;
+    editing.quantity = null;
+    editing.impactManufacturingDistributionEol = null;
+    assert.equal(results.totalEmbodied, 50);
+    assert.equal(results.resourcesInService, 1);
+    data.includeSecondHandEmbodied = true;
+    assert.equal(results.totalEmbodied, null);
+});
+
+test('memory and storage selectors validate measurements and never default missing values to zero', () => {
+    const results = useSurveyResultsStore();
+    const row = {
+        ...validHardware(),
+        memoryQuantity: 2,
+        memorySizeGb: 16,
+        storageQuantity: 3,
+        storageSize: 100,
+    };
+    assert.equal(results.memoryTotal(row), 32);
+    assert.equal(results.storageTotal(row), 300);
+    for (const missing of [null, undefined, '', NaN, -1, 0.5]) {
+        assert.equal(results.memoryTotal({ ...row, memorySizeGb: missing }), null);
+        assert.equal(results.storageTotal({ ...row, storageQuantity: missing }), null);
+    }
+    assert.equal(results.memoryTotal({ ...row, memoryQuantity: 0 }), 0);
+    assert.equal(results.storageTotal({ ...row, storageSize: 0 }), 0);
+});
+
+test('enabled underlying estimates must be valid for totals and assessment completion', () => {
+    const data = useSurveyDataStore();
+    const results = useSurveyResultsStore();
+    setupScope(data);
+    data.hardware = [validHardware()];
+    data.datacenters[0].energy = DatacenterEnergyDraftSchema.parse({
+        carbonIntensity: 0,
+        energyConsumption: 100,
+    });
+    data.includeUnderlyingServices = true;
+    data.underlyingServices = [
+        UnderlyingServiceDraftSchema.parse({ co2EstimateKg: 10 }),
+        UnderlyingServiceDraftSchema.parse({}),
+    ];
+    for (const missing of [null, undefined, '', NaN, Infinity, '10']) {
+        data.underlyingServices[1].co2EstimateKg = missing;
+        assert.equal(results.totalUnderlying, null);
+        assert.equal(results.totalLifespan, null);
+        assert.equal(data.resultsStatus, 'partial');
+    }
+    data.underlyingServices[1].co2EstimateKg = 0;
+    assert.equal(results.totalUnderlying, 10);
+    assert.equal(results.totalLifespan, 10);
+    assert.equal(data.resultsStatus, 'complete');
+    data.underlyingServices[1].co2EstimateKg = null;
+    data.includeUnderlyingServices = false;
+    assert.equal(results.totalUnderlying, 0);
+    assert.equal(results.totalLifespan, 0);
+    assert.equal(data.resultsStatus, 'complete');
+    data.includeUnderlyingServices = true;
+    data.underlyingServices = [];
+    assert.equal(results.totalUnderlying, 0);
+});
+
+test('store-owned PUE presentation preserves supplied zero and labels invalid drafts unavailable', () => {
+    const data = useSurveyDataStore();
+    const results = useSurveyResultsStore();
+    setupScope(data);
+    data.monitoringPeriod.unit = 'year';
+    const dc = data.datacenters[0];
+    dc.energy = DatacenterEnergyDraftSchema.parse({
+        carbonIntensity: 400,
+        energyConsumption: 3000,
+    });
+    for (const [pue, expected] of [
+        [null, 1200],
+        [0, 0],
+        [1, 1200],
+        [1.5, 1800],
+    ]) {
+        dc.energy.pue = pue;
+        assert.equal(results.operationalPerDc[0].co2Period, expected);
+        assert.equal(results.totalOperational, expected);
+        assert.deepEqual(
+            results.operationalPerDc[0].pueInclusion,
+            pue === null ? { status: 'omitted' } : { status: 'included', value: pue },
+        );
+    }
+    for (const invalid of [-1, NaN, Infinity, '1']) {
+        dc.energy.pue = invalid;
+        assert.deepEqual(results.operationalPerDc[0].pueInclusion, { status: 'unavailable' });
+        assert.equal(results.operationalPerDc[0].co2Period, null);
+    }
+    dc.energy.pue = null;
+    dc.energy.carbonIntensity = 0;
+    assert.equal(results.totalOperational, 0);
+    assert.equal(data.energyConsumptionStatus, 'complete');
+    data.scope.functionalUnit.usageDuration = 0;
+    assert.equal(data.isScopeValid, false);
+    assert.equal(results.perFunctionalUnit, null);
+});
+
+test('arithmetic overflow is unavailable at calculation and aggregation boundaries', () => {
+    const data = useSurveyDataStore();
+    const results = useSurveyResultsStore();
+    setupScope(data);
+    data.monitoringPeriod.unit = 'year';
+    data.hardware = [
+        {
+            ...validHardware(),
+            cpuQuantity: 1,
+            quantity: 2,
+            impactManufacturingDistributionEol: Number.MAX_VALUE,
+        },
+    ];
+    assert.equal(results.rowSubtotal(data.hardware[0]), null);
+    assert.equal(results.totalEmbodied, null);
+    data.hardware = ['a', 'b'].map((id) => ({
+        ...validHardware(),
+        id,
+        cpuQuantity: 1,
+        impactManufacturingDistributionEol: Number.MAX_VALUE,
+    }));
+    assert.equal(results.rowSubtotal(data.hardware[0]), Number.MAX_VALUE);
+    assert.equal(results.totalEmbodied, null);
+    data.hardware = [];
+    const dc = data.datacenters[0];
+    dc.energy = DatacenterEnergyDraftSchema.parse({
+        carbonIntensity: 1000,
+        energyConsumption: Number.MAX_VALUE,
+        pue: 2,
+    });
+    assert.equal(results.operationalPerDc[0].co2Period, null);
+    assert.equal(results.totalOperational, null);
+    dc.energy.pue = 1;
+    data.scope.lifespanYears = 2;
+    assert.equal(results.operationalPerDc[0].co2Period, Number.MAX_VALUE);
+    assert.equal(results.operationalPerDc[0].co2Lifespan, null);
+    data.scope.lifespanYears = 1;
+    data.datacenters.push(DatacenterDraftSchema.parse({ id: 'overflow', energy: dc.energy }));
+    assert.equal(results.totalOperational, null);
+    data.datacenters = [];
+    data.includeUnderlyingServices = true;
+    data.underlyingServices = [1, 2].map(() =>
+        UnderlyingServiceDraftSchema.parse({ co2EstimateKg: Number.MAX_VALUE }),
+    );
+    assert.equal(results.totalUnderlying, null);
+    assert.equal(results.totalLifespan, null);
+    data.hardware = [
+        {
+            ...validHardware(),
+            cpuQuantity: 1,
+            impactManufacturingDistributionEol: Number.MAX_VALUE,
+        },
+    ];
+    data.scope.functionalUnit = {
+        resourceType: 'CPU',
+        timeUnit: 'year',
+        usageDuration: Number.MAX_VALUE,
+        resourceCount: 1,
+    };
+    data.includeUnderlyingServices = false;
+    assert.equal(results.totalLifespan, Number.MAX_VALUE);
     assert.equal(results.perFunctionalUnit, null);
 });

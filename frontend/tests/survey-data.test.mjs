@@ -90,7 +90,7 @@ test('import persists its local save time and restores it on reload', () => {
     assert.equal(restored.scope.organizationName, 'Imported');
 });
 
-test('legacy drafts load without an invented timestamp and use the wrapper on their next save', () => {
+test('unwrapped current-version drafts load without an invented timestamp', () => {
     const assessment = MitsiStateDraftSchema.parse({ scope: { organizationName: 'Legacy' } });
     const legacy = JSON.stringify(assessment);
     stored.set(MITSI_STORAGE_KEY, legacy);
@@ -181,8 +181,8 @@ test('save and export normalize cleared numerics without turning invalid values 
     store.datacenters[0].energy.energyConsumption = '';
     assert.equal(store.saveToStorage(), true);
     const snapshot = JSON.parse(store.exportJson());
-    assert.equal(snapshot.scope.lifespanYears, 1);
-    assert.equal(snapshot.hardware[0].quantity, 0);
+    assert.equal(snapshot.scope.lifespanYears, null);
+    assert.equal(snapshot.hardware[0].quantity, null);
     assert.equal(snapshot.datacenters[0].energy.pue, null);
     assert.deepEqual(JSON.parse(stored.get(MITSI_STORAGE_KEY)).assessment, snapshot);
 });
@@ -274,7 +274,7 @@ test('energy and results completion require a valid monitoring period and option
     store.datacenters[0].energy.pue = '';
     assert.equal(store.energyConsumptionStatus, 'complete');
     store.datacenters[0].energy.carbonIntensity = 0;
-    assert.equal(store.energyConsumptionStatus, 'partial');
+    assert.equal(store.energyConsumptionStatus, 'complete');
 });
 
 test('datacenter lifecycle owns energy and checks current hardware references', () => {
@@ -317,9 +317,11 @@ test('unsupported stored versions are ignored without modifying state or storage
     for (const raw of [
         {},
         { schemaVersion: 3 },
-        { schemaVersion: 5 },
+        { schemaVersion: 4 },
+        { schemaVersion: MITSI_SCHEMA_VERSION + 1 },
         { assessment: { schemaVersion: 3 }, savedAt: 123 },
-        { assessment: { schemaVersion: 5 }, savedAt: 123 },
+        { assessment: { schemaVersion: 4 }, savedAt: 123 },
+        { assessment: { schemaVersion: MITSI_SCHEMA_VERSION + 1 }, savedAt: 123 },
     ]) {
         const json = JSON.stringify(raw);
         stored.set(MITSI_STORAGE_KEY, json);
@@ -440,6 +442,7 @@ test('section statuses follow input validity, invalidation, clearing, and reset'
     data.monitoringPeriod.value = 1;
     assert.equal(data.resultsStatus, 'complete');
     data.clearDatacenterEnergy('dc1');
+    data.monitoringPeriod.value = null;
     assert.equal(data.energyConsumptionStatus, 'not_started');
     assert.equal(data.resultsStatus, 'partial');
     data.datacenters[0].energy.energyConsumption = 0;
@@ -472,4 +475,83 @@ test('results progress includes standalone energy inputs, settings, and underlyi
     assert.equal(data.resultsStatus, 'partial');
     data.underlyingServices = [];
     assert.equal(data.resultsStatus, 'not_started');
+});
+
+test('every cleared numeric field stays empty through export, import, and storage reload', () => {
+    for (const empty of ['', undefined, null]) {
+        const data = useSurveyDataStore();
+        data.reset();
+        data.scope.lifespanYears = empty;
+        data.scope.functionalUnit.usageDuration = empty;
+        data.scope.functionalUnit.resourceCount = empty;
+        data.monitoringPeriod.value = empty;
+        data.addHardwareItem();
+        const row = data.hardware[0];
+        const fields = [
+            'quantity',
+            'impactManufacturing',
+            'impactManufacturingDistributionEol',
+            'cpuQuantity',
+            'gpuQuantity',
+            'memoryQuantity',
+            'memorySizeGb',
+            'storageQuantity',
+            'storageSize',
+        ];
+        for (const field of fields) row[field] = empty;
+        row.rackUnit = empty;
+        data.addDatacenter();
+        for (const field of ['pue', 'carbonIntensity', 'energyConsumption'])
+            data.datacenters[0].energy[field] = empty;
+        data.underlyingServices = [UnderlyingServiceDraftSchema.parse({})];
+        data.underlyingServices[0].co2EstimateKg = empty;
+        assert.equal(data.saveToStorage(), true);
+        const json = data.exportJson();
+        const snapshot = JSON.parse(json);
+        assert.equal(snapshot.scope.lifespanYears, null);
+        assert.equal(snapshot.scope.functionalUnit.usageDuration, null);
+        assert.equal(snapshot.scope.functionalUnit.resourceCount, null);
+        assert.equal(snapshot.monitoringPeriod.value, null);
+        for (const field of fields) assert.equal(snapshot.hardware[0][field], null, field);
+        assert.equal('rackUnit' in snapshot.hardware[0], false);
+        for (const field of ['pue', 'carbonIntensity', 'energyConsumption'])
+            assert.equal(snapshot.datacenters[0].energy[field], null);
+        assert.equal(snapshot.underlyingServices[0].co2EstimateKg, null);
+        assert.equal(data.importJson(json), true);
+        assert.equal(data.exportJson(), json);
+        setActivePinia(createPinia());
+        const restored = useSurveyDataStore();
+        restored.loadFromStorage();
+        assert.equal(restored.exportJson(), json);
+        assert.equal(restored.scopeStatus, 'partial');
+        assert.equal(restored.resultsStatus, 'partial');
+    }
+});
+
+test('explicit zero measurements survive saving and loading unchanged', () => {
+    const data = useSurveyDataStore();
+    setupScope(data);
+    data.hardware = [{ ...validHardware(), rackUnit: 0 }];
+    data.datacenters[0].energy = DatacenterEnergyDraftSchema.parse({
+        carbonIntensity: 0,
+        energyConsumption: 0,
+        pue: 0,
+    });
+    data.includeUnderlyingServices = true;
+    data.underlyingServices = [UnderlyingServiceDraftSchema.parse({ co2EstimateKg: 0 })];
+    assert.equal(data.resultsStatus, 'complete');
+    assert.equal(data.saveToStorage(), true);
+    const json = data.exportJson();
+    const snapshot = JSON.parse(json);
+    assert.equal(snapshot.hardware[0].impactManufacturingDistributionEol, 0);
+    assert.equal(snapshot.hardware[0].rackUnit, 0);
+    assert.equal(snapshot.datacenters[0].energy.pue, 0);
+    assert.equal(snapshot.underlyingServices[0].co2EstimateKg, 0);
+    assert.equal(data.importJson(json), true);
+    assert.equal(data.exportJson(), json);
+    setActivePinia(createPinia());
+    const restored = useSurveyDataStore();
+    restored.loadFromStorage();
+    assert.equal(restored.exportJson(), json);
+    assert.equal(restored.resultsStatus, 'complete');
 });
