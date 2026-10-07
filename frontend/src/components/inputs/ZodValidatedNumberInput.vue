@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { QInput } from 'quasar';
+import { computed, ref, onMounted } from 'vue';
+import { QInput, type ValidationRule } from 'quasar';
 import type { z } from 'zod';
 import { useValidation } from 'src/composables/useValidation';
 import { numberInputAttributes } from 'src/utils/number-input';
@@ -9,18 +9,30 @@ defineOptions({ inheritAttrs: false });
 
 const props = defineProps<{
     schema: z.ZodType;
+    rules?: ValidationRule[];
 }>();
 
 // Vue's number modifier preserves empty strings and clearable null values.
 const model = defineModel<string | number | null | undefined>({ required: true });
-const { toValidationRule } = useValidation();
+const input = ref<QInput>();
+const { toValidationRule, registerForInitialValidation } = useValidation();
 
-const rules = computed(() => [toValidationRule(props.schema)]);
+const rules = computed(() => [toValidationRule(props.schema), ...(props.rules ?? [])]);
 const numberAttrs = computed(() => numberInputAttributes(props.schema));
+
+// Registering the input in the global composable queue.
+onMounted(() => {
+    if (input.value) {
+        registerForInitialValidation(() => void input.value?.validate());
+    }
+});
+
+defineExpose({ input });
 </script>
 
 <template>
     <QInput
+        ref="input"
         v-bind="$attrs"
         v-model.number="model"
         type="number"

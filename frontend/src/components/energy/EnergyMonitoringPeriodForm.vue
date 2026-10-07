@@ -12,11 +12,11 @@
     </div>
     <div class="row items-center q-col-gutter-x-sm q-py-xs">
         <div class="col-2">
-            <q-select
+            <ZodValidatedSelect
                 class="full-width"
                 v-model="mitsi.monitoringPeriod.unit"
+                :schema="MonitoringPeriodSchema.shape.unit"
                 :options="monitoringUnitOptions"
-                :rules="[toValidationRule(MonitoringPeriodSchema.shape.unit)]"
                 emit-value
                 map-options
                 dense
@@ -48,15 +48,14 @@
 
 <script setup lang="ts">
 import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInput.vue';
+import ZodValidatedSelect from 'src/components/inputs/ZodValidatedSelect.vue';
 import { useI18n } from 'vue-i18n';
 import { useMitsiStore } from 'src/stores/mitsi';
-import { useValidation } from 'src/composables/useValidation';
 import { MonitoringPeriodSchema, MonitoringUnitSchema } from 'src/models/schema';
 import { normalizeKey } from 'src/utils/format';
 
 const mitsi = useMitsiStore();
 const { t } = useI18n();
-const { toValidationRule } = useValidation();
 
 const monitoringUnitOptions = MonitoringUnitSchema.options.map((unit) => ({
     label: t('energyMonitorUnit_' + normalizeKey(unit)),

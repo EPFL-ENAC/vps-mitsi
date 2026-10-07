@@ -82,12 +82,12 @@
 
                     <!-- Datacenter select (store-driven options, value = id) -->
                     <template v-else-if="col.kind === 'datacenter'">
-                        <q-select
+                        <ZodValidatedSelect
                             v-model="props.row.datacenterId"
+                            :schema="col.zod"
                             :options="col.options"
                             emit-value
                             map-options
-                            :rules="[toValidationRule(col.zod)]"
                             dense
                             outlined
                             hide-bottom-space
@@ -96,12 +96,12 @@
 
                     <!-- Schema enum select (translated options) -->
                     <template v-else-if="col.kind === 'enum'">
-                        <q-select
+                        <ZodValidatedSelect
                             v-model="props.row[col.field]"
+                            :schema="col.zod"
                             :options="col.options"
                             emit-value
                             map-options
-                            :rules="[toValidationRule(col.zod)]"
                             dense
                             outlined
                             hide-bottom-space
@@ -157,6 +157,7 @@
 <script setup lang="ts">
 import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInput.vue';
 import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
+import ZodValidatedSelect from 'src/components/inputs/ZodValidatedSelect.vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useQuasar, type QTableColumn } from 'quasar';
@@ -174,7 +175,6 @@ import {
     StorageTypeSchema,
 } from 'src/models/schema';
 import { useMitsiStore } from 'src/stores/mitsi';
-import { useValidation } from 'src/composables/useValidation';
 
 const GROUPS = ['general', 'impact', 'cpu', 'memory', 'storage', 'gpu', 'network'] as const;
 type GroupKey = (typeof GROUPS)[number];
@@ -200,7 +200,6 @@ const props = defineProps<{
 const { t } = useI18n();
 const $q = useQuasar();
 const mitsi = useMitsiStore();
-const { toValidationRule } = useValidation();
 
 /** Columns are cumulative: advanced ⊇ normal ⊇ simple. */
 const MODE_RANK: Record<VisibilityMode, number> = { simple: 0, normal: 1, advanced: 2 };

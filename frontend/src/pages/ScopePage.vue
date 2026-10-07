@@ -79,11 +79,11 @@
                         >
                             <q-tooltip>{{ $t('scopeFuDurationTooltip') }}</q-tooltip>
                         </ZodValidatedNumberInput>
-                        <q-select
+                        <ZodValidatedSelect
                             class="scope-fu-select"
                             v-model="mitsi.scope.functionalUnit.timeUnit"
                             :options="timeUnitOptions"
-                            :rules="[toValidationRule(FunctionalUnitSchema.shape.timeUnit)]"
+                            :schema="FunctionalUnitSchema.shape.timeUnit"
                             emit-value
                             map-options
                             dense
@@ -93,7 +93,7 @@
                             <q-tooltip anchor="top middle" self="top middle">{{
                                 $t('scopeFuTimeUnitTooltip')
                             }}</q-tooltip>
-                        </q-select>
+                        </ZodValidatedSelect>
                         <span>{{ $t('scopeFuMiddle') }}</span>
                         <ZodValidatedNumberInput
                             class="scope-fu-input"
@@ -105,19 +105,21 @@
                         >
                             <q-tooltip>{{ $t('scopeFuResourceCountTooltip') }}</q-tooltip>
                         </ZodValidatedNumberInput>
-                        <q-select
+                        <ZodValidatedSelect
                             class="scope-fu-select scope-fu-select--grow"
                             v-model="mitsi.scope.functionalUnit.resourceType"
                             :options="resourceTypeOptions"
+                            :schema="FunctionalUnitSchema.shape.resourceType"
                             emit-value
                             map-options
                             dense
                             outlined
+                            hide-bottom-space
                         >
                             <q-tooltip anchor="center right" self="center left">{{
                                 $t('scopeFuResourceTypeTooltip')
                             }}</q-tooltip>
-                        </q-select>
+                        </ZodValidatedSelect>
                     </div>
                 </div>
             </div>
@@ -167,19 +169,18 @@
 import AssessmentSection from 'src/components/AssessmentSection.vue';
 import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInput.vue';
 import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
+import ZodValidatedSelect from 'src/components/inputs/ZodValidatedSelect.vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import ScopeDatacentersTable from 'src/components/scope/ScopeDatacentersTable.vue';
 import ScopeBoundaryItemsTable from 'src/components/scope/ScopeBoundaryItemsTable.vue';
 import { useMitsiStore } from 'src/stores/mitsi';
-import { useValidation } from 'src/composables/useValidation';
 import { FunctionalUnitSchema, ScopeSchema, TimeUnitSchema } from 'src/models/schema';
 import { normalizeKey } from 'src/utils/format';
 
 const { t } = useI18n();
 const mitsi = useMitsiStore();
-const { toValidationRule } = useValidation();
 
 const timeUnitOptions = computed(() =>
     TimeUnitSchema.options.map((unit) => ({
