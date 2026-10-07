@@ -120,7 +120,36 @@ test('derived columns calculate from inputs and subtotal sorts by calculated val
     assert.equal(byName.storageTotal.derived(row), 2000);
     assert.equal(byName.subtotal.derived(row), 36);
     assert.equal(byName.subtotal.sort(undefined, undefined, row, { ...row, quantity: 1 }), 24);
+    const missingSubtotal = { ...row, quantity: null };
+    assert.equal(byName.subtotal.sort(undefined, undefined, missingSubtotal, row), 1);
+    assert.equal(byName.subtotal.sort(undefined, undefined, row, missingSubtotal), -1);
+    assert.equal(byName.subtotal.sort(undefined, undefined, missingSubtotal, missingSubtotal), 0);
     assert.equal(byName.memoryTotalGb.derived({ ...row, memoryQuantity: null }), null);
     assert.equal(byName.storageTotal.derived({ ...row, storageSize: undefined }), null);
-    assert.match(html, /<tbody>/);
+    const derivedCells = [...html.matchAll(/<td[^>]*data-kind="derived"[^>]*>(.*?)<\/td>/gs)];
+    assert.deepEqual(
+        derivedCells.map((cell) => cell[1].replace(/<!--[\s\S]*?-->|<[^>]+>/g, '').trim()),
+        ['36.00', '64.00', '2,000.00'],
+    );
+});
+
+test('derived cells and excluded impact display missing values without formatting result objects', async () => {
+    const row = HardwareItemDraftSchema.parse({ id: 'unfinished' });
+    const { html } = await renderInventoryTable({ hardware: [row] });
+    const derivedCells = [...html.matchAll(/<td[^>]*data-kind="derived"[^>]*>(.*?)<\/td>/gs)];
+    assert.deepEqual(
+        derivedCells.map((cell) => cell[1].replace(/<!--[\s\S]*?-->|<[^>]+>/g, '').trim()),
+        ['—', '—', '—'],
+    );
+
+    const excluded = await renderInventoryTable({
+        hardware: [{ ...row, isSecondHand: true, impactManufacturingDistributionEol: 12 }],
+    });
+    assert.match(excluded.html, /inventory-strike[^>]*>12\.00<\/span>/);
+    assert.ok(excluded.html.includes(en.inventoryNotCounted));
+
+    const excludedMissing = await renderInventoryTable({
+        hardware: [{ ...row, isSecondHand: true }],
+    });
+    assert.match(excludedMissing.html, /inventory-strike[^>]*>—<\/span>/);
 });

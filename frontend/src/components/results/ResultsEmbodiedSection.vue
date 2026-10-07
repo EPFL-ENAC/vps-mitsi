@@ -78,7 +78,7 @@
                         <strong>{{ $t('resultsTotalEmbodied') }}</strong>
                     </td>
                     <td class="text-right">
-                        <strong>{{ formatKg(surveyResults.totalEmbodied) }}</strong>
+                        <strong>{{ formatKg(surveyResults.totalEmbodied.result) }}</strong>
                     </td>
                 </tr>
             </tbody>
@@ -92,7 +92,7 @@
                 </div>
                 <EmbodiedTreemapChart
                     :groups="surveyResults.embodiedByCategory"
-                    :grand-total="surveyResults.totalEmbodied"
+                    :grand-total="surveyResults.totalEmbodied.result"
                     variant="element"
                 />
             </div>
@@ -102,7 +102,7 @@
                 </div>
                 <EmbodiedTreemapChart
                     :groups="surveyResults.embodiedByCategory"
-                    :grand-total="surveyResults.totalEmbodied"
+                    :grand-total="surveyResults.totalEmbodied.result"
                     variant="category"
                 />
             </div>

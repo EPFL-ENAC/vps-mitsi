@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { beforeEach, afterEach, mock, test } from 'node:test';
 import { createPinia, setActivePinia } from 'pinia';
 import { LocalStorage } from 'quasar';
+import { z } from 'zod';
 import { useSurveyResultsStore } from '../src/stores/surveyResults.ts';
 import { useSurveyDataStore, MITSI_STORAGE_KEY } from '../src/stores/surveyData.ts';
 
@@ -10,6 +11,7 @@ import {
     DatacenterDraftSchema,
 } from '../src/models/Datacenter/schema.ts';
 import { MitsiStateDraftSchema } from '../src/models/MitsiState/schema.ts';
+import { HardwareItemDraftSchema } from '../src/models/HardwareItem/schema.ts';
 import { UnderlyingServiceDraftSchema } from '../src/models/UnderlyingService/schema.ts';
 
 import { setupScope, validHardware } from './helpers/survey-fixtures.mjs';
@@ -209,7 +211,8 @@ test('unfinished hardware edits withhold invalid totals and resource ratios unti
     }));
 
     data.hardware[1].quantity = undefined;
-    assert.equal(results.totalEmbodied, null);
+    assert.equal(results.totalEmbodied.success, 'partial');
+    assert.equal(results.totalEmbodied.result, 50);
     assert.equal(results.totalLifespan, null);
     assert.equal(results.perFunctionalUnit, null);
     assert.equal(results.totalPerResource, null);
@@ -296,8 +299,13 @@ test('inventory totals and groups react to settings, edits, and replacement', ()
         },
     ];
     assert.equal(results.rowsCount, 2);
-    assert.equal(results.elementsCount, 5);
-    assert.equal(results.totalEmbodied, 20);
+    assert.deepEqual(results.elementsCount, {
+        success: 'success',
+        result: 5,
+        inputErrors: [],
+        ignoredInputs: [],
+    });
+    assert.equal(results.totalEmbodied.result, 20);
     assert.equal(results.resourcesInService, 8);
     assert.equal(results.secondHandExcludedCount, 1);
     const reusedGroup = results.embodiedByCategory.find(
@@ -305,15 +313,16 @@ test('inventory totals and groups react to settings, edits, and replacement', ()
     );
     assert.equal(reusedGroup.categoryTotal, 0);
     assert.equal(reusedGroup.rows[0].excluded, true);
-    assert.equal(results.rowSubtotal(data.hardware[1]), 60);
+    assert.equal(results.rowSubtotal(data.hardware[1]).result, 60);
 
     data.includeSecondHandEmbodied = true;
-    assert.equal(results.totalEmbodied, 80);
+    assert.equal(results.totalEmbodied.result, 80);
     assert.equal(results.resourcesInService, 14);
     assert.equal(results.secondHandExcludedCount, 0);
     data.hardware[1].quantity = 4;
-    assert.equal(results.totalEmbodied, 100);
-    assert.equal(results.elementsCount, 6);
+    assert.equal(results.totalEmbodied.result, 100);
+    assert.equal(results.elementsCount.success, 'success');
+    assert.equal(results.elementsCount.result, 6);
     assert.equal(
         results.embodiedByCategory.find((group) => group.category === 'storage_bay').categoryTotal,
         80,
@@ -329,12 +338,141 @@ test('inventory totals and groups react to settings, edits, and replacement', ()
 
     data.hardware = [];
     assert.equal(results.rowsCount, 0);
-    assert.equal(results.elementsCount, 0);
-    assert.equal(results.totalEmbodied, 0);
+    assert.deepEqual(results.elementsCount, {
+        success: 'success',
+        result: 0,
+        inputErrors: [],
+        ignoredInputs: [],
+    });
+    assert.equal(results.totalEmbodied.result, 0);
     assert.deepEqual(results.embodiedByCategory, []);
     assert.equal(results.totalLifespan, 40);
     data.includeUnderlyingServices = false;
     assert.equal(results.totalLifespan, null);
+});
+
+test('element counts distinguish complete, partial, failed, and empty inventories', () => {
+    const data = useSurveyDataStore();
+    const results = useSurveyResultsStore();
+
+    for (const [quantities, success, result, ignoredCount] of [
+        [[], 'success', 0, 0],
+        [[2, 3], 'success', 5, 0],
+        [[2, null, 3], 'partial', 5, 1],
+        [[null, 0], 'failure', null, 2],
+    ]) {
+        data.hardware = quantities.map((quantity, index) => ({
+            ...validHardware(),
+            id: `row-${index}`,
+            quantity,
+        }));
+
+        const count = results.elementsCount;
+        assert.equal(count.success, success);
+        assert.equal(count.result, result);
+        assert.equal(count.ignoredInputs.length, ignoredCount);
+        assert.equal(count.inputErrors.length, ignoredCount);
+
+        const ignoredRows = data.hardware.filter(
+            (row) => row.quantity === null || row.quantity === 0,
+        );
+        ignoredRows.forEach((row, index) => {
+            assert.equal(count.ignoredInputs[index], row);
+            assert.ok(count.inputErrors[index] instanceof z.ZodError);
+            assert.deepEqual(
+                count.inputErrors[index].issues.map((issue) => issue.path),
+                [['quantity']],
+            );
+        });
+    }
+});
+
+test('quantities validate only their required field and retain Zod diagnostics', () => {
+    const data = useSurveyDataStore();
+    const results = useSurveyResultsStore();
+    data.hardware = [
+        {
+            ...validHardware(),
+            quantity: 2,
+            name: '',
+            datacenterId: '',
+            impactManufacturingDistributionEol: null,
+            cpuQuantity: null,
+        },
+    ];
+    const row = data.hardware[0];
+    assert.deepEqual(results.elementsCount, {
+        success: 'success',
+        result: 2,
+        inputErrors: [],
+        ignoredInputs: [],
+    });
+    assert.equal(results.embodiedByCategory[0].rows[0].number, 2);
+
+    for (const invalid of [null, undefined, '', NaN, Infinity, -Infinity, 0, -1, 0.5, '12']) {
+        row.quantity = invalid;
+        const count = results.elementsCount;
+        assert.equal(count.success, 'failure');
+        assert.equal(count.result, null);
+        assert.equal(count.ignoredInputs.length, 1);
+        assert.equal(count.ignoredInputs[0], row);
+        assert.equal(count.inputErrors.length, 1);
+        assert.ok(count.inputErrors[0] instanceof z.ZodError);
+        assert.ok(
+            count.inputErrors[0].issues.every((issue) => issue.path.join('.') === 'quantity'),
+        );
+        assert.equal(results.embodiedByCategory[0].rows[0].number, null);
+        assert.ok(Object.is(row.quantity, invalid));
+    }
+});
+
+test('element count status and ignored rows react to edits, removal, and replacement', () => {
+    const data = useSurveyDataStore();
+    const results = useSurveyResultsStore();
+    data.hardware = [
+        { ...validHardware(), quantity: 2 },
+        { ...validHardware(), id: 'editing', quantity: null },
+    ];
+    assert.equal(results.elementsCount.success, 'partial');
+    assert.equal(results.elementsCount.result, 2);
+    assert.equal(results.elementsCount.ignoredInputs[0], data.hardware[1]);
+
+    data.hardware[1].quantity = 3;
+    assert.deepEqual(results.elementsCount, {
+        success: 'success',
+        result: 5,
+        inputErrors: [],
+        ignoredInputs: [],
+    });
+
+    data.hardware[0].quantity = 0;
+    assert.equal(results.elementsCount.success, 'partial');
+    assert.equal(results.elementsCount.result, 3);
+    assert.equal(results.elementsCount.ignoredInputs[0], data.hardware[0]);
+
+    data.hardware[1].quantity = null;
+    assert.equal(results.elementsCount.success, 'failure');
+    assert.equal(results.elementsCount.result, null);
+    assert.equal(results.elementsCount.ignoredInputs.length, 2);
+
+    data.hardware.splice(0, 1);
+    assert.equal(results.elementsCount.ignoredInputs.length, 1);
+    assert.equal(results.elementsCount.ignoredInputs[0], data.hardware[0]);
+
+    data.hardware = [{ ...validHardware(), id: 'replacement', quantity: 6 }];
+    assert.deepEqual(results.elementsCount, {
+        success: 'success',
+        result: 6,
+        inputErrors: [],
+        ignoredInputs: [],
+    });
+    data.hardware = [];
+    assert.deepEqual(results.elementsCount, {
+        success: 'success',
+        result: 0,
+        inputErrors: [],
+        ignoredInputs: [],
+    });
 });
 
 test('existing results follow imported, loaded, and reset data without stale references', () => {
@@ -363,7 +501,7 @@ test('existing results follow imported, loaded, and reset data without stale ref
     assessment.hardware[0].quantity = 2;
     stored.set(MITSI_STORAGE_KEY, JSON.stringify({ assessment, savedAt: 123 }));
     data.loadFromStorage();
-    assert.equal(results.totalEmbodied, 100);
+    assert.equal(results.totalEmbodied.result, 100);
     assert.equal(results.totalOperational, 200);
     assert.equal(results.totalLifespan, 300);
     assert.equal(results.resourcesInService, 4);
@@ -452,7 +590,7 @@ test('resource selection and functional-unit scaling are composed from current a
             impactManufacturingDistributionEol: 17520,
         },
     ];
-    assert.equal(results.totalEmbodied, 770880);
+    assert.equal(results.totalEmbodied.result, 770880);
     assert.equal(results.resourcesInService, 176);
     assert.equal(results.perFunctionalUnit, 1);
     data.scope.functionalUnit.timeUnit = 'minute';
@@ -483,24 +621,27 @@ test('missing and invalid hardware inputs withhold aggregates without hiding val
         { ...validHardware(), id: 'editing', cpuQuantity: 1 },
     ];
     const editing = data.hardware[1];
-    assert.equal(results.totalEmbodied, 50);
+    assert.equal(results.totalEmbodied.result, 50);
     for (const missing of [null, undefined, '', NaN, Infinity, -1, '12']) {
         editing.impactManufacturingDistributionEol = missing;
-        assert.equal(results.rowSubtotal(editing), null);
-        assert.equal(results.totalEmbodied, null);
+        assert.equal(results.rowSubtotal(editing).result, null);
+        assert.equal(results.totalEmbodied.success, 'partial');
+        assert.equal(results.totalEmbodied.result, 50);
         assert.equal(results.embodiedByCategory[0].categoryTotal, null);
         assert.equal(results.totalLifespan, null);
         assert.equal(results.totalPerResource, null);
         assert.equal(results.perFunctionalUnit, null);
     }
     editing.impactManufacturingDistributionEol = 0;
-    assert.equal(results.rowSubtotal(editing), 0);
-    assert.equal(results.totalEmbodied, 50);
+    assert.equal(results.rowSubtotal(editing).result, 0);
+    assert.equal(results.totalEmbodied.result, 50);
     for (const missing of [null, undefined, '', NaN, 0, -1, 0.5]) {
         editing.quantity = missing;
-        assert.equal(results.elementsCount, null);
+        assert.equal(results.elementsCount.success, 'partial');
+        assert.equal(results.elementsCount.result, 1);
         assert.equal(results.resourcesInService, null);
-        assert.equal(results.totalEmbodied, null);
+        assert.equal(results.totalEmbodied.success, 'partial');
+        assert.equal(results.totalEmbodied.result, 50);
     }
     editing.quantity = 1;
     for (const missing of [null, undefined, '', NaN, -1, 0.5]) {
@@ -514,10 +655,121 @@ test('missing and invalid hardware inputs withhold aggregates without hiding val
     editing.isSecondHand = true;
     editing.quantity = null;
     editing.impactManufacturingDistributionEol = null;
-    assert.equal(results.totalEmbodied, 50);
+    assert.equal(results.totalEmbodied.result, 50);
     assert.equal(results.resourcesInService, 1);
     data.includeSecondHandEmbodied = true;
-    assert.equal(results.totalEmbodied, null);
+    assert.equal(results.totalEmbodied.success, 'partial');
+    assert.equal(results.totalEmbodied.result, 50);
+});
+
+test('embodied totals retain partial sums and diagnostics through edits and exclusion changes', () => {
+    const data = useSurveyDataStore();
+    const results = useSurveyResultsStore();
+    assert.deepEqual(results.totalEmbodied, {
+        success: 'success',
+        result: 0,
+        inputErrors: [],
+        ignoredInputs: [],
+    });
+
+    data.hardware = [
+        { ...validHardware(), quantity: 2, impactManufacturingDistributionEol: 10 },
+        {
+            ...validHardware(),
+            id: 'editing',
+            quantity: null,
+            impactManufacturingDistributionEol: null,
+        },
+        { ...validHardware(), id: 'excluded', isSecondHand: true, quantity: null },
+    ];
+    const [valid, editing, excluded] = data.hardware;
+    const partial = results.totalEmbodied;
+    assert.equal(partial.success, 'partial');
+    assert.equal(partial.result, 20);
+    assert.deepEqual(partial.ignoredInputs, [editing]);
+    assert.equal(partial.ignoredInputs[0], editing);
+    assert.equal(partial.inputErrors.length, 1);
+    assert.ok(partial.inputErrors[0] instanceof z.ZodError);
+    assert.deepEqual(
+        partial.inputErrors[0].issues.map((issue) => issue.path),
+        [['quantity'], ['impactManufacturingDistributionEol']],
+    );
+    assert.equal(results.totalLifespan, null);
+
+    editing.quantity = 3;
+    assert.equal(results.totalEmbodied.success, 'partial');
+    assert.deepEqual(
+        results.totalEmbodied.inputErrors[0].issues.map((issue) => issue.path),
+        [['impactManufacturingDistributionEol']],
+    );
+    editing.impactManufacturingDistributionEol = 10;
+    assert.deepEqual(results.totalEmbodied, {
+        success: 'success',
+        result: 50,
+        inputErrors: [],
+        ignoredInputs: [],
+    });
+    assert.equal(results.totalLifespan, 50);
+
+    valid.quantity = null;
+    assert.equal(results.totalEmbodied.success, 'partial');
+    assert.equal(results.totalEmbodied.result, 30);
+    assert.equal(results.totalEmbodied.ignoredInputs[0], valid);
+    editing.impactManufacturingDistributionEol = null;
+    assert.equal(results.totalEmbodied.success, 'failure');
+    assert.equal(results.totalEmbodied.result, null);
+    assert.deepEqual(results.totalEmbodied.ignoredInputs, [valid, editing]);
+    assert.deepEqual(
+        results.totalEmbodied.inputErrors.map((error) => error.issues.map((issue) => issue.path)),
+        [[['quantity']], [['impactManufacturingDistributionEol']]],
+    );
+
+    data.hardware.splice(1, 1);
+    assert.equal(results.totalEmbodied.success, 'failure');
+    assert.equal(results.totalEmbodied.ignoredInputs.length, 1);
+    assert.equal(results.totalEmbodied.ignoredInputs[0], valid);
+    data.includeSecondHandEmbodied = true;
+    assert.equal(results.totalEmbodied.success, 'failure');
+    assert.deepEqual(results.totalEmbodied.ignoredInputs, [valid, excluded]);
+
+    valid.quantity = 1;
+    valid.impactManufacturingDistributionEol = 0;
+    assert.equal(results.totalEmbodied.success, 'partial');
+    assert.equal(results.totalEmbodied.result, 0);
+    assert.equal(results.totalEmbodied.ignoredInputs[0], excluded);
+    excluded.quantity = 1;
+    assert.deepEqual(results.totalEmbodied, {
+        success: 'success',
+        result: 0,
+        inputErrors: [],
+        ignoredInputs: [],
+    });
+
+    valid.isSecondHand = true;
+    valid.quantity = null;
+    data.includeSecondHandEmbodied = false;
+    assert.deepEqual(results.totalEmbodied, {
+        success: 'success',
+        result: 0,
+        inputErrors: [],
+        ignoredInputs: [],
+    });
+    data.hardware = [
+        { ...validHardware(), id: 'replacement', impactManufacturingDistributionEol: 100 },
+    ];
+    assert.deepEqual(results.totalEmbodied, {
+        success: 'success',
+        result: 100,
+        inputErrors: [],
+        ignoredInputs: [],
+    });
+    data.hardware = [];
+    assert.deepEqual(results.totalEmbodied, {
+        success: 'success',
+        result: 0,
+        inputErrors: [],
+        ignoredInputs: [],
+    });
 });
 
 test('memory and storage selectors validate measurements and never default missing values to zero', () => {
@@ -529,14 +781,102 @@ test('memory and storage selectors validate measurements and never default missi
         storageQuantity: 3,
         storageSize: 100,
     };
-    assert.equal(results.memoryTotal(row), 32);
-    assert.equal(results.storageTotal(row), 300);
+    assert.equal(results.memoryTotal(row).result, 32);
+    assert.equal(results.storageTotal(row).result, 300);
     for (const missing of [null, undefined, '', NaN, -1, 0.5]) {
-        assert.equal(results.memoryTotal({ ...row, memorySizeGb: missing }), null);
-        assert.equal(results.storageTotal({ ...row, storageQuantity: missing }), null);
+        assert.equal(results.memoryTotal({ ...row, memorySizeGb: missing }).result, null);
+        assert.equal(results.storageTotal({ ...row, storageQuantity: missing }).result, null);
     }
-    assert.equal(results.memoryTotal({ ...row, memoryQuantity: 0 }), 0);
-    assert.equal(results.storageTotal({ ...row, storageSize: 0 }), 0);
+    assert.equal(results.memoryTotal({ ...row, memoryQuantity: 0 }).result, 0);
+    assert.equal(results.storageTotal({ ...row, storageSize: 0 }).result, 0);
+});
+
+test('hardware computations return results and field-specific Zod errors without mutating drafts', () => {
+    const results = useSurveyResultsStore();
+    const cases = [
+        ['hardwareImpact', { impactManufacturingDistributionEol: 12.5 }, 12.5],
+        ['rowSubtotal', { quantity: 3, impactManufacturingDistributionEol: 12.5 }, 37.5],
+        ['memoryTotal', { memoryQuantity: 2, memorySizeGb: 16 }, 32],
+        ['storageTotal', { storageQuantity: 3, storageSize: 100 }, 300],
+    ];
+
+    for (const [name, measurements, expected] of cases) {
+        const row = Object.freeze({ ...HardwareItemDraftSchema.parse({}), ...measurements });
+        assert.deepEqual(results[name](row), {
+            success: 'success',
+            result: expected,
+            inputErrors: [],
+            ignoredInputs: [],
+        });
+
+        for (const field of Object.keys(measurements)) {
+            const invalidValues = [null, undefined, '', NaN, Infinity, -Infinity, -1, '12'];
+            if (field !== 'impactManufacturingDistributionEol') invalidValues.push(0.5);
+            if (field === 'quantity') invalidValues.push(0);
+
+            for (const invalid of invalidValues) {
+                const draft = Object.freeze({ ...row, [field]: invalid });
+                const before = { ...draft };
+                const calculation = results[name](draft);
+                assert.equal(calculation.success, 'failure');
+                assert.equal(calculation.result, null);
+                assert.deepEqual(calculation.ignoredInputs, []);
+                assert.equal(calculation.inputErrors.length, 1);
+                assert.ok(calculation.inputErrors[0] instanceof z.ZodError);
+                assert.deepEqual(
+                    calculation.inputErrors[0].issues.map((issue) => issue.path),
+                    [[field]],
+                );
+                assert.deepEqual(draft, before);
+            }
+
+            if (field !== 'quantity') {
+                assert.deepEqual(results[name](Object.freeze({ ...row, [field]: 0 })), {
+                    success: 'success',
+                    result: 0,
+                    inputErrors: [],
+                    ignoredInputs: [],
+                });
+            }
+        }
+
+        const missing = Object.freeze({
+            ...row,
+            ...Object.fromEntries(Object.keys(measurements).map((field) => [field, null])),
+        });
+        const failure = results[name](missing);
+        assert.equal(failure.success, 'failure');
+        assert.equal(failure.result, null);
+        assert.deepEqual(failure.ignoredInputs, []);
+        assert.equal(failure.inputErrors.length, 1);
+        assert.deepEqual(
+            failure.inputErrors[0].issues.map((issue) => issue.path),
+            Object.keys(measurements).map((field) => [field]),
+        );
+    }
+
+    // Impact needs no quantity; memory and storage need no impact or hardware quantity.
+    const unrelatedInvalid = Object.freeze({
+        ...HardwareItemDraftSchema.parse({}),
+        quantity: null,
+        impactManufacturingDistributionEol: 12,
+        memoryQuantity: 2,
+        memorySizeGb: 16,
+        storageQuantity: 3,
+        storageSize: 100,
+    });
+    assert.equal(results.hardwareImpact(unrelatedInvalid).result, 12);
+    assert.equal(results.memoryTotal(unrelatedInvalid).result, 32);
+    assert.equal(results.storageTotal(unrelatedInvalid).result, 300);
+});
+
+test('failed subtotals do not create an embodied contribution from excluded unfinished rows', () => {
+    const data = useSurveyDataStore();
+    const results = useSurveyResultsStore();
+    data.hardware = [HardwareItemDraftSchema.parse({ id: 'unfinished', isSecondHand: true })];
+    assert.equal(results.rowSubtotal(data.hardware[0]).success, 'failure');
+    assert.equal(results.totalEmbodied.result, 0);
+    assert.equal(results.totalLifespan, null);
 });
 
 test('enabled underlying estimates must be valid for totals and assessment completion', () => {
@@ -611,30 +951,11 @@ test('store-owned PUE presentation preserves supplied zero and labels invalid dr
     assert.equal(results.perFunctionalUnit, null);
 });
 
-test('arithmetic overflow is unavailable at calculation and aggregation boundaries', () => {
+test('arithmetic overflow is unavailable in operational, underlying, and functional-unit calculations', () => {
     const data = useSurveyDataStore();
     const results = useSurveyResultsStore();
     setupScope(data);
     data.monitoringPeriod.unit = 'year';
-    data.hardware = [
-        {
-            ...validHardware(),
-            cpuQuantity: 1,
-            quantity: 2,
-            impactManufacturingDistributionEol: Number.MAX_VALUE,
-        },
-    ];
-    assert.equal(results.rowSubtotal(data.hardware[0]), null);
-    assert.equal(results.totalEmbodied, null);
-    data.hardware = ['a', 'b'].map((id) => ({
-        ...validHardware(),
-        id,
-        cpuQuantity: 1,
-        impactManufacturingDistributionEol: Number.MAX_VALUE,
-    }));
-    assert.equal(results.rowSubtotal(data.hardware[0]), Number.MAX_VALUE);
-    assert.equal(results.totalEmbodied, null);
-    data.hardware = [];
     const dc = data.datacenters[0];
     dc.energy = DatacenterEnergyDraftSchema.parse({
         carbonIntensity: 1000,

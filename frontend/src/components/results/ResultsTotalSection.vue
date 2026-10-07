@@ -5,7 +5,7 @@
                 <tr>
                     <td data-kind="text">{{ $t('resultsRowEmbodied') }}</td>
                     <td class="text-right" data-kind="number">
-                        {{ formatKg(surveyResults.totalEmbodied) }}
+                        {{ formatKg(surveyResults.totalEmbodied.result) }}
                     </td>
                 </tr>
                 <tr>
@@ -33,7 +33,7 @@
                 {{ $t('resultsChartSplitTitle') }}
             </div>
             <TotalSplitPieChart
-                :embodied="surveyResults.totalEmbodied"
+                :embodied="surveyResults.totalEmbodied.result"
                 :operational="surveyResults.totalOperational"
                 :total="surveyResults.totalLifespan"
                 :labels="{

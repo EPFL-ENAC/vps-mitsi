@@ -60,7 +60,7 @@
                     <template v-if="col.name === 'impactManufacturingDistributionEol'">
                         <template v-if="surveyResults.isSecondHandExcluded(props.row)">
                             <span class="inventory-strike">{{
-                                formatKg(surveyResults.hardwareImpact(props.row))
+                                formatKg(surveyResults.hardwareImpact(props.row).result)
                             }}</span>
                             <span class="inventory-dim">({{ $t('inventoryNotCounted') }})</span>
                         </template>
@@ -298,10 +298,10 @@ const columns = computed<InventoryColumn[]>(() => [
         calc: true,
         sortable: true,
         zod: undefined,
-        derived: surveyResults.rowSubtotal,
+        derived: (row) => surveyResults.rowSubtotal(row).result,
         sort: (_a, _b, rowA, rowB) => {
-            const a = surveyResults.rowSubtotal(rowA);
-            const b = surveyResults.rowSubtotal(rowB);
+            const a = surveyResults.rowSubtotal(rowA).result;
+            const b = surveyResults.rowSubtotal(rowB).result;
             if (a === null) return b === null ? 0 : 1;
             return b === null ? -1 : a - b;
         },
@@ -321,7 +321,7 @@ const columns = computed<InventoryColumn[]>(() => [
         mode: 'advanced',
         kind: 'derived',
         zod: undefined,
-        derived: surveyResults.memoryTotal,
+        derived: (row) => surveyResults.memoryTotal(row).result,
     }),
 
     column({
@@ -339,7 +339,7 @@ const columns = computed<InventoryColumn[]>(() => [
         mode: 'advanced',
         kind: 'derived',
         zod: undefined,
-        derived: surveyResults.storageTotal,
+        derived: (row) => surveyResults.storageTotal(row).result,
     }),
     column({
         field: 'storageTechnology',

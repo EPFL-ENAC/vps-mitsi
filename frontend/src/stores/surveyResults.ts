@@ -32,6 +32,12 @@ import {
 import { unitsPerYear } from 'src/models/TimeUnit/utils';
 import { sum } from 'src/utils/math';
 import { useSurveyDataStore } from 'src/stores/surveyData';
+import type { ComputationResult } from 'src/types/computation';
+import {
+    successfulComputation,
+    failedComputation,
+    partiallySuccessfulComputation,
+} from 'src/utils/computation';
 
 export type DatacenterOperationalResult = {
     datacenter: Datacenter;
@@ -66,6 +72,10 @@ const NumberResultSchema = z.number();
 const PositiveResultSchema = z.number().positive();
 const CompleteValuesSchema = z.array(NumberResultSchema);
 const UnderlyingEstimatesSchema = z.array(UnderlyingServiceSchema.shape.co2EstimateKg);
+const HardwareQuantitySchema = HardwareItemSchema.pick({ quantity: true });
+const HardwareUnitImpactSchema = HardwareItemSchema.pick({
+    impactManufacturingDistributionEol: true,
+});
 
 /** Finite arithmetic results only; overflow is unavailable rather than a measurement. */
 function numberResult(value: unknown): number | null {
@@ -100,45 +110,101 @@ function pueInclusion(value: Datacenter['energy']['pue']): PueInclusion {
 export const useSurveyResultsStore = defineStore('surveyResults', () => {
     const data = useSurveyDataStore();
     const rowsCount = computed(() => data.hardware.length);
-    const elementsCount = computed(() =>
-        completeSum(data.hardware.map((row) => hardwareQuantity(row))),
-    );
+    const elementsCount = computed<ComputationResult<number, HardwareItem>>(() => {
+        let total = 0;
+        // Each error describes the ignored row at the same index.
+        const inputErrors: z.ZodError[] = [];
+        const ignoredInputs: HardwareItem[] = [];
 
-    function hardwareQuantity(row: HardwareItem): number | null {
-        return validatedCalculation(
-            HardwareItemSchema.shape.quantity,
-            row.quantity,
-            (value) => value,
-        );
+        for (const row of data.hardware) {
+            const quantity = hardwareQuantity(row);
+
+            if (quantity.success === 'failure') {
+                inputErrors.push(...quantity.inputErrors);
+                ignoredInputs.push(row);
+            } else {
+                total += quantity.result;
+            }
+        }
+
+        if (ignoredInputs.length === 0) {
+            return successfulComputation(total);
+        }
+
+        if (ignoredInputs.length === data.hardware.length) {
+            return { ...failedComputation(inputErrors), ignoredInputs };
+        }
+
+        return partiallySuccessfulComputation(total, inputErrors, ignoredInputs);
+    });
+
+    function hardwareQuantity(row: HardwareItem): ComputationResult<number> {
+        const parsed = HardwareQuantitySchema.safeParse(row);
+        return parsed.success
+            ? successfulComputation(parsed.data.quantity)
+            : failedComputation([parsed.error]);
     }
 
-    function hardwareImpact(row: HardwareItem): number | null {
-        return validatedCalculation(
-            HardwareItemSchema.shape.impactManufacturingDistributionEol,
-            row.impactManufacturingDistributionEol,
-            (value) => value,
-        );
+    function hardwareImpact(row: HardwareItem): ComputationResult<number> {
+        const parsed = HardwareUnitImpactSchema.safeParse(row);
+        return parsed.success
+            ? successfulComputation(parsed.data.impactManufacturingDistributionEol)
+            : failedComputation([parsed.error]);
     }
 
-    function rowSubtotal(row: HardwareItem): number | null {
-        return validatedCalculation(HardwareImpactMeasurementsSchema, row, calculateRowSubtotal);
+    function rowSubtotal(row: HardwareItem): ComputationResult<number> {
+        const parsed = HardwareImpactMeasurementsSchema.safeParse(row);
+        return parsed.success
+            ? successfulComputation(calculateRowSubtotal(parsed.data))
+            : failedComputation([parsed.error]);
     }
 
-    function memoryTotal(row: HardwareItem): number | null {
-        return validatedCalculation(HardwareMemoryMeasurementsSchema, row, calculateMemoryTotal);
+    function memoryTotal(row: HardwareItem): ComputationResult<number> {
+        const parsed = HardwareMemoryMeasurementsSchema.safeParse(row);
+        return parsed.success
+            ? successfulComputation(calculateMemoryTotal(parsed.data))
+            : failedComputation([parsed.error]);
     }
 
-    function storageTotal(row: HardwareItem): number | null {
-        return validatedCalculation(HardwareStorageMeasurementsSchema, row, calculateStorageTotal);
+    function storageTotal(row: HardwareItem): ComputationResult<number> {
+        const parsed = HardwareStorageMeasurementsSchema.safeParse(row);
+        return parsed.success
+            ? successfulComputation(calculateStorageTotal(parsed.data))
+            : failedComputation([parsed.error]);
     }
 
     function isSecondHandExcluded(row: HardwareItem): boolean {
         return row.isSecondHand && !data.includeSecondHandEmbodied;
     }
 
-    const totalEmbodied = computed(() =>
-        completeSum(data.hardware.filter((row) => !isSecondHandExcluded(row)).map(rowSubtotal)),
-    );
+    const totalEmbodied = computed<ComputationResult<number, HardwareItem>>(() => {
+        const rows = data.hardware.filter((row) => !isSecondHandExcluded(row));
+        let total = 0;
+        // Each error describes the ignored row at the same index.
+        const inputErrors: z.ZodError[] = [];
+        const ignoredInputs: HardwareItem[] = [];
+
+        for (const row of rows) {
+            const subtotal = rowSubtotal(row);
+
+            if (subtotal.success === 'failure') {
+                inputErrors.push(...subtotal.inputErrors);
+                ignoredInputs.push(row);
+            } else {
+                total += subtotal.result;
+            }
+        }
+
+        if (ignoredInputs.length === 0) {
+            return successfulComputation(total);
+        }
+
+        if (ignoredInputs.length === rows.length) {
+            return { ...failedComputation(inputErrors), ignoredInputs };
+        }
+
+        return partiallySuccessfulComputation(total, inputErrors, ignoredInputs);
+    });
 
     const secondHandExcludedCount = computed(
         () => data.hardware.filter(isSecondHandExcluded).length,
@@ -200,18 +266,18 @@ export const useSurveyResultsStore = defineStore('surveyResults', () => {
     );
 
     const hasEmbodiedContribution = computed(() =>
-        data.hardware.some((row) => rowSubtotal(row) !== null),
+        data.hardware.some((row) => rowSubtotal(row).result !== null),
     );
 
     const totalLifespan = computed(() => {
         const embodied = totalEmbodied.value;
         const underlying = totalUnderlying.value;
         const operational = totalOperational.value;
-        if (embodied === null || underlying === null) return null;
+        if (embodied.success !== 'success' || underlying === null) return null;
         const hasUnderlying = data.includeUnderlyingServices && data.underlyingServices.length > 0;
         if (!hasEmbodiedContribution.value && operational === null && !hasUnderlying) return null;
         // Preserve existing operational partial behavior until the next sweep.
-        return numberResult(embodied + (operational ?? 0) + underlying);
+        return numberResult(embodied.result + (operational ?? 0) + underlying);
     });
 
     const resourcesInService = computed(() => {
@@ -262,9 +328,9 @@ export const useSurveyResultsStore = defineStore('surveyResults', () => {
                         id: row.id,
                         name: row.name,
                         description: row.description ?? '',
-                        number: hardwareQuantity(row),
-                        co2PerUnit: hardwareImpact(row),
-                        co2RowTotal: rowSubtotal(row),
+                        number: hardwareQuantity(row).result,
+                        co2PerUnit: hardwareImpact(row).result,
+                        co2RowTotal: rowSubtotal(row).result,
                         excluded: isSecondHandExcluded(row),
                     }));
                 return {

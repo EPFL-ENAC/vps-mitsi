@@ -34,8 +34,8 @@
                 {{
                     $t('inventoryStats', {
                         rows: surveyResults.rowsCount,
-                        elements: surveyResults.elementsCount ?? '—',
-                        total: formatKg(surveyResults.totalEmbodied),
+                        elements: surveyResults.elementsCount.result ?? '—',
+                        total: formatKg(surveyResults.totalEmbodied.result),
                     })
                 }}
             </div>
@@ -71,7 +71,7 @@
                 {{ $t('inventoryFooter', { n: surveyResults.secondHandExcludedCount }) }}
             </div>
             <div class="text-body1 text-weight-medium" style="margin-left: auto">
-                {{ formatKg(surveyResults.totalEmbodied) }}
+                {{ formatKg(surveyResults.totalEmbodied.result) }}
             </div>
         </div>
     </div>

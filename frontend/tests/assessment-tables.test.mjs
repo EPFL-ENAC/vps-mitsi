@@ -6,6 +6,7 @@ import EnergyDatacentersTable from '../src/components/energy/EnergyDatacentersTa
 import EnergyMonitoringPeriodForm from '../src/components/energy/EnergyMonitoringPeriodForm.vue';
 import HardwareInventoryTable from '../src/components/inventory/HardwareInventoryTable.vue';
 import ResultsPage from '../src/pages/ResultsPage.vue';
+import ResultsEmbodiedSection from '../src/components/results/ResultsEmbodiedSection.vue';
 import ReportPreviewPage from '../src/pages/ReportPreviewPage.vue';
 import ScopePage from '../src/pages/ScopePage.vue';
 import { ScopeDraftSchema, BoundaryItemDraftSchema } from '../src/models/Scope/schema.ts';
@@ -185,7 +186,26 @@ test('results preserve translated report headers, excluded totals and missing op
     assert.match(result.html, /DC — Test datacenter/);
     assert.match(result.html, /data-kind="number"[^>]*>—<\/td>/);
     assert.match(result.html, /<th scope="row"/);
-    assert.equal(result.results.totalEmbodied, 0);
+    assert.equal(result.results.totalEmbodied.result, 0);
+});
+
+test('embodied results render the available partial total while retaining unfinished rows', async () => {
+    const result = await renderTables(ResultsEmbodiedSection, {
+        setupStore(store) {
+            store.hardware = [
+                HardwareItemDraftSchema.parse({
+                    id: 'valid',
+                    quantity: 2,
+                    impactManufacturingDistributionEol: 12,
+                }),
+                HardwareItemDraftSchema.parse({ id: 'unfinished' }),
+            ];
+        },
+    });
+    assert.equal(result.results.totalEmbodied.success, 'partial');
+    assert.equal(result.results.totalEmbodied.result, 24);
+    assert.equal(result.tables[0].rows.length, 2);
+    assert.match(result.html, /results-total-table[\s\S]*<strong>24\.00<\/strong>/);
 });
 
 test('select and toggle edits write through to the store', async () => {
