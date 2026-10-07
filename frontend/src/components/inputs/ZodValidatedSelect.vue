@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue';
-import { QInput, type ValidationRule } from 'quasar';
+import { QSelect, type ValidationRule } from 'quasar';
 import type { z } from 'zod';
 import { useValidation } from 'src/composables/useValidation';
 
@@ -11,27 +11,26 @@ const props = defineProps<{
     rules?: ValidationRule[];
 }>();
 
-// Preserve editable values, including cleared fields.
-const model = defineModel<string | number | null | undefined>({ required: true });
-const input = ref<QInput>();
+const model = defineModel<unknown>({ required: true });
+const select = ref<QSelect>();
 const { toValidationRule, registerForInitialValidation } = useValidation();
 
 const rules = computed(() => [toValidationRule(props.schema), ...(props.rules ?? [])]);
 
-// Registering the input in the global composable queue.
+// Registering the select in the global composable queue.
 onMounted(() => {
-    if (input.value) {
-        registerForInitialValidation(() => void input.value?.validate());
+    if (select.value) {
+        registerForInitialValidation(() => void select.value?.validate());
     }
 });
 
-defineExpose({ input });
+defineExpose({ select });
 </script>
 
 <template>
-    <QInput ref="input" v-bind="$attrs" v-model="model" :rules="rules">
+    <QSelect ref="select" v-bind="$attrs" v-model="model" :rules="rules" :lazy-rules="false">
         <template v-for="(_, name) in $slots" #[name]="slotProps">
             <slot :name="name" v-bind="slotProps ?? {}" />
         </template>
-    </QInput>
+    </QSelect>
 </template>

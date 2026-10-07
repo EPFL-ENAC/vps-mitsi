@@ -2,15 +2,41 @@
  * MITSI — Quasar form validation via Zod (silent adapter).
  *
  * Adapts canonical entity fields from src/models/schema.ts to Quasar rules.
- * Components pass field schemas directly; this adapter supplies translated
+ * Pages and registries pass schemas directly; this adapter supplies translated
  * validation messages and normalizes empty inputs.
  */
 import type { ValidationRule } from 'quasar';
 import type * as z from 'zod';
 import { useI18n } from 'vue-i18n';
+import { nextTick } from 'vue';
+
+// Queue of inputs to be validated during the current page load cycle
+const validationQueue = new Set<() => unknown>();
+let isValidationScheduled = false;
+
+function processValidationQueue() {
+    // Trigger validation for ALL inputs in a single timer pass
+    validationQueue.forEach((validateFn) => {
+        validateFn();
+    });
+    validationQueue.clear();
+    isValidationScheduled = false;
+}
 
 export function useValidation() {
     const { t } = useI18n();
+
+    const registerForInitialValidation = (validateFn: () => unknown) => {
+        validationQueue.add(validateFn);
+
+        if (!isValidationScheduled) {
+            isValidationScheduled = true;
+            // nextTick + setTimeout, max perf
+            void nextTick(() => {
+                setTimeout(processValidationQueue, 0);
+            });
+        }
+    };
 
     /** Map a Zod issue to a validation.* key (origin = number/string/int/…). */
     function toKey(issue: z.core.$ZodIssue): string {
@@ -43,6 +69,5 @@ export function useValidation() {
                 : r.error.issues.map((is) => t(toKey(is), { ...is })).join(', ');
         };
     }
-
-    return { toValidationRule };
+    return { toValidationRule, registerForInitialValidation };
 }
