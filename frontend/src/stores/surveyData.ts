@@ -12,7 +12,7 @@ import {
 } from 'src/models/MitsiState/schema';
 import type { BlockStatus } from 'src/types/ui';
 import {
-    type Datacenter,
+    type DatacenterDraft,
     DatacenterEnergySchema,
     DatacenterEnergyDraftSchema,
     DatacenterDraftSchema,
@@ -68,7 +68,7 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
     const scope = ref<Scope>(initial.scope);
     const hardware = ref<HardwareItem[]>(initial.hardware);
     const monitoringPeriod = ref<MonitoringPeriod>({ ...initial.monitoringPeriod });
-    const datacenters = ref<Datacenter[]>(initial.datacenters);
+    const datacenters = ref<DatacenterDraft[]>(initial.datacenters);
     const includeSecondHandEmbodied = ref(initial.includeSecondHandEmbodied);
     const includeUnderlyingServices = ref(initial.includeUnderlyingServices);
     const underlyingServices = ref<UnderlyingService[]>(initial.underlyingServices);

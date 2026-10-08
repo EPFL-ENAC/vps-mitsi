@@ -60,7 +60,9 @@
                     <template v-if="col.name === 'impactManufacturingDistributionEol'">
                         <template v-if="surveyResults.isSecondHandExcluded(props.row)">
                             <span class="inventory-strike">{{
-                                formatKg(surveyResults.hardwareImpact(props.row).result)
+                                formatKg(
+                                    surveyResults.hardwareUnitEmbodiedEmissionsKg(props.row).result,
+                                )
                             }}</span>
                             <span class="inventory-dim">({{ $t('inventoryNotCounted') }})</span>
                         </template>
@@ -298,10 +300,10 @@ const columns = computed<InventoryColumn[]>(() => [
         calc: true,
         sortable: true,
         zod: undefined,
-        derived: (row) => surveyResults.rowSubtotal(row).result,
+        derived: (row) => surveyResults.hardwareRowEmbodiedEmissionsKg(row).result,
         sort: (_a, _b, rowA, rowB) => {
-            const a = surveyResults.rowSubtotal(rowA).result;
-            const b = surveyResults.rowSubtotal(rowB).result;
+            const a = surveyResults.hardwareRowEmbodiedEmissionsKg(rowA).result;
+            const b = surveyResults.hardwareRowEmbodiedEmissionsKg(rowB).result;
             if (a === null) return b === null ? 0 : 1;
             return b === null ? -1 : a - b;
         },
@@ -321,7 +323,7 @@ const columns = computed<InventoryColumn[]>(() => [
         mode: 'advanced',
         kind: 'derived',
         zod: undefined,
-        derived: (row) => surveyResults.memoryTotal(row).result,
+        derived: (row) => surveyResults.hardwareMemoryPerUnitGb(row).result,
     }),
 
     column({
@@ -339,7 +341,7 @@ const columns = computed<InventoryColumn[]>(() => [
         mode: 'advanced',
         kind: 'derived',
         zod: undefined,
-        derived: (row) => surveyResults.storageTotal(row).result,
+        derived: (row) => surveyResults.hardwareStorageCapacityPerUnit(row).result,
     }),
     column({
         field: 'storageTechnology',

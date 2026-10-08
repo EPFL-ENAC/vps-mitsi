@@ -70,7 +70,7 @@ import { useQuasar, type QTableColumn } from 'quasar';
 import type { z } from 'zod';
 
 import {
-    type Datacenter,
+    type DatacenterDraft,
     type DatacenterGeneralInfo,
     DatacenterGeneralInfoSchema,
 } from 'src/models/Datacenter/schema';
@@ -80,7 +80,7 @@ import { createSchemaColumn } from 'src/utils/tables';
 
 const surveyData = useSurveyDataStore();
 
-interface DatacenterColumn extends QTableColumn<Datacenter> {
+interface DatacenterColumn extends QTableColumn<DatacenterDraft> {
     name: keyof DatacenterGeneralInfo | 'usedBy';
     kind: 'text' | 'number';
     zod?: z.ZodType;
@@ -123,7 +123,7 @@ function addDatacenter(): void {
     surveyData.addDatacenter();
 }
 
-function usedByCell(dc: Datacenter): string {
+function usedByCell(dc: DatacenterDraft): string {
     const guard = surveyData.getDatacenterDeletionBlock(dc.id);
     return guard ? t('scopeDcInvRows', guard.hardwareRowCount) : t('scopeDcUsedByNone');
 }
@@ -139,7 +139,7 @@ function showDeletionBlocked(name: string, hardwareRowCount: number): void {
     });
 }
 
-function removeDatacenter(dc: Datacenter): void {
+function removeDatacenter(dc: DatacenterDraft): void {
     const name = formatDatacenterName(dc);
     const guard = surveyData.getDatacenterDeletionBlock(dc.id);
     if (guard) {

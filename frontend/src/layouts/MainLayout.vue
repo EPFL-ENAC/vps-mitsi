@@ -93,10 +93,10 @@
                     {{ $t('mainFooterOperational', { value: operationalText }) }}
                 </span>
                 <span class="text-caption text-grey-8">
-                    {{ $t('mainFooterTotal', { value: totalLifespanText }) }}
+                    {{ $t('mainFooterTotal', { value: totalLifespanEmissionsText }) }}
                 </span>
                 <span class="text-caption text-grey-7">
-                    {{ $t('mainFooterPerFu', { value: perFunctionalUnitText }) }}
+                    {{ $t('mainFooterPerFu', { value: emissionsPerFunctionalUnitText }) }}
                 </span>
             </q-toolbar>
         </q-footer>
@@ -130,16 +130,17 @@ const epflLogoUrl = `${import.meta.env.BASE_URL}epfl.svg`;
 const leftDrawerOpen = ref(false);
 const operationalResultOptions = computed(() => ({
     missingLabel: t('mainNotApplicable'),
-    partialLabel: surveyResults.energyCoverage.isComplete
+    partialLabel: surveyResults.operationalCalculationCoverage.isComplete
         ? ''
         : t('resultsEnergyCoverage', {
-              complete: surveyResults.energyCoverage.completeDatacenters,
-              total: surveyResults.energyCoverage.totalDatacenters,
+              complete: surveyResults.operationalCalculationCoverage.validDatacenterCount,
+              total: surveyResults.operationalCalculationCoverage.totalDatacenterCount,
           }),
 }));
 const combinedResultOptions = computed(() => ({
     missingLabel: t('mainNotApplicable'),
-    partialLabel: surveyResults.totalLifespan.success === 'partial' ? t('resultsPartial') : '',
+    partialLabel:
+        surveyResults.totalLifespanEmissionsKg.success === 'partial' ? t('resultsPartial') : '',
 }));
 const $q = useQuasar();
 
@@ -242,15 +243,15 @@ function completionLabelKey(status: BlockStatus): string {
 
 /** Embodied emissions in tonnes, or a dash until the scope is valid. */
 const embodiedText = computed<string>(() =>
-    surveyData.isScopeValid && surveyResults.totalEmbodied.result !== null
-        ? `${(surveyResults.totalEmbodied.result / 1000).toFixed(1)} ${t('mainUnitTonnes')}`
+    surveyData.isScopeValid && surveyResults.totalEmbodiedEmissionsKg.result !== null
+        ? `${(surveyResults.totalEmbodiedEmissionsKg.result / 1000).toFixed(1)} ${t('mainUnitTonnes')}`
         : t('mainNotApplicable'),
 );
 
 /** Operational emissions in tonnes, or a dash until the scope is valid. */
 const operationalText = computed<string>(() =>
     surveyData.isScopeValid
-        ? formatResult(surveyResults.totalOperational.result, {
+        ? formatResult(surveyResults.totalOperationalEmissionsKg.result, {
               ...operationalResultOptions.value,
               formatValue: (value) => `${(value / 1000).toFixed(1)} ${t('mainUnitTonnes')}`,
           })
@@ -258,9 +259,9 @@ const operationalText = computed<string>(() =>
 );
 
 /** Total over the lifespan in tonnes of CO2-eq, or a dash until the scope is valid. */
-const totalLifespanText = computed<string>(() =>
+const totalLifespanEmissionsText = computed<string>(() =>
     surveyData.isScopeValid
-        ? formatResult(surveyResults.totalLifespan.result, {
+        ? formatResult(surveyResults.totalLifespanEmissionsKg.result, {
               ...combinedResultOptions.value,
               formatValue: (value) => `${(value / 1000).toFixed(1)} ${t('mainUnitTonnesCo2e')}`,
           })
@@ -268,8 +269,8 @@ const totalLifespanText = computed<string>(() =>
 );
 
 /** Per-functional-unit emissions in grams of CO2-eq, or a dash when not computable. */
-const perFunctionalUnitText = computed<string>(() =>
-    formatResult(surveyResults.perFunctionalUnit.result, {
+const emissionsPerFunctionalUnitText = computed<string>(() =>
+    formatResult(surveyResults.emissionsPerFunctionalUnitKg.result, {
         ...combinedResultOptions.value,
         formatValue: (value) => `${(value * 1000).toFixed(2)} ${t('mainUnitGramsCo2e')}`,
     }),

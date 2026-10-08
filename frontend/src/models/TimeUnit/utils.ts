@@ -11,6 +11,6 @@ const COUNTS_PER_YEAR: Record<TimeUnit, number> = {
     year: 1,
 };
 
-export function unitsPerYear(unit: TimeUnit): number {
+export function timeUnitsPerYear(unit: TimeUnit): number {
     return COUNTS_PER_YEAR[unit];
 }

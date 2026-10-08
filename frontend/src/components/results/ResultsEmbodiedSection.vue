@@ -8,7 +8,11 @@
             />
         </div>
 
-        <div v-for="g in surveyResults.embodiedByCategory" :key="g.category" class="q-mb-md">
+        <div
+            v-for="g in surveyResults.embodiedEmissionsByCategory"
+            :key="g.category"
+            class="q-mb-md"
+        >
             <component
                 :is="interactive ? QExpansionItem : 'div'"
                 :label="t('inventoryCategory_' + normalizeKey(g.category))"
@@ -66,7 +70,7 @@
 
                 <div class="results-category-total text-right q-py-xs text-caption">
                     {{ $t('resultsCategoryTotal') }}:
-                    <strong>{{ formatKg(g.categoryTotal.result) }}</strong>
+                    <strong>{{ formatKg(g.totalEmbodiedEmissionsKg.result) }}</strong>
                 </div>
             </component>
         </div>
@@ -78,7 +82,9 @@
                         <strong>{{ $t('resultsTotalEmbodied') }}</strong>
                     </td>
                     <td class="text-right">
-                        <strong>{{ formatKg(surveyResults.totalEmbodied.result) }}</strong>
+                        <strong>{{
+                            formatKg(surveyResults.totalEmbodiedEmissionsKg.result)
+                        }}</strong>
                     </td>
                 </tr>
             </tbody>
@@ -91,8 +97,8 @@
                     {{ $t('resultsChartTreemapByElement') }}
                 </div>
                 <EmbodiedTreemapChart
-                    :groups="surveyResults.embodiedByCategory"
-                    :grand-total="surveyResults.totalEmbodied.result"
+                    :groups="surveyResults.embodiedEmissionsByCategory"
+                    :grand-total="surveyResults.totalEmbodiedEmissionsKg.result"
                     variant="element"
                 />
             </div>
@@ -101,8 +107,8 @@
                     {{ $t('resultsChartTreemapByCategory') }}
                 </div>
                 <EmbodiedTreemapChart
-                    :groups="surveyResults.embodiedByCategory"
-                    :grand-total="surveyResults.totalEmbodied.result"
+                    :groups="surveyResults.embodiedEmissionsByCategory"
+                    :grand-total="surveyResults.totalEmbodiedEmissionsKg.result"
                     variant="category"
                 />
             </div>
@@ -138,7 +144,7 @@ withDefaults(
 
 const { t } = useI18n();
 
-type EmbodiedRow = (typeof surveyResults.embodiedByCategory)[number]['rows'][number];
+type EmbodiedRow = (typeof surveyResults.embodiedEmissionsByCategory)[number]['rows'][number];
 
 interface EmbodiedTableColumn extends QTableColumn<EmbodiedRow> {
     kind: 'text' | 'number';
@@ -163,21 +169,21 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
         name: 'number',
         label: t('resultsEmbodiedColumns.number'),
         align: 'right',
-        field: (row) => row.number ?? '—',
+        field: (row) => row.quantity ?? '—',
         kind: 'number',
     },
     {
         name: 'co2PerUnit',
         label: t('resultsEmbodiedColumns.co2PerUnit'),
         align: 'right',
-        field: (row) => formatKg(row.co2PerUnit),
+        field: (row) => formatKg(row.unitEmbodiedEmissionsKg),
         kind: 'number',
     },
     {
         name: 'co2RowTotal',
         label: t('resultsEmbodiedColumns.co2RowTotal'),
         align: 'right',
-        field: (row) => formatKg(row.co2RowTotal),
+        field: (row) => formatKg(row.rowEmbodiedEmissionsKg),
         kind: 'number',
     },
 ]);

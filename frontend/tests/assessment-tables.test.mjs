@@ -193,7 +193,7 @@ test('results preserve translated report headers, excluded totals and missing op
     assert.deepEqual(result.datacenterCharts[0].rows, []);
     assert.match(result.html, /data-kind="number"[^>]*>—<\/td>/);
     assert.match(result.html, /<th scope="row"/);
-    assert.equal(result.results.totalEmbodied.result, 0);
+    assert.equal(result.results.totalEmbodiedEmissionsKg.result, 0);
 });
 
 test('embodied results render the available partial total while retaining unfinished rows', async () => {
@@ -209,12 +209,12 @@ test('embodied results render the available partial total while retaining unfini
             ];
         },
     });
-    assert.equal(result.results.totalEmbodied.success, 'partial');
-    assert.equal(result.results.totalEmbodied.result, 24);
-    const group = result.results.embodiedByCategory[0];
-    assert.equal(group.categoryTotal.success, 'partial');
-    assert.equal(group.categoryTotal.result, 24);
-    assert.equal(group.categoryTotal.ignoredInputs[0], result.store.hardware[1]);
+    assert.equal(result.results.totalEmbodiedEmissionsKg.success, 'partial');
+    assert.equal(result.results.totalEmbodiedEmissionsKg.result, 24);
+    const group = result.results.embodiedEmissionsByCategory[0];
+    assert.equal(group.totalEmbodiedEmissionsKg.success, 'partial');
+    assert.equal(group.totalEmbodiedEmissionsKg.result, 24);
+    assert.equal(group.totalEmbodiedEmissionsKg.ignoredInputs[0], result.store.hardware[1]);
     assert.equal(result.tables[0].rows.length, 2);
     assert.match(result.html, /results-category-total[\s\S]*<strong>24\.00<\/strong>/);
     assert.match(result.html, /results-total-table[\s\S]*<strong>24\.00<\/strong>/);
@@ -322,7 +322,7 @@ test('combined totals and ratios render partial values and pass numbers to the s
                 ];
             },
         });
-        assert.equal(result.results.totalLifespan.success, 'partial');
+        assert.equal(result.results.totalLifespanEmissionsKg.success, 'partial');
         if (component === ResultsTotalSection) {
             assert.match(result.html, /10\.00 \(Partial\)/);
             assert.equal(result.splitCharts[0].total, 10);
@@ -340,7 +340,7 @@ test('unfinished descriptive scope fields do not mark complete emission values a
             store.hardware = [{ ...validHardware(), impactManufacturingDistributionEol: 10 }];
         },
     });
-    assert.equal(result.results.totalLifespan.success, 'success');
+    assert.equal(result.results.totalLifespanEmissionsKg.success, 'success');
     assert.match(result.html, /<strong>10\.00<\/strong>/);
     assert.doesNotMatch(result.html, /10\.00 \(Partial\)/);
 });

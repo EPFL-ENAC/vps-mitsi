@@ -5,10 +5,12 @@ import { LocalStorage } from 'quasar';
 import { z } from 'zod';
 import { useSurveyResultsStore } from '../src/stores/surveyResults.ts';
 import { useSurveyDataStore, MITSI_STORAGE_KEY } from '../src/stores/surveyData.ts';
+import { ComputationResult } from '../src/utils/computation.ts';
 
 import {
     DatacenterEnergyDraftSchema,
     DatacenterDraftSchema,
+    DatacenterSchema,
 } from '../src/models/Datacenter/schema.ts';
 import { MitsiStateDraftSchema } from '../src/models/MitsiState/schema.ts';
 import { HardwareItemDraftSchema } from '../src/models/HardwareItem/schema.ts';
@@ -27,6 +29,62 @@ beforeEach(() => {
     mock.method(LocalStorage, 'remove', (key) => stored.delete(key));
 });
 afterEach(() => mock.restoreAll());
+
+test('Pinia exposes result instances and methods through edits and replacement', () => {
+    const data = useSurveyDataStore();
+    const results = useSurveyResultsStore();
+    setupScope(data);
+    data.scope.functionalUnit.resourceType = 'CPU';
+    data.hardware = [
+        { ...validHardware(), cpuQuantity: 1, impactManufacturingDistributionEol: 10 },
+        { ...validHardware(), id: 'editing', cpuQuantity: 1, quantity: null },
+    ];
+    const names = [
+        'hardwareItemCount',
+        'totalEmbodiedEmissionsKg',
+        'datacenterOperationalResults',
+        'totalOperationalEmissionsKg',
+        'totalUnderlyingEmissionsKg',
+        'totalLifespanEmissionsKg',
+        'selectedResourceFleetCount',
+        'emissionsPerFunctionalUnitKg',
+        'lifespanEmissionsPerResourceKg',
+    ];
+    for (const name of names) {
+        const computation = results[name];
+        assert.ok(computation instanceof ComputationResult, name);
+        let called = false;
+        const mapped = computation.map(() => {
+            called = true;
+            return 'mapped';
+        });
+        assert.ok(mapped instanceof ComputationResult, name);
+        assert.equal(mapped.success, computation.success, name);
+        assert.equal(called, computation.success !== 'failure', name);
+        assert.deepEqual(mapped.inputErrors, computation.inputErrors);
+        assert.deepEqual(mapped.ignoredInputs, computation.ignoredInputs);
+    }
+    assert.ok(
+        results.embodiedEmissionsByCategory[0].totalEmbodiedEmissionsKg instanceof
+            ComputationResult,
+    );
+    assert.equal(results.totalEmbodiedEmissionsKg.ignoredInputs[0], data.hardware[1]);
+    data.hardware[1].quantity = 2;
+    assert.equal(results.totalEmbodiedEmissionsKg.success, 'success');
+    assert.equal(results.totalEmbodiedEmissionsKg.map((value) => value * 2).result, 20);
+    data.hardware = [
+        { ...validHardware(), cpuQuantity: 2, impactManufacturingDistributionEol: 15 },
+    ];
+    assert.equal(results.totalEmbodiedEmissionsKg.map((value) => value * 2).result, 30);
+    for (const name of [
+        'hardwareUnitEmbodiedEmissionsKg',
+        'hardwareRowEmbodiedEmissionsKg',
+        'hardwareMemoryPerUnitGb',
+        'hardwareStorageCapacityPerUnit',
+    ]) {
+        assert.ok(results[name](data.hardware[0]) instanceof ComputationResult, name);
+    }
+});
 
 test('energy calculations validate drafts in the store without mutating inputs', () => {
     const data = useSurveyDataStore();
@@ -52,38 +110,45 @@ test('energy calculations validate drafts in the store without mutating inputs',
         ].map((patch) => ({ ...energy, ...patch })),
     ]) {
         dc.energy = Object.freeze(draft);
-        assert.equal(results.operationalPerDc.success, 'failure');
-        assert.equal(results.operationalPerDc.result, null);
-        assert.equal(results.operationalPerDc.ignoredInputs[0], dc);
-        assert.equal(results.operationalPerDc.inputErrors.length, 1);
-        assert.ok(results.operationalPerDc.inputErrors[0] instanceof z.ZodError);
+        assert.equal(results.datacenterOperationalResults.success, 'failure');
+        assert.equal(results.datacenterOperationalResults.result, null);
+        assert.equal(results.datacenterOperationalResults.ignoredInputs[0], dc);
+        assert.equal(results.datacenterOperationalResults.inputErrors.length, 1);
+        assert.ok(results.datacenterOperationalResults.inputErrors[0] instanceof z.ZodError);
         assert.ok(
-            results.operationalPerDc.inputErrors[0].issues.every(
+            results.datacenterOperationalResults.inputErrors[0].issues.every(
                 (issue) => issue.path[0] === 'energy',
             ),
         );
-        assert.equal(results.totalOperational.result, null);
+        assert.equal(results.totalOperationalEmissionsKg.result, null);
         assert.equal(dc.energy, draft);
     }
 
     for (const pue of ['', undefined, null]) {
         const draft = Object.freeze({ ...energy, pue });
         dc.energy = draft;
-        assert.deepEqual(results.operationalPerDc, {
-            success: 'success',
-            result: [
-                {
-                    datacenter: dc,
-                    pueInclusion: { status: 'omitted' },
-                    co2Period: 50,
-                    co2Lifespan: 50,
-                },
-            ],
-            inputErrors: [],
-            ignoredInputs: [],
-        });
+        assert.deepEqual(
+            { ...results.datacenterOperationalResults },
+            {
+                success: 'success',
+                result: [
+                    {
+                        datacenter: DatacenterSchema.parse(dc),
+                        pueInclusion: { status: 'omitted' },
+                        co2Period: 50,
+                        co2Lifespan: 50,
+                    },
+                ],
+                inputErrors: [],
+                ignoredInputs: [],
+            },
+        );
         assert.equal(dc.energy, draft);
         assert.equal(dc.energy.pue, pue);
+        const validatedDatacenter = results.datacenterOperationalResults.result[0].datacenter;
+        assert.notEqual(validatedDatacenter, dc);
+        assert.notEqual(validatedDatacenter.energy, draft);
+        assert.equal(validatedDatacenter.energy.pue, null);
     }
 });
 
@@ -108,7 +173,7 @@ test('operational context failures report shared paths before processing datacen
     ]) {
         data.monitoringPeriod.value = period;
         data.scope.lifespanYears = lifespan;
-        const computation = results.operationalPerDc;
+        const computation = results.datacenterOperationalResults;
         assert.equal(computation.success, 'failure');
         assert.equal(computation.result, null);
         assert.deepEqual(computation.ignoredInputs, []);
@@ -118,33 +183,39 @@ test('operational context failures report shared paths before processing datacen
             computation.inputErrors[0].issues.map((issue) => issue.path),
             paths,
         );
-        assert.equal(results.totalOperational.result, null);
-        assert.equal(results.energyCoverage.completeDatacenters, 0);
+        assert.equal(results.totalOperationalEmissionsKg.result, null);
+        assert.equal(results.operationalCalculationCoverage.validDatacenterCount, 0);
     }
 
     data.datacenters = [];
-    assert.equal(results.operationalPerDc.success, 'failure');
+    assert.equal(results.datacenterOperationalResults.success, 'failure');
     data.monitoringPeriod.value = 1;
     data.scope.lifespanYears = 1;
     data.monitoringPeriod.unit = 'invalid';
     assert.deepEqual(
-        results.operationalPerDc.inputErrors[0].issues.map((issue) => issue.path),
+        results.datacenterOperationalResults.inputErrors[0].issues.map((issue) => issue.path),
         [['monitoringPeriod', 'unit']],
     );
     data.monitoringPeriod.unit = 'year';
-    assert.deepEqual(results.operationalPerDc, {
-        success: 'success',
-        result: [],
-        inputErrors: [],
-        ignoredInputs: [],
-    });
-    assert.deepEqual(results.totalOperational, {
-        success: 'success',
-        result: 0,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
-    assert.equal(results.totalLifespan.result, null);
+    assert.deepEqual(
+        { ...results.datacenterOperationalResults },
+        {
+            success: 'success',
+            result: [],
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
+    assert.deepEqual(
+        { ...results.totalOperationalEmissionsKg },
+        {
+            success: 'success',
+            result: 0,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
+    assert.equal(results.totalLifespanEmissionsKg.result, null);
 });
 
 test('operational collection preserves valid rows, ignored datacenter identity, and energy paths', () => {
@@ -154,36 +225,47 @@ test('operational collection preserves valid rows, ignored datacenter identity, 
     data.monitoringPeriod.unit = 'year';
     data.scope.lifespanYears = 2;
     data.datacenters = [
-        DatacenterDraftSchema.parse({ id: 'missing' }),
+        DatacenterDraftSchema.parse({
+            id: 'missing',
+            generalInfo: { name: 'Missing energy', abbreviation: 'M' },
+        }),
         DatacenterDraftSchema.parse({
             id: 'zero',
+            generalInfo: { name: 'Zero', abbreviation: 'Z' },
             energy: { carbonIntensity: 500, energyConsumption: 0 },
         }),
         DatacenterDraftSchema.parse({
             id: 'bad-pue',
+            generalInfo: { name: 'Bad PUE', abbreviation: 'P' },
             energy: { carbonIntensity: 500, energyConsumption: 100 },
         }),
         DatacenterDraftSchema.parse({
             id: 'ready',
+            generalInfo: { name: 'Ready', abbreviation: 'R' },
             energy: { carbonIntensity: 500, energyConsumption: 100, pue: 1.5 },
         }),
     ];
     const [missing, zero, badPue, ready] = data.datacenters;
     badPue.energy.pue = -1;
     const before = JSON.stringify(data.$state);
-    const partial = results.operationalPerDc;
+    const partial = results.datacenterOperationalResults;
     assert.equal(partial.success, 'partial');
     assert.deepEqual(partial.result, [
-        { datacenter: zero, pueInclusion: { status: 'omitted' }, co2Period: 0, co2Lifespan: 0 },
         {
-            datacenter: ready,
+            datacenter: DatacenterSchema.parse(zero),
+            pueInclusion: { status: 'omitted' },
+            co2Period: 0,
+            co2Lifespan: 0,
+        },
+        {
+            datacenter: DatacenterSchema.parse(ready),
             pueInclusion: { status: 'included', value: 1.5 },
             co2Period: 75,
             co2Lifespan: 150,
         },
     ]);
-    assert.equal(partial.result[0].datacenter, zero);
-    assert.equal(partial.result[1].datacenter, ready);
+    assert.notEqual(partial.result[0].datacenter, zero);
+    assert.notEqual(partial.result[1].datacenter, ready);
     assert.equal(partial.ignoredInputs[0], missing);
     assert.equal(partial.ignoredInputs[1], badPue);
     assert.equal(partial.inputErrors.length, 2);
@@ -198,13 +280,13 @@ test('operational collection preserves valid rows, ignored datacenter identity, 
             [['energy', 'pue']],
         ],
     );
-    assert.equal(results.totalOperational.result, 150);
-    assert.equal(results.totalOperational.success, 'partial');
-    assert.equal(results.totalOperational.inputErrors, partial.inputErrors);
-    assert.equal(results.totalOperational.ignoredInputs, partial.ignoredInputs);
-    assert.deepEqual(results.energyCoverage, {
-        completeDatacenters: 2,
-        totalDatacenters: 4,
+    assert.equal(results.totalOperationalEmissionsKg.result, 150);
+    assert.equal(results.totalOperationalEmissionsKg.success, 'partial');
+    assert.equal(results.totalOperationalEmissionsKg.inputErrors, partial.inputErrors);
+    assert.equal(results.totalOperationalEmissionsKg.ignoredInputs, partial.ignoredInputs);
+    assert.deepEqual(results.operationalCalculationCoverage, {
+        validDatacenterCount: 2,
+        totalDatacenterCount: 4,
         isComplete: false,
     });
     assert.equal(JSON.stringify(data.$state), before);
@@ -212,27 +294,27 @@ test('operational collection preserves valid rows, ignored datacenter identity, 
     missing.energy.carbonIntensity = 1000;
     missing.energy.energyConsumption = 10;
     badPue.energy.pue = null;
-    assert.equal(results.operationalPerDc.success, 'success');
-    assert.deepEqual(results.operationalPerDc.inputErrors, []);
-    assert.deepEqual(results.operationalPerDc.ignoredInputs, []);
+    assert.equal(results.datacenterOperationalResults.success, 'success');
+    assert.deepEqual(results.datacenterOperationalResults.inputErrors, []);
+    assert.deepEqual(results.datacenterOperationalResults.ignoredInputs, []);
     assert.deepEqual(
-        results.operationalPerDc.result.map((row) => row.datacenter.id),
+        results.datacenterOperationalResults.result.map((row) => row.datacenter.id),
         ['missing', 'zero', 'bad-pue', 'ready'],
     );
-    assert.equal(results.totalOperational.result, 270);
-    assert.equal(results.energyCoverage.completeDatacenters, 4);
-    assert.equal(results.energyCoverage.isComplete, false);
+    assert.equal(results.totalOperationalEmissionsKg.result, 270);
+    assert.equal(results.operationalCalculationCoverage.validDatacenterCount, 4);
+    assert.equal(results.operationalCalculationCoverage.isComplete, false);
 
     data.datacenters = ['replacement-a', 'replacement-b'].map((id) =>
         DatacenterDraftSchema.parse({ id }),
     );
-    assert.equal(results.operationalPerDc.success, 'failure');
-    assert.equal(results.operationalPerDc.result, null);
-    assert.equal(results.operationalPerDc.inputErrors.length, 2);
-    assert.equal(results.operationalPerDc.ignoredInputs.length, 2);
-    assert.equal(results.operationalPerDc.ignoredInputs[0], data.datacenters[0]);
-    assert.equal(results.operationalPerDc.ignoredInputs[1], data.datacenters[1]);
-    assert.equal(results.totalOperational.result, null);
+    assert.equal(results.datacenterOperationalResults.success, 'failure');
+    assert.equal(results.datacenterOperationalResults.result, null);
+    assert.equal(results.datacenterOperationalResults.inputErrors.length, 2);
+    assert.equal(results.datacenterOperationalResults.ignoredInputs.length, 2);
+    assert.equal(results.datacenterOperationalResults.ignoredInputs[0], data.datacenters[0]);
+    assert.equal(results.datacenterOperationalResults.ignoredInputs[1], data.datacenters[1]);
+    assert.equal(results.totalOperationalEmissionsKg.result, null);
 });
 
 test('scope completion ignores energy; energy progress follows entry, not datacenter creation', () => {
@@ -242,12 +324,12 @@ test('scope completion ignores energy; energy progress follows entry, not datace
     store.monitoringPeriod.value = null;
     assert.equal(store.isScopeValid, true);
     assert.equal(store.energyConsumptionStatus, 'not_started');
-    assert.equal(results.totalOperational.result, null);
-    assert.equal(results.totalLifespan.result, null);
+    assert.equal(results.totalOperationalEmissionsKg.result, null);
+    assert.equal(results.totalLifespanEmissionsKg.result, null);
     assert.equal(store.resultsStatus, 'partial');
     store.datacenters[0].energy.energyConsumption = 0;
     assert.equal(store.energyConsumptionStatus, 'partial');
-    assert.equal(results.totalOperational.result, null);
+    assert.equal(results.totalOperationalEmissionsKg.result, null);
     store.datacenters[0].energy.carbonIntensity = -1;
     assert.equal(store.isScopeValid, true);
     assert.equal(store.saveToStorage(), false);
@@ -288,40 +370,40 @@ test('partial totals include only computable energy and react to direct nested e
             generalInfo: { name: 'B', abbreviation: 'B' },
         }),
     );
-    assert.equal(results.operationalPerDc.success, 'partial');
-    assert.deepEqual(results.operationalPerDc.result, [
+    assert.equal(results.datacenterOperationalResults.success, 'partial');
+    assert.deepEqual(results.datacenterOperationalResults.result, [
         { datacenter: a, pueInclusion: { status: 'omitted' }, co2Period: 100, co2Lifespan: 100 },
     ]);
-    assert.equal(results.operationalPerDc.ignoredInputs[0], store.datacenters[1]);
-    assert.deepEqual(results.energyCoverage, {
-        completeDatacenters: 1,
-        totalDatacenters: 2,
+    assert.equal(results.datacenterOperationalResults.ignoredInputs[0], store.datacenters[1]);
+    assert.deepEqual(results.operationalCalculationCoverage, {
+        validDatacenterCount: 1,
+        totalDatacenterCount: 2,
         isComplete: false,
     });
-    assert.equal(results.totalOperational.result, 100);
-    assert.equal(results.totalLifespan.result, 150);
-    assert.equal(results.totalPerResource.result, 150);
-    assert.equal(results.perFunctionalUnit.result, 150 / 8760);
+    assert.equal(results.totalOperationalEmissionsKg.result, 100);
+    assert.equal(results.totalLifespanEmissionsKg.result, 150);
+    assert.equal(results.lifespanEmissionsPerResourceKg.result, 150);
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, 150 / 8760);
     assert.equal(store.resultsStatus, 'partial');
     const b = store.datacenters[1];
     b.energy.carbonIntensity = 1000;
     b.energy.energyConsumption = 200;
-    assert.equal(results.totalOperational.result, 300);
-    assert.equal(results.totalLifespan.result, 350);
+    assert.equal(results.totalOperationalEmissionsKg.result, 300);
+    assert.equal(results.totalLifespanEmissionsKg.result, 350);
     assert.equal(store.energyConsumptionStatus, 'complete');
     assert.equal(store.resultsStatus, 'complete');
     a.energy.pue = 2;
-    assert.equal(results.totalOperational.result, 400);
+    assert.equal(results.totalOperationalEmissionsKg.result, 400);
     a.energy.pue = 0;
-    assert.equal(results.totalOperational.result, 200);
+    assert.equal(results.totalOperationalEmissionsKg.result, 200);
     a.energy.pue = '';
-    assert.equal(results.totalOperational.result, 300);
+    assert.equal(results.totalOperationalEmissionsKg.result, 300);
     store.clearDatacenterEnergy('dc1');
-    assert.equal(results.totalOperational.result, 200);
+    assert.equal(results.totalOperationalEmissionsKg.result, 200);
     assert.equal(store.resultsStatus, 'partial');
     store.clearDatacenterEnergy('b');
-    assert.equal(results.totalOperational.result, null);
-    assert.equal(results.totalLifespan.result, 50);
+    assert.equal(results.totalOperationalEmissionsKg.result, null);
+    assert.equal(results.totalLifespanEmissionsKg.result, 50);
     assert.equal(store.resultsStatus, 'partial');
 });
 
@@ -333,26 +415,26 @@ test('invalid shared inputs withhold energy estimates and real zero results rema
     store.hardware.push({ ...validHardware(), cpuQuantity: 1 });
     store.datacenters[0].energy.carbonIntensity = 100;
     store.datacenters[0].energy.energyConsumption = 0;
-    assert.equal(results.totalOperational.result, 0);
-    assert.equal(results.totalLifespan.result, 0);
-    assert.equal(results.perFunctionalUnit.result, 0);
-    assert.equal(results.totalPerResource.result, 0);
+    assert.equal(results.totalOperationalEmissionsKg.result, 0);
+    assert.equal(results.totalLifespanEmissionsKg.result, 0);
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, 0);
+    assert.equal(results.lifespanEmissionsPerResourceKg.result, 0);
     assert.equal(store.resultsStatus, 'complete');
     store.monitoringPeriod.value = 0;
-    assert.equal(results.totalOperational.result, null);
-    assert.equal(results.operationalPerDc.success, 'failure');
-    assert.equal(results.operationalPerDc.result, null);
+    assert.equal(results.totalOperationalEmissionsKg.result, null);
+    assert.equal(results.datacenterOperationalResults.success, 'failure');
+    assert.equal(results.datacenterOperationalResults.result, null);
     assert.equal(store.resultsStatus, 'partial');
     store.monitoringPeriod.value = 1;
     store.scope.lifespanYears = 0;
-    assert.equal(results.operationalPerDc.success, 'failure');
-    assert.equal(results.operationalPerDc.result, null);
-    assert.equal(results.totalOperational.result, null);
-    assert.equal(results.perFunctionalUnit.result, null);
+    assert.equal(results.datacenterOperationalResults.success, 'failure');
+    assert.equal(results.datacenterOperationalResults.result, null);
+    assert.equal(results.totalOperationalEmissionsKg.result, null);
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, null);
     store.scope.lifespanYears = 1;
     store.hardware[0].cpuQuantity = 0;
-    assert.equal(results.perFunctionalUnit.result, null);
-    assert.equal(results.totalPerResource.result, null);
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, null);
+    assert.equal(results.lifespanEmissionsPerResourceKg.result, null);
 });
 
 test('unfinished hardware edits retain partial emissions but withhold incomplete resource ratios', () => {
@@ -368,25 +450,25 @@ test('unfinished hardware edits retain partial emissions but withhold incomplete
     }));
 
     data.hardware[1].quantity = undefined;
-    assert.equal(results.totalEmbodied.success, 'partial');
-    assert.equal(results.totalEmbodied.result, 50);
-    assert.equal(results.totalLifespan.success, 'partial');
-    assert.equal(results.totalLifespan.result, 50);
-    assert.equal(results.perFunctionalUnit.result, null);
-    assert.equal(results.totalPerResource.result, null);
+    assert.equal(results.totalEmbodiedEmissionsKg.success, 'partial');
+    assert.equal(results.totalEmbodiedEmissionsKg.result, 50);
+    assert.equal(results.totalLifespanEmissionsKg.success, 'partial');
+    assert.equal(results.totalLifespanEmissionsKg.result, 50);
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, null);
+    assert.equal(results.lifespanEmissionsPerResourceKg.result, null);
 
     data.hardware[1].quantity = 1;
     data.hardware[1].cpuQuantity = undefined;
-    assert.equal(results.totalLifespan.result, 100);
-    assert.equal(results.resourcesInService.success, 'partial');
-    assert.equal(results.resourcesInService.result, 1);
-    assert.equal(results.perFunctionalUnit.result, null);
-    assert.equal(results.totalPerResource.result, null);
+    assert.equal(results.totalLifespanEmissionsKg.result, 100);
+    assert.equal(results.selectedResourceFleetCount.success, 'partial');
+    assert.equal(results.selectedResourceFleetCount.result, 1);
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, null);
+    assert.equal(results.lifespanEmissionsPerResourceKg.result, null);
 
     data.hardware[1].cpuQuantity = 1;
-    assert.equal(results.resourcesInService.result, 2);
-    assert.equal(results.totalPerResource.result, 50);
-    assert.equal(results.perFunctionalUnit.result, 100 / (8760 * 2));
+    assert.equal(results.selectedResourceFleetCount.result, 2);
+    assert.equal(results.lifespanEmissionsPerResourceKg.result, 50);
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, 100 / (8760 * 2));
 });
 
 test('cleared nested energy survives persistence and reset restores fresh assessment defaults', () => {
@@ -435,8 +517,8 @@ test('cleared nested energy survives persistence and reset restores fresh assess
         assert.equal(store.savedAt, null);
         assert.equal(store.exportedAt, null);
         assert.equal(stored.has(MITSI_STORAGE_KEY), false);
-        assert.equal(results.totalOperational.result, null);
-        assert.equal(results.totalLifespan.result, null);
+        assert.equal(results.totalOperationalEmissionsKg.result, null);
+        assert.equal(results.totalLifespanEmissionsKg.result, null);
         assert.equal(store.energyConsumptionStatus, 'not_started');
     }
 });
@@ -457,58 +539,64 @@ test('inventory totals and groups react to settings, edits, and replacement', ()
             isSecondHand: true,
         },
     ];
-    assert.equal(results.rowsCount, 2);
-    assert.deepEqual(results.elementsCount, {
-        success: 'success',
-        result: 5,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
-    assert.equal(results.totalEmbodied.result, 20);
-    assert.equal(results.resourcesInService.result, 8);
-    assert.equal(results.secondHandExcludedCount, 1);
-    const reusedGroup = results.embodiedByCategory.find(
+    assert.equal(results.hardwareRowCount, 2);
+    assert.deepEqual(
+        { ...results.hardwareItemCount },
+        {
+            success: 'success',
+            result: 5,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
+    assert.equal(results.totalEmbodiedEmissionsKg.result, 20);
+    assert.equal(results.selectedResourceFleetCount.result, 8);
+    assert.equal(results.excludedSecondHandRowCount, 1);
+    const reusedGroup = results.embodiedEmissionsByCategory.find(
         (group) => group.category === 'storage_bay',
     );
-    assert.equal(reusedGroup.categoryTotal.result, 0);
+    assert.equal(reusedGroup.totalEmbodiedEmissionsKg.result, 0);
     assert.equal(reusedGroup.rows[0].excluded, true);
-    assert.equal(results.rowSubtotal(data.hardware[1]).result, 60);
+    assert.equal(results.hardwareRowEmbodiedEmissionsKg(data.hardware[1]).result, 60);
 
     data.includeSecondHandEmbodied = true;
-    assert.equal(results.totalEmbodied.result, 80);
-    assert.equal(results.resourcesInService.result, 14);
-    assert.equal(results.secondHandExcludedCount, 0);
+    assert.equal(results.totalEmbodiedEmissionsKg.result, 80);
+    assert.equal(results.selectedResourceFleetCount.result, 14);
+    assert.equal(results.excludedSecondHandRowCount, 0);
     data.hardware[1].quantity = 4;
-    assert.equal(results.totalEmbodied.result, 100);
-    assert.equal(results.elementsCount.success, 'success');
-    assert.equal(results.elementsCount.result, 6);
+    assert.equal(results.totalEmbodiedEmissionsKg.result, 100);
+    assert.equal(results.hardwareItemCount.success, 'success');
+    assert.equal(results.hardwareItemCount.result, 6);
     assert.equal(
-        results.embodiedByCategory.find((group) => group.category === 'storage_bay').categoryTotal
-            .result,
+        results.embodiedEmissionsByCategory.find((group) => group.category === 'storage_bay')
+            .totalEmbodiedEmissionsKg.result,
         80,
     );
 
     data.underlyingServices = [UnderlyingServiceDraftSchema.parse({ co2EstimateKg: 30 })];
-    assert.equal(results.totalUnderlying.result, 0);
+    assert.equal(results.totalUnderlyingEmissionsKg.result, 0);
     data.includeUnderlyingServices = true;
-    assert.equal(results.totalUnderlying.result, 30);
-    assert.equal(results.totalLifespan.result, 130);
+    assert.equal(results.totalUnderlyingEmissionsKg.result, 30);
+    assert.equal(results.totalLifespanEmissionsKg.result, 130);
     data.underlyingServices[0].co2EstimateKg = 40;
-    assert.equal(results.totalLifespan.result, 140);
+    assert.equal(results.totalLifespanEmissionsKg.result, 140);
 
     data.hardware = [];
-    assert.equal(results.rowsCount, 0);
-    assert.deepEqual(results.elementsCount, {
-        success: 'success',
-        result: 0,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
-    assert.equal(results.totalEmbodied.result, 0);
-    assert.deepEqual(results.embodiedByCategory, []);
-    assert.equal(results.totalLifespan.result, 40);
+    assert.equal(results.hardwareRowCount, 0);
+    assert.deepEqual(
+        { ...results.hardwareItemCount },
+        {
+            success: 'success',
+            result: 0,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
+    assert.equal(results.totalEmbodiedEmissionsKg.result, 0);
+    assert.deepEqual(results.embodiedEmissionsByCategory, []);
+    assert.equal(results.totalLifespanEmissionsKg.result, 40);
     data.includeUnderlyingServices = false;
-    assert.equal(results.totalLifespan.result, null);
+    assert.equal(results.totalLifespanEmissionsKg.result, null);
 });
 
 test('element counts distinguish complete, partial, failed, and empty inventories', () => {
@@ -527,7 +615,7 @@ test('element counts distinguish complete, partial, failed, and empty inventorie
             quantity,
         }));
 
-        const count = results.elementsCount;
+        const count = results.hardwareItemCount;
         assert.equal(count.success, success);
         assert.equal(count.result, result);
         assert.equal(count.ignoredInputs.length, ignoredCount);
@@ -561,17 +649,20 @@ test('quantities validate only their required field and retain Zod diagnostics',
         },
     ];
     const row = data.hardware[0];
-    assert.deepEqual(results.elementsCount, {
-        success: 'success',
-        result: 2,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
-    assert.equal(results.embodiedByCategory[0].rows[0].number, 2);
+    assert.deepEqual(
+        { ...results.hardwareItemCount },
+        {
+            success: 'success',
+            result: 2,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
+    assert.equal(results.embodiedEmissionsByCategory[0].rows[0].quantity, 2);
 
     for (const invalid of [null, undefined, '', NaN, Infinity, -Infinity, 0, -1, 0.5, '12']) {
         row.quantity = invalid;
-        const count = results.elementsCount;
+        const count = results.hardwareItemCount;
         assert.equal(count.success, 'failure');
         assert.equal(count.result, null);
         assert.equal(count.ignoredInputs.length, 1);
@@ -581,7 +672,7 @@ test('quantities validate only their required field and retain Zod diagnostics',
         assert.ok(
             count.inputErrors[0].issues.every((issue) => issue.path.join('.') === 'quantity'),
         );
-        assert.equal(results.embodiedByCategory[0].rows[0].number, null);
+        assert.equal(results.embodiedEmissionsByCategory[0].rows[0].quantity, null);
         assert.ok(Object.is(row.quantity, invalid));
     }
 });
@@ -593,52 +684,61 @@ test('element count status and ignored rows react to edits, removal, and replace
         { ...validHardware(), quantity: 2 },
         { ...validHardware(), id: 'editing', quantity: null },
     ];
-    assert.equal(results.elementsCount.success, 'partial');
-    assert.equal(results.elementsCount.result, 2);
-    assert.equal(results.elementsCount.ignoredInputs[0], data.hardware[1]);
+    assert.equal(results.hardwareItemCount.success, 'partial');
+    assert.equal(results.hardwareItemCount.result, 2);
+    assert.equal(results.hardwareItemCount.ignoredInputs[0], data.hardware[1]);
 
     data.hardware[1].quantity = 3;
-    assert.deepEqual(results.elementsCount, {
-        success: 'success',
-        result: 5,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
+    assert.deepEqual(
+        { ...results.hardwareItemCount },
+        {
+            success: 'success',
+            result: 5,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
 
     data.hardware[0].quantity = 0;
-    assert.equal(results.elementsCount.success, 'partial');
-    assert.equal(results.elementsCount.result, 3);
-    assert.equal(results.elementsCount.ignoredInputs[0], data.hardware[0]);
+    assert.equal(results.hardwareItemCount.success, 'partial');
+    assert.equal(results.hardwareItemCount.result, 3);
+    assert.equal(results.hardwareItemCount.ignoredInputs[0], data.hardware[0]);
 
     data.hardware[1].quantity = null;
-    assert.equal(results.elementsCount.success, 'failure');
-    assert.equal(results.elementsCount.result, null);
-    assert.equal(results.elementsCount.ignoredInputs.length, 2);
+    assert.equal(results.hardwareItemCount.success, 'failure');
+    assert.equal(results.hardwareItemCount.result, null);
+    assert.equal(results.hardwareItemCount.ignoredInputs.length, 2);
 
     data.hardware.splice(0, 1);
-    assert.equal(results.elementsCount.ignoredInputs.length, 1);
-    assert.equal(results.elementsCount.ignoredInputs[0], data.hardware[0]);
+    assert.equal(results.hardwareItemCount.ignoredInputs.length, 1);
+    assert.equal(results.hardwareItemCount.ignoredInputs[0], data.hardware[0]);
 
     data.hardware = [{ ...validHardware(), id: 'replacement', quantity: 6 }];
-    assert.deepEqual(results.elementsCount, {
-        success: 'success',
-        result: 6,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
+    assert.deepEqual(
+        { ...results.hardwareItemCount },
+        {
+            success: 'success',
+            result: 6,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
     data.hardware = [];
-    assert.deepEqual(results.elementsCount, {
-        success: 'success',
-        result: 0,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
+    assert.deepEqual(
+        { ...results.hardwareItemCount },
+        {
+            success: 'success',
+            result: 0,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
 });
 
 test('existing results follow imported, loaded, and reset data without stale references', () => {
     const results = useSurveyResultsStore();
     const data = useSurveyDataStore();
-    assert.equal(results.totalLifespan.result, null);
+    assert.equal(results.totalLifespanEmissionsKg.result, null);
     const assessment = MitsiStateDraftSchema.parse({});
     setupScope(assessment);
     assessment.scope.functionalUnit.resourceType = 'CPU';
@@ -652,8 +752,8 @@ test('existing results follow imported, loaded, and reset data without stale ref
     });
     assert.equal(data.importJson(JSON.stringify(assessment)), true);
     assert.equal(data.resultsStatus, 'complete');
-    assert.equal(results.totalLifespan.result, 150);
-    assert.equal(results.totalPerResource.result, 75);
+    assert.equal(results.totalLifespanEmissionsKg.result, 150);
+    assert.equal(results.lifespanEmissionsPerResourceKg.result, 75);
     const oldDatacenter = data.datacenters[0];
     const oldHardware = data.hardware[0];
 
@@ -661,23 +761,25 @@ test('existing results follow imported, loaded, and reset data without stale ref
     assessment.hardware[0].quantity = 2;
     stored.set(MITSI_STORAGE_KEY, JSON.stringify({ assessment, savedAt: 123 }));
     data.loadFromStorage();
-    assert.equal(results.totalEmbodied.result, 100);
-    assert.equal(results.totalOperational.result, 200);
-    assert.equal(results.totalLifespan.result, 300);
-    assert.equal(results.resourcesInService.result, 4);
-    assert.equal(results.operationalPerDc.result[0].datacenter, data.datacenters[0]);
+    assert.equal(results.totalEmbodiedEmissionsKg.result, 100);
+    assert.equal(results.totalOperationalEmissionsKg.result, 200);
+    assert.equal(results.totalLifespanEmissionsKg.result, 300);
+    assert.equal(results.selectedResourceFleetCount.result, 4);
+    const validatedDatacenter = results.datacenterOperationalResults.result[0].datacenter;
+    assert.notEqual(validatedDatacenter, data.datacenters[0]);
+    assert.deepEqual(validatedDatacenter, DatacenterSchema.parse(data.datacenters[0]));
     oldDatacenter.energy.energyConsumption = 999;
     oldHardware.quantity = 999;
-    assert.equal(results.totalLifespan.result, 300);
+    assert.equal(results.totalLifespanEmissionsKg.result, 300);
 
     data.reset();
-    assert.equal(results.totalLifespan.result, null);
-    assert.equal(results.totalOperational.result, null);
-    assert.equal(results.operationalPerDc.success, 'failure');
-    assert.equal(results.operationalPerDc.result, null);
-    assert.deepEqual(results.energyCoverage, {
-        completeDatacenters: 0,
-        totalDatacenters: 0,
+    assert.equal(results.totalLifespanEmissionsKg.result, null);
+    assert.equal(results.totalOperationalEmissionsKg.result, null);
+    assert.equal(results.datacenterOperationalResults.success, 'failure');
+    assert.equal(results.datacenterOperationalResults.result, null);
+    assert.deepEqual(results.operationalCalculationCoverage, {
+        validDatacenterCount: 0,
+        totalDatacenterCount: 0,
         isComplete: false,
     });
     assert.equal(data.resultsStatus, 'not_started');
@@ -694,11 +796,11 @@ test('reading calculations never persists or normalizes the editable inputs in p
     data.datacenters[0].energy.pue = '';
     const before = JSON.stringify(data.$state);
     const results = useSurveyResultsStore();
-    assert.equal(results.totalOperational.result, 100);
-    assert.equal(results.totalLifespan.result, 100);
-    assert.equal(results.energyCoverage.isComplete, true);
-    assert.equal(results.perFunctionalUnit.result, null);
-    assert.deepEqual(results.embodiedByCategory, []);
+    assert.equal(results.totalOperationalEmissionsKg.result, 100);
+    assert.equal(results.totalLifespanEmissionsKg.result, 100);
+    assert.equal(results.operationalCalculationCoverage.isComplete, true);
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, null);
+    assert.deepEqual(results.embodiedEmissionsByCategory, []);
     assert.equal(JSON.stringify(data.$state), before);
     assert.equal(LocalStorage.set.mock.callCount(), 0);
     assert.equal(LocalStorage.getItem.mock.callCount(), 0);
@@ -716,8 +818,8 @@ test('operational totals combine local energy with monitoring units and lifespan
         pue: 1.5,
     });
     data.monitoringPeriod.value = 30;
-    assert.equal(results.operationalPerDc.result[0].co2Period, 1800);
-    assert.ok(Math.abs(results.totalOperational.result - 43800) < 1e-8);
+    assert.equal(results.datacenterOperationalResults.result[0].co2Period, 1800);
+    assert.ok(Math.abs(results.totalOperationalEmissionsKg.result - 43800) < 1e-8);
     for (const [unit, value] of [
         ['day', 365],
         ['week', 52],
@@ -726,8 +828,8 @@ test('operational totals combine local energy with monitoring units and lifespan
     ]) {
         data.monitoringPeriod.unit = unit;
         data.monitoringPeriod.value = value;
-        assert.equal(results.operationalPerDc.result[0].co2Period, 1800);
-        assert.equal(results.totalOperational.result, 3600);
+        assert.equal(results.datacenterOperationalResults.result[0].co2Period, 1800);
+        assert.equal(results.totalOperationalEmissionsKg.result, 3600);
     }
 });
 
@@ -747,47 +849,55 @@ test('category totals distinguish partial, failed, and excluded groups using ori
         },
     ];
     const groups = Object.fromEntries(
-        results.embodiedByCategory.map((group) => [group.category, group]),
+        results.embodiedEmissionsByCategory.map((group) => [group.category, group]),
     );
-    assert.equal(groups.server.categoryTotal.success, 'partial');
-    assert.equal(groups.server.categoryTotal.result, 20);
-    assert.equal(groups.server.categoryTotal.ignoredInputs[0], data.hardware[1]);
+    assert.equal(groups.server.totalEmbodiedEmissionsKg.success, 'partial');
+    assert.equal(groups.server.totalEmbodiedEmissionsKg.result, 20);
+    assert.equal(groups.server.totalEmbodiedEmissionsKg.ignoredInputs[0], data.hardware[1]);
     assert.deepEqual(
-        groups.server.categoryTotal.inputErrors[0].issues.map((issue) => issue.path),
+        groups.server.totalEmbodiedEmissionsKg.inputErrors[0].issues.map((issue) => issue.path),
         [['impactManufacturingDistributionEol']],
     );
-    assert.equal(groups.storage_bay.categoryTotal.success, 'failure');
-    assert.equal(groups.storage_bay.categoryTotal.result, null);
-    assert.equal(groups.storage_bay.categoryTotal.ignoredInputs[0], data.hardware[2]);
-    assert.deepEqual(groups.network_device.categoryTotal, {
-        success: 'success',
-        result: 0,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
+    assert.equal(groups.storage_bay.totalEmbodiedEmissionsKg.success, 'failure');
+    assert.equal(groups.storage_bay.totalEmbodiedEmissionsKg.result, null);
+    assert.equal(groups.storage_bay.totalEmbodiedEmissionsKg.ignoredInputs[0], data.hardware[2]);
+    assert.deepEqual(
+        { ...groups.network_device.totalEmbodiedEmissionsKg },
+        {
+            success: 'success',
+            result: 0,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
     assert.equal(groups.server.rows.length, 2);
-    assert.equal(groups.server.rows[1].co2RowTotal, null);
-    assert.equal(results.totalEmbodied.result, 20);
+    assert.equal(groups.server.rows[1].rowEmbodiedEmissionsKg, null);
+    assert.equal(results.totalEmbodiedEmissionsKg.result, 20);
 
     data.hardware[1].impactManufacturingDistributionEol = 20;
     data.hardware[2].quantity = 1;
-    const repaired = results.embodiedByCategory.find((group) => group.category === 'server');
-    assert.deepEqual(repaired.categoryTotal, {
-        success: 'success',
-        result: 40,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
-    assert.equal(results.totalEmbodied.success, 'success');
+    const repaired = results.embodiedEmissionsByCategory.find(
+        (group) => group.category === 'server',
+    );
+    assert.deepEqual(
+        { ...repaired.totalEmbodiedEmissionsKg },
+        {
+            success: 'success',
+            result: 40,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
+    assert.equal(results.totalEmbodiedEmissionsKg.success, 'success');
     data.includeSecondHandEmbodied = true;
-    const included = results.embodiedByCategory.find(
+    const included = results.embodiedEmissionsByCategory.find(
         (group) => group.category === 'network_device',
     );
-    assert.equal(included.categoryTotal.success, 'failure');
-    assert.equal(included.categoryTotal.ignoredInputs[0], data.hardware[3]);
-    assert.equal(results.totalEmbodied.success, 'partial');
+    assert.equal(included.totalEmbodiedEmissionsKg.success, 'failure');
+    assert.equal(included.totalEmbodiedEmissionsKg.ignoredInputs[0], data.hardware[3]);
+    assert.equal(results.totalEmbodiedEmissionsKg.success, 'partial');
     data.hardware = [];
-    assert.deepEqual(results.embodiedByCategory, []);
+    assert.deepEqual(results.embodiedEmissionsByCategory, []);
 });
 
 test('resource sums report selected CPU or GPU measurements and preserve exclusions', () => {
@@ -806,7 +916,7 @@ test('resource sums report selected CPU or GPU measurements and preserve exclusi
             { ...validHardware(), id: 'excluded', isSecondHand: true, quantity: null },
         ];
         const [valid, editing, excluded] = data.hardware;
-        const partial = results.resourcesInService;
+        const partial = results.selectedResourceFleetCount;
         assert.equal(partial.success, 'partial');
         assert.equal(partial.result, expected);
         assert.equal(partial.ignoredInputs.length, 1);
@@ -817,15 +927,15 @@ test('resource sums report selected CPU or GPU measurements and preserve exclusi
             partial.inputErrors[0].issues.map((issue) => issue.path),
             [[field]],
         );
-        assert.equal(results.totalPerResource.result, null);
-        assert.equal(results.perFunctionalUnit.result, null);
+        assert.equal(results.lifespanEmissionsPerResourceKg.result, null);
+        assert.equal(results.emissionsPerFunctionalUnitKg.result, null);
 
         valid.quantity = null;
-        assert.equal(results.resourcesInService.success, 'failure');
-        assert.equal(results.resourcesInService.result, null);
-        assert.deepEqual(results.resourcesInService.ignoredInputs, [valid, editing]);
+        assert.equal(results.selectedResourceFleetCount.success, 'failure');
+        assert.equal(results.selectedResourceFleetCount.result, null);
+        assert.deepEqual(results.selectedResourceFleetCount.ignoredInputs, [valid, editing]);
         assert.deepEqual(
-            results.resourcesInService.inputErrors.map((error) =>
+            results.selectedResourceFleetCount.inputErrors.map((error) =>
                 error.issues.map((issue) => issue.path),
             ),
             [[['quantity']], [[field]]],
@@ -834,27 +944,33 @@ test('resource sums report selected CPU or GPU measurements and preserve exclusi
         valid.quantity = 1;
         valid[field] = 0;
         valid[otherField] = -1;
-        assert.equal(results.resourcesInService.success, 'partial');
-        assert.equal(results.resourcesInService.result, 0);
+        assert.equal(results.selectedResourceFleetCount.success, 'partial');
+        assert.equal(results.selectedResourceFleetCount.result, 0);
         editing[field] = 2;
-        assert.deepEqual(results.resourcesInService, {
-            success: 'success',
-            result: 2,
-            inputErrors: [],
-            ignoredInputs: [],
-        });
+        assert.deepEqual(
+            { ...results.selectedResourceFleetCount },
+            {
+                success: 'success',
+                result: 2,
+                inputErrors: [],
+                ignoredInputs: [],
+            },
+        );
 
         data.includeSecondHandEmbodied = true;
-        assert.equal(results.resourcesInService.success, 'partial');
-        assert.equal(results.resourcesInService.result, 2);
-        assert.equal(results.resourcesInService.ignoredInputs[0], excluded);
+        assert.equal(results.selectedResourceFleetCount.success, 'partial');
+        assert.equal(results.selectedResourceFleetCount.result, 2);
+        assert.equal(results.selectedResourceFleetCount.ignoredInputs[0], excluded);
         data.hardware = [];
-        assert.deepEqual(results.resourcesInService, {
-            success: 'success',
-            result: 0,
-            inputErrors: [],
-            ignoredInputs: [],
-        });
+        assert.deepEqual(
+            { ...results.selectedResourceFleetCount },
+            {
+                success: 'success',
+                result: 0,
+                inputErrors: [],
+                ignoredInputs: [],
+            },
+        );
     }
 });
 
@@ -878,84 +994,108 @@ test('resource selection and functional-unit scaling are composed from current a
             impactManufacturingDistributionEol: 17520,
         },
     ];
-    assert.equal(results.totalEmbodied.result, 770880);
-    assert.equal(results.resourcesInService.result, 176);
-    assert.equal(results.perFunctionalUnit.result, 1);
+    assert.equal(results.totalEmbodiedEmissionsKg.result, 770880);
+    assert.equal(results.selectedResourceFleetCount.result, 176);
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, 1);
     data.scope.functionalUnit.timeUnit = 'minute';
     data.scope.functionalUnit.usageDuration = 120;
-    assert.equal(results.perFunctionalUnit.result, 1);
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, 1);
     data.scope.lifespanYears = 4;
-    assert.equal(results.perFunctionalUnit.result, 0.5);
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, 0.5);
     data.scope.lifespanYears = 2;
     for (const resourceType of ['GPU', 'other']) {
         data.scope.functionalUnit.resourceType = resourceType;
-        assert.equal(results.resourcesInService.result, 352);
-        assert.equal(results.perFunctionalUnit.result, 0.5);
+        assert.equal(results.selectedResourceFleetCount.result, 352);
+        assert.equal(results.emissionsPerFunctionalUnitKg.result, 0.5);
     }
     data.hardware[0].impactManufacturingDistributionEol = 0;
-    assert.equal(results.perFunctionalUnit.result, 0);
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, 0);
     data.hardware = [];
-    assert.equal(results.resourcesInService.result, 0);
-    assert.equal(results.perFunctionalUnit.result, null);
+    assert.equal(results.selectedResourceFleetCount.result, 0);
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, null);
 });
 
 test('combined emissions distinguish absent measurements, measured zeros and partial sources', () => {
     const data = useSurveyDataStore();
     const results = useSurveyResultsStore();
-    assert.deepEqual(results.totalLifespan, {
-        success: 'failure',
-        result: null,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
+    assert.deepEqual(
+        { ...results.totalLifespanEmissionsKg },
+        {
+            success: 'failure',
+            result: null,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
     setupScope(data);
     data.monitoringPeriod.unit = 'year';
     data.datacenters = [];
     data.hardware = [validHardware()];
     data.includeUnderlyingServices = true;
-    assert.deepEqual(results.totalLifespan, {
-        success: 'success',
-        result: 0,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
+    assert.deepEqual(
+        { ...results.totalLifespanEmissionsKg },
+        {
+            success: 'success',
+            result: 0,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
 
     data.datacenters = [DatacenterDraftSchema.parse({ id: 'editing-dc' })];
     data.underlyingServices = [UnderlyingServiceDraftSchema.parse({ id: 'editing-service' })];
     const [dc] = data.datacenters;
     const [service] = data.underlyingServices;
-    assert.equal(results.totalLifespan.success, 'partial');
-    assert.equal(results.totalLifespan.result, 0);
-    assert.deepEqual(results.totalLifespan.ignoredInputs, [dc, service]);
-    assert.equal(results.totalLifespan.ignoredInputs[0], dc);
-    assert.equal(results.totalLifespan.ignoredInputs[1], service);
-    assert.deepEqual(results.totalLifespan.inputErrors, [
-        ...results.totalOperational.inputErrors,
-        ...results.totalUnderlying.inputErrors,
+    assert.equal(results.totalLifespanEmissionsKg.success, 'partial');
+    assert.equal(results.totalLifespanEmissionsKg.result, 0);
+    assert.deepEqual(results.totalLifespanEmissionsKg.ignoredInputs, [dc, service]);
+    assert.equal(results.totalLifespanEmissionsKg.ignoredInputs[0], dc);
+    assert.equal(results.totalLifespanEmissionsKg.ignoredInputs[1], service);
+    assert.deepEqual(results.totalLifespanEmissionsKg.inputErrors, [
+        ...results.totalOperationalEmissionsKg.inputErrors,
+        ...results.totalUnderlyingEmissionsKg.inputErrors,
     ]);
 
     data.hardware[0].impactManufacturingDistributionEol = null;
-    assert.equal(results.totalLifespan.success, 'failure');
-    assert.equal(results.totalLifespan.result, null);
-    assert.deepEqual(results.totalLifespan.ignoredInputs, [data.hardware[0], dc, service]);
-    assert.equal(results.totalLifespan.inputErrors.length, 3);
+    assert.equal(results.totalLifespanEmissionsKg.success, 'failure');
+    assert.equal(results.totalLifespanEmissionsKg.result, null);
+    assert.deepEqual(results.totalLifespanEmissionsKg.ignoredInputs, [
+        data.hardware[0],
+        dc,
+        service,
+    ]);
+    assert.equal(results.totalLifespanEmissionsKg.inputErrors.length, 3);
 
     service.co2EstimateKg = 12;
-    assert.equal(results.totalLifespan.success, 'partial');
-    assert.equal(results.totalLifespan.result, 12);
-    assert.deepEqual(results.totalLifespan.ignoredInputs, [data.hardware[0], dc]);
+    assert.equal(results.totalLifespanEmissionsKg.success, 'partial');
+    assert.equal(results.totalLifespanEmissionsKg.result, 12);
+    assert.deepEqual(results.totalLifespanEmissionsKg.ignoredInputs, [data.hardware[0], dc]);
     data.hardware[0].impactManufacturingDistributionEol = 8;
     dc.energy = DatacenterEnergyDraftSchema.parse({ energyConsumption: 10, carbonIntensity: 1000 });
-    assert.deepEqual(results.totalLifespan, {
-        success: 'success',
-        result: 30,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
+    assert.equal(results.totalLifespanEmissionsKg.success, 'partial');
+    assert.equal(results.totalLifespanEmissionsKg.result, 20);
+    assert.deepEqual(
+        results.totalLifespanEmissionsKg.inputErrors[0].issues.map((issue) => issue.path),
+        [
+            ['generalInfo', 'abbreviation'],
+            ['generalInfo', 'name'],
+        ],
+    );
+    dc.generalInfo.abbreviation = 'DC';
+    dc.generalInfo.name = 'Datacenter';
+    assert.deepEqual(
+        { ...results.totalLifespanEmissionsKg },
+        {
+            success: 'success',
+            result: 30,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
     data.includeUnderlyingServices = false;
     service.co2EstimateKg = null;
-    assert.equal(results.totalLifespan.success, 'success');
-    assert.equal(results.totalLifespan.result, 18);
+    assert.equal(results.totalLifespanEmissionsKg.success, 'success');
+    assert.equal(results.totalLifespanEmissionsKg.result, 18);
 });
 
 test('combined diagnostics preserve shared operational errors without inventing ignored rows', () => {
@@ -966,7 +1106,7 @@ test('combined diagnostics preserve shared operational errors without inventing 
     data.monitoringPeriod.value = null;
     data.includeUnderlyingServices = true;
     data.underlyingServices = [UnderlyingServiceDraftSchema.parse({})];
-    const total = results.totalLifespan;
+    const total = results.totalLifespanEmissionsKg;
     assert.equal(total.success, 'partial');
     assert.equal(total.result, 20);
     assert.deepEqual(
@@ -976,12 +1116,15 @@ test('combined diagnostics preserve shared operational errors without inventing 
     assert.deepEqual(total.ignoredInputs, [data.underlyingServices[0]]);
     data.datacenters = [];
     data.underlyingServices = [];
-    assert.deepEqual(results.totalLifespan, {
-        success: 'success',
-        result: 20,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
+    assert.deepEqual(
+        { ...results.totalLifespanEmissionsKg },
+        {
+            success: 'success',
+            result: 20,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
 });
 
 test('ratios carry partial numerator diagnostics but require a complete positive resource count', () => {
@@ -1001,16 +1144,22 @@ test('ratios carry partial numerator diagnostics but require a complete positive
         },
     ];
     const editing = data.hardware[1];
-    for (const ratio of [results.totalPerResource, results.perFunctionalUnit]) {
+    for (const ratio of [
+        results.lifespanEmissionsPerResourceKg,
+        results.emissionsPerFunctionalUnitKg,
+    ]) {
         assert.equal(ratio.success, 'partial');
         assert.equal(ratio.result, 2);
-        assert.deepEqual(ratio.inputErrors, results.totalLifespan.inputErrors);
+        assert.deepEqual(ratio.inputErrors, results.totalLifespanEmissionsKg.inputErrors);
         assert.deepEqual(ratio.ignoredInputs, [editing]);
         assert.equal(ratio.ignoredInputs[0], editing);
     }
     editing.cpuQuantity = null;
-    assert.equal(results.resourcesInService.result, 2);
-    for (const ratio of [results.totalPerResource, results.perFunctionalUnit]) {
+    assert.equal(results.selectedResourceFleetCount.result, 2);
+    for (const ratio of [
+        results.lifespanEmissionsPerResourceKg,
+        results.emissionsPerFunctionalUnitKg,
+    ]) {
         assert.equal(ratio.success, 'failure');
         assert.equal(ratio.result, null);
         assert.deepEqual(
@@ -1020,8 +1169,11 @@ test('ratios carry partial numerator diagnostics but require a complete positive
         assert.deepEqual(ratio.ignoredInputs, [editing, editing]);
     }
     data.hardware = [{ ...validHardware(), cpuQuantity: 0 }];
-    assert.equal(results.totalLifespan.result, 0);
-    for (const ratio of [results.totalPerResource, results.perFunctionalUnit]) {
+    assert.equal(results.totalLifespanEmissionsKg.result, 0);
+    for (const ratio of [
+        results.lifespanEmissionsPerResourceKg,
+        results.emissionsPerFunctionalUnitKg,
+    ]) {
         assert.equal(ratio.success, 'failure');
         assert.equal(ratio.result, null);
         assert.deepEqual(ratio.ignoredInputs, []);
@@ -1029,17 +1181,23 @@ test('ratios carry partial numerator diagnostics but require a complete positive
         assert.deepEqual(ratio.inputErrors[0].issues[0].path, ['resourcesInService']);
     }
     data.hardware[0].cpuQuantity = 1;
-    for (const ratio of [results.totalPerResource, results.perFunctionalUnit]) {
-        assert.deepEqual(ratio, {
-            success: 'success',
-            result: 0,
-            inputErrors: [],
-            ignoredInputs: [],
-        });
+    for (const ratio of [
+        results.lifespanEmissionsPerResourceKg,
+        results.emissionsPerFunctionalUnitKg,
+    ]) {
+        assert.deepEqual(
+            { ...ratio },
+            {
+                success: 'success',
+                result: 0,
+                inputErrors: [],
+                ignoredInputs: [],
+            },
+        );
     }
     data.hardware[0].impactManufacturingDistributionEol = null;
-    assert.equal(results.totalPerResource.success, 'failure');
-    assert.equal(results.perFunctionalUnit.success, 'failure');
+    assert.equal(results.lifespanEmissionsPerResourceKg.success, 'failure');
+    assert.equal(results.emissionsPerFunctionalUnitKg.success, 'failure');
 });
 
 test('functional-unit validation retains scope paths and ignores unfinished descriptive fields', () => {
@@ -1053,8 +1211,8 @@ test('functional-unit validation retains scope paths and ignores unfinished desc
     ];
     data.scope.organizationName = '';
     data.scope.assessors = '';
-    assert.equal(results.perFunctionalUnit.success, 'success');
-    assert.equal(results.perFunctionalUnit.result, 40 / (8760 * 2));
+    assert.equal(results.emissionsPerFunctionalUnitKg.success, 'success');
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, 40 / (8760 * 2));
 
     for (const [field, invalid] of [
         ['usageDuration', 0],
@@ -1063,10 +1221,10 @@ test('functional-unit validation retains scope paths and ignores unfinished desc
     ]) {
         const original = data.scope.functionalUnit[field];
         data.scope.functionalUnit[field] = invalid;
-        assert.equal(results.perFunctionalUnit.success, 'failure');
-        assert.equal(results.perFunctionalUnit.result, null);
+        assert.equal(results.emissionsPerFunctionalUnitKg.success, 'failure');
+        assert.equal(results.emissionsPerFunctionalUnitKg.result, null);
         assert.ok(
-            results.perFunctionalUnit.inputErrors.some((error) =>
+            results.emissionsPerFunctionalUnitKg.inputErrors.some((error) =>
                 error.issues.some(
                     (issue) =>
                         JSON.stringify(issue.path) ===
@@ -1080,18 +1238,18 @@ test('functional-unit validation retains scope paths and ignores unfinished desc
     data.scope.functionalUnit.usageDuration = null;
     data.scope.lifespanYears = null;
     assert.deepEqual(
-        results.perFunctionalUnit.inputErrors[0].issues.map((issue) => issue.path),
+        results.emissionsPerFunctionalUnitKg.inputErrors[0].issues.map((issue) => issue.path),
         [
             ['scope', 'functionalUnit', 'usageDuration'],
             ['scope', 'lifespanYears'],
         ],
     );
-    assert.equal(results.totalPerResource.success, 'success');
-    assert.equal(results.totalPerResource.result, 20);
+    assert.equal(results.lifespanEmissionsPerResourceKg.success, 'success');
+    assert.equal(results.lifespanEmissionsPerResourceKg.result, 20);
     data.scope.functionalUnit.usageDuration = 2;
     data.scope.lifespanYears = 2;
-    assert.equal(results.perFunctionalUnit.success, 'success');
-    assert.equal(results.perFunctionalUnit.result, 40 / (8760 * 2));
+    assert.equal(results.emissionsPerFunctionalUnitKg.success, 'success');
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, 40 / (8760 * 2));
 });
 
 test('missing and invalid hardware inputs withhold aggregates without hiding valid zeros', () => {
@@ -1104,62 +1262,68 @@ test('missing and invalid hardware inputs withhold aggregates without hiding val
         { ...validHardware(), id: 'editing', cpuQuantity: 1 },
     ];
     const editing = data.hardware[1];
-    assert.equal(results.totalEmbodied.result, 50);
+    assert.equal(results.totalEmbodiedEmissionsKg.result, 50);
     for (const missing of [null, undefined, '', NaN, Infinity, -1, '12']) {
         editing.impactManufacturingDistributionEol = missing;
-        assert.equal(results.rowSubtotal(editing).result, null);
-        assert.equal(results.totalEmbodied.success, 'partial');
-        assert.equal(results.totalEmbodied.result, 50);
-        assert.equal(results.embodiedByCategory[0].categoryTotal.success, 'partial');
-        assert.equal(results.embodiedByCategory[0].categoryTotal.result, 50);
-        assert.equal(results.totalLifespan.success, 'partial');
-        assert.equal(results.totalLifespan.result, 50);
-        assert.equal(results.totalPerResource.success, 'partial');
-        assert.equal(results.totalPerResource.result, 25);
-        assert.equal(results.perFunctionalUnit.success, 'partial');
-        assert.equal(results.perFunctionalUnit.result, 50 / (8760 * 2));
+        assert.equal(results.hardwareRowEmbodiedEmissionsKg(editing).result, null);
+        assert.equal(results.totalEmbodiedEmissionsKg.success, 'partial');
+        assert.equal(results.totalEmbodiedEmissionsKg.result, 50);
+        assert.equal(
+            results.embodiedEmissionsByCategory[0].totalEmbodiedEmissionsKg.success,
+            'partial',
+        );
+        assert.equal(results.embodiedEmissionsByCategory[0].totalEmbodiedEmissionsKg.result, 50);
+        assert.equal(results.totalLifespanEmissionsKg.success, 'partial');
+        assert.equal(results.totalLifespanEmissionsKg.result, 50);
+        assert.equal(results.lifespanEmissionsPerResourceKg.success, 'partial');
+        assert.equal(results.lifespanEmissionsPerResourceKg.result, 25);
+        assert.equal(results.emissionsPerFunctionalUnitKg.success, 'partial');
+        assert.equal(results.emissionsPerFunctionalUnitKg.result, 50 / (8760 * 2));
     }
     editing.impactManufacturingDistributionEol = 0;
-    assert.equal(results.rowSubtotal(editing).result, 0);
-    assert.equal(results.totalEmbodied.result, 50);
+    assert.equal(results.hardwareRowEmbodiedEmissionsKg(editing).result, 0);
+    assert.equal(results.totalEmbodiedEmissionsKg.result, 50);
     for (const missing of [null, undefined, '', NaN, 0, -1, 0.5]) {
         editing.quantity = missing;
-        assert.equal(results.elementsCount.success, 'partial');
-        assert.equal(results.elementsCount.result, 1);
-        assert.equal(results.resourcesInService.success, 'partial');
-        assert.equal(results.resourcesInService.result, 1);
-        assert.equal(results.totalEmbodied.success, 'partial');
-        assert.equal(results.totalEmbodied.result, 50);
+        assert.equal(results.hardwareItemCount.success, 'partial');
+        assert.equal(results.hardwareItemCount.result, 1);
+        assert.equal(results.selectedResourceFleetCount.success, 'partial');
+        assert.equal(results.selectedResourceFleetCount.result, 1);
+        assert.equal(results.totalEmbodiedEmissionsKg.success, 'partial');
+        assert.equal(results.totalEmbodiedEmissionsKg.result, 50);
     }
     editing.quantity = 1;
     for (const missing of [null, undefined, '', NaN, -1, 0.5]) {
         editing.cpuQuantity = missing;
-        assert.equal(results.resourcesInService.success, 'partial');
-        assert.equal(results.resourcesInService.result, 1);
-        assert.equal(results.totalPerResource.result, null);
-        assert.equal(results.perFunctionalUnit.result, null);
+        assert.equal(results.selectedResourceFleetCount.success, 'partial');
+        assert.equal(results.selectedResourceFleetCount.result, 1);
+        assert.equal(results.lifespanEmissionsPerResourceKg.result, null);
+        assert.equal(results.emissionsPerFunctionalUnitKg.result, null);
     }
     editing.cpuQuantity = 0;
-    assert.equal(results.resourcesInService.result, 1);
+    assert.equal(results.selectedResourceFleetCount.result, 1);
     editing.isSecondHand = true;
     editing.quantity = null;
     editing.impactManufacturingDistributionEol = null;
-    assert.equal(results.totalEmbodied.result, 50);
-    assert.equal(results.resourcesInService.result, 1);
+    assert.equal(results.totalEmbodiedEmissionsKg.result, 50);
+    assert.equal(results.selectedResourceFleetCount.result, 1);
     data.includeSecondHandEmbodied = true;
-    assert.equal(results.totalEmbodied.success, 'partial');
-    assert.equal(results.totalEmbodied.result, 50);
+    assert.equal(results.totalEmbodiedEmissionsKg.success, 'partial');
+    assert.equal(results.totalEmbodiedEmissionsKg.result, 50);
 });
 
 test('embodied totals retain partial sums and diagnostics through edits and exclusion changes', () => {
     const data = useSurveyDataStore();
     const results = useSurveyResultsStore();
-    assert.deepEqual(results.totalEmbodied, {
-        success: 'success',
-        result: 0,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
+    assert.deepEqual(
+        { ...results.totalEmbodiedEmissionsKg },
+        {
+            success: 'success',
+            result: 0,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
 
     data.hardware = [
         { ...validHardware(), quantity: 2, impactManufacturingDistributionEol: 10 },
@@ -1172,7 +1336,7 @@ test('embodied totals retain partial sums and diagnostics through edits and excl
         { ...validHardware(), id: 'excluded', isSecondHand: true, quantity: null },
     ];
     const [valid, editing, excluded] = data.hardware;
-    const partial = results.totalEmbodied;
+    const partial = results.totalEmbodiedEmissionsKg;
     assert.equal(partial.success, 'partial');
     assert.equal(partial.result, 20);
     assert.deepEqual(partial.ignoredInputs, [editing]);
@@ -1183,83 +1347,100 @@ test('embodied totals retain partial sums and diagnostics through edits and excl
         partial.inputErrors[0].issues.map((issue) => issue.path),
         [['quantity'], ['impactManufacturingDistributionEol']],
     );
-    assert.equal(results.totalLifespan.success, 'partial');
-    assert.equal(results.totalLifespan.result, 20);
+    assert.equal(results.totalLifespanEmissionsKg.success, 'partial');
+    assert.equal(results.totalLifespanEmissionsKg.result, 20);
 
     editing.quantity = 3;
-    assert.equal(results.totalEmbodied.success, 'partial');
+    assert.equal(results.totalEmbodiedEmissionsKg.success, 'partial');
     assert.deepEqual(
-        results.totalEmbodied.inputErrors[0].issues.map((issue) => issue.path),
+        results.totalEmbodiedEmissionsKg.inputErrors[0].issues.map((issue) => issue.path),
         [['impactManufacturingDistributionEol']],
     );
     editing.impactManufacturingDistributionEol = 10;
-    assert.deepEqual(results.totalEmbodied, {
-        success: 'success',
-        result: 50,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
-    assert.equal(results.totalLifespan.result, 50);
+    assert.deepEqual(
+        { ...results.totalEmbodiedEmissionsKg },
+        {
+            success: 'success',
+            result: 50,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
+    assert.equal(results.totalLifespanEmissionsKg.result, 50);
 
     valid.quantity = null;
-    assert.equal(results.totalEmbodied.success, 'partial');
-    assert.equal(results.totalEmbodied.result, 30);
-    assert.equal(results.totalEmbodied.ignoredInputs[0], valid);
+    assert.equal(results.totalEmbodiedEmissionsKg.success, 'partial');
+    assert.equal(results.totalEmbodiedEmissionsKg.result, 30);
+    assert.equal(results.totalEmbodiedEmissionsKg.ignoredInputs[0], valid);
     editing.impactManufacturingDistributionEol = null;
-    assert.equal(results.totalEmbodied.success, 'failure');
-    assert.equal(results.totalEmbodied.result, null);
-    assert.deepEqual(results.totalEmbodied.ignoredInputs, [valid, editing]);
+    assert.equal(results.totalEmbodiedEmissionsKg.success, 'failure');
+    assert.equal(results.totalEmbodiedEmissionsKg.result, null);
+    assert.deepEqual(results.totalEmbodiedEmissionsKg.ignoredInputs, [valid, editing]);
     assert.deepEqual(
-        results.totalEmbodied.inputErrors.map((error) => error.issues.map((issue) => issue.path)),
+        results.totalEmbodiedEmissionsKg.inputErrors.map((error) =>
+            error.issues.map((issue) => issue.path),
+        ),
         [[['quantity']], [['impactManufacturingDistributionEol']]],
     );
 
     data.hardware.splice(1, 1);
-    assert.equal(results.totalEmbodied.success, 'failure');
-    assert.equal(results.totalEmbodied.ignoredInputs.length, 1);
-    assert.equal(results.totalEmbodied.ignoredInputs[0], valid);
+    assert.equal(results.totalEmbodiedEmissionsKg.success, 'failure');
+    assert.equal(results.totalEmbodiedEmissionsKg.ignoredInputs.length, 1);
+    assert.equal(results.totalEmbodiedEmissionsKg.ignoredInputs[0], valid);
     data.includeSecondHandEmbodied = true;
-    assert.equal(results.totalEmbodied.success, 'failure');
-    assert.deepEqual(results.totalEmbodied.ignoredInputs, [valid, excluded]);
+    assert.equal(results.totalEmbodiedEmissionsKg.success, 'failure');
+    assert.deepEqual(results.totalEmbodiedEmissionsKg.ignoredInputs, [valid, excluded]);
 
     valid.quantity = 1;
     valid.impactManufacturingDistributionEol = 0;
-    assert.equal(results.totalEmbodied.success, 'partial');
-    assert.equal(results.totalEmbodied.result, 0);
-    assert.equal(results.totalEmbodied.ignoredInputs[0], excluded);
+    assert.equal(results.totalEmbodiedEmissionsKg.success, 'partial');
+    assert.equal(results.totalEmbodiedEmissionsKg.result, 0);
+    assert.equal(results.totalEmbodiedEmissionsKg.ignoredInputs[0], excluded);
     excluded.quantity = 1;
-    assert.deepEqual(results.totalEmbodied, {
-        success: 'success',
-        result: 0,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
+    assert.deepEqual(
+        { ...results.totalEmbodiedEmissionsKg },
+        {
+            success: 'success',
+            result: 0,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
 
     valid.isSecondHand = true;
     valid.quantity = null;
     data.includeSecondHandEmbodied = false;
-    assert.deepEqual(results.totalEmbodied, {
-        success: 'success',
-        result: 0,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
+    assert.deepEqual(
+        { ...results.totalEmbodiedEmissionsKg },
+        {
+            success: 'success',
+            result: 0,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
     data.hardware = [
         { ...validHardware(), id: 'replacement', impactManufacturingDistributionEol: 100 },
     ];
-    assert.deepEqual(results.totalEmbodied, {
-        success: 'success',
-        result: 100,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
+    assert.deepEqual(
+        { ...results.totalEmbodiedEmissionsKg },
+        {
+            success: 'success',
+            result: 100,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
     data.hardware = [];
-    assert.deepEqual(results.totalEmbodied, {
-        success: 'success',
-        result: 0,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
+    assert.deepEqual(
+        { ...results.totalEmbodiedEmissionsKg },
+        {
+            success: 'success',
+            result: 0,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
 });
 
 test('memory and storage selectors validate measurements and never default missing values to zero', () => {
@@ -1271,33 +1452,46 @@ test('memory and storage selectors validate measurements and never default missi
         storageQuantity: 3,
         storageSize: 100,
     };
-    assert.equal(results.memoryTotal(row).result, 32);
-    assert.equal(results.storageTotal(row).result, 300);
+    assert.equal(results.hardwareMemoryPerUnitGb(row).result, 32);
+    assert.equal(results.hardwareStorageCapacityPerUnit(row).result, 300);
     for (const missing of [null, undefined, '', NaN, -1, 0.5]) {
-        assert.equal(results.memoryTotal({ ...row, memorySizeGb: missing }).result, null);
-        assert.equal(results.storageTotal({ ...row, storageQuantity: missing }).result, null);
+        assert.equal(
+            results.hardwareMemoryPerUnitGb({ ...row, memorySizeGb: missing }).result,
+            null,
+        );
+        assert.equal(
+            results.hardwareStorageCapacityPerUnit({ ...row, storageQuantity: missing }).result,
+            null,
+        );
     }
-    assert.equal(results.memoryTotal({ ...row, memoryQuantity: 0 }).result, 0);
-    assert.equal(results.storageTotal({ ...row, storageSize: 0 }).result, 0);
+    assert.equal(results.hardwareMemoryPerUnitGb({ ...row, memoryQuantity: 0 }).result, 0);
+    assert.equal(results.hardwareStorageCapacityPerUnit({ ...row, storageSize: 0 }).result, 0);
 });
 
 test('hardware computations return results and field-specific Zod errors without mutating drafts', () => {
     const results = useSurveyResultsStore();
     const cases = [
-        ['hardwareImpact', { impactManufacturingDistributionEol: 12.5 }, 12.5],
-        ['rowSubtotal', { quantity: 3, impactManufacturingDistributionEol: 12.5 }, 37.5],
-        ['memoryTotal', { memoryQuantity: 2, memorySizeGb: 16 }, 32],
-        ['storageTotal', { storageQuantity: 3, storageSize: 100 }, 300],
+        ['hardwareUnitEmbodiedEmissionsKg', { impactManufacturingDistributionEol: 12.5 }, 12.5],
+        [
+            'hardwareRowEmbodiedEmissionsKg',
+            { quantity: 3, impactManufacturingDistributionEol: 12.5 },
+            37.5,
+        ],
+        ['hardwareMemoryPerUnitGb', { memoryQuantity: 2, memorySizeGb: 16 }, 32],
+        ['hardwareStorageCapacityPerUnit', { storageQuantity: 3, storageSize: 100 }, 300],
     ];
 
     for (const [name, measurements, expected] of cases) {
         const row = Object.freeze({ ...HardwareItemDraftSchema.parse({}), ...measurements });
-        assert.deepEqual(results[name](row), {
-            success: 'success',
-            result: expected,
-            inputErrors: [],
-            ignoredInputs: [],
-        });
+        assert.deepEqual(
+            { ...results[name](row) },
+            {
+                success: 'success',
+                result: expected,
+                inputErrors: [],
+                ignoredInputs: [],
+            },
+        );
 
         for (const field of Object.keys(measurements)) {
             const invalidValues = [null, undefined, '', NaN, Infinity, -Infinity, -1, '12'];
@@ -1321,12 +1515,15 @@ test('hardware computations return results and field-specific Zod errors without
             }
 
             if (field !== 'quantity') {
-                assert.deepEqual(results[name](Object.freeze({ ...row, [field]: 0 })), {
-                    success: 'success',
-                    result: 0,
-                    inputErrors: [],
-                    ignoredInputs: [],
-                });
+                assert.deepEqual(
+                    { ...results[name](Object.freeze({ ...row, [field]: 0 })) },
+                    {
+                        success: 'success',
+                        result: 0,
+                        inputErrors: [],
+                        ignoredInputs: [],
+                    },
+                );
             }
         }
 
@@ -1355,18 +1552,18 @@ test('hardware computations return results and field-specific Zod errors without
         storageQuantity: 3,
         storageSize: 100,
     });
-    assert.equal(results.hardwareImpact(unrelatedInvalid).result, 12);
-    assert.equal(results.memoryTotal(unrelatedInvalid).result, 32);
-    assert.equal(results.storageTotal(unrelatedInvalid).result, 300);
+    assert.equal(results.hardwareUnitEmbodiedEmissionsKg(unrelatedInvalid).result, 12);
+    assert.equal(results.hardwareMemoryPerUnitGb(unrelatedInvalid).result, 32);
+    assert.equal(results.hardwareStorageCapacityPerUnit(unrelatedInvalid).result, 300);
 });
 
 test('failed subtotals do not create an embodied contribution from excluded unfinished rows', () => {
     const data = useSurveyDataStore();
     const results = useSurveyResultsStore();
     data.hardware = [HardwareItemDraftSchema.parse({ id: 'unfinished', isSecondHand: true })];
-    assert.equal(results.rowSubtotal(data.hardware[0]).success, 'failure');
-    assert.equal(results.totalEmbodied.result, 0);
-    assert.equal(results.totalLifespan.result, null);
+    assert.equal(results.hardwareRowEmbodiedEmissionsKg(data.hardware[0]).success, 'failure');
+    assert.equal(results.totalEmbodiedEmissionsKg.result, 0);
+    assert.equal(results.totalLifespanEmissionsKg.result, null);
 });
 
 test('enabled underlying estimates must be valid for totals and assessment completion', () => {
@@ -1385,24 +1582,24 @@ test('enabled underlying estimates must be valid for totals and assessment compl
     ];
     for (const missing of [null, undefined, '', NaN, Infinity, '10']) {
         data.underlyingServices[1].co2EstimateKg = missing;
-        assert.equal(results.totalUnderlying.success, 'partial');
-        assert.equal(results.totalUnderlying.result, 10);
-        assert.equal(results.totalLifespan.success, 'partial');
-        assert.equal(results.totalLifespan.result, 10);
+        assert.equal(results.totalUnderlyingEmissionsKg.success, 'partial');
+        assert.equal(results.totalUnderlyingEmissionsKg.result, 10);
+        assert.equal(results.totalLifespanEmissionsKg.success, 'partial');
+        assert.equal(results.totalLifespanEmissionsKg.result, 10);
         assert.equal(data.resultsStatus, 'partial');
     }
     data.underlyingServices[1].co2EstimateKg = 0;
-    assert.equal(results.totalUnderlying.result, 10);
-    assert.equal(results.totalLifespan.result, 10);
+    assert.equal(results.totalUnderlyingEmissionsKg.result, 10);
+    assert.equal(results.totalLifespanEmissionsKg.result, 10);
     assert.equal(data.resultsStatus, 'complete');
     data.underlyingServices[1].co2EstimateKg = null;
     data.includeUnderlyingServices = false;
-    assert.equal(results.totalUnderlying.result, 0);
-    assert.equal(results.totalLifespan.result, 0);
+    assert.equal(results.totalUnderlyingEmissionsKg.result, 0);
+    assert.equal(results.totalLifespanEmissionsKg.result, 0);
     assert.equal(data.resultsStatus, 'complete');
     data.includeUnderlyingServices = true;
     data.underlyingServices = [];
-    assert.equal(results.totalUnderlying.result, 0);
+    assert.equal(results.totalUnderlyingEmissionsKg.result, 0);
 });
 
 test('underlying sums retain service diagnostics and skip validation when disabled', () => {
@@ -1418,7 +1615,7 @@ test('underlying sums retain service diagnostics and skip validation when disabl
     const editing = data.underlyingServices[1];
     data.underlyingServices[0].name = undefined;
     const before = JSON.stringify(data.$state);
-    const partial = results.totalUnderlying;
+    const partial = results.totalUnderlyingEmissionsKg;
     assert.equal(partial.success, 'partial');
     assert.equal(partial.result, 7);
     assert.equal(partial.ignoredInputs.length, 1);
@@ -1432,16 +1629,19 @@ test('underlying sums retain service diagnostics and skip validation when disabl
     assert.equal(JSON.stringify(data.$state), before);
 
     editing.co2EstimateKg = 14;
-    assert.deepEqual(results.totalUnderlying, {
-        success: 'success',
-        result: 21,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
+    assert.deepEqual(
+        { ...results.totalUnderlyingEmissionsKg },
+        {
+            success: 'success',
+            result: 21,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
     data.underlyingServices.forEach((service) => {
         service.co2EstimateKg = null;
     });
-    const failure = results.totalUnderlying;
+    const failure = results.totalUnderlyingEmissionsKg;
     assert.equal(failure.success, 'failure');
     assert.equal(failure.result, null);
     assert.equal(failure.inputErrors.length, 4);
@@ -1453,21 +1653,27 @@ test('underlying sums retain service diagnostics and skip validation when disabl
         );
     });
     data.includeUnderlyingServices = false;
-    assert.deepEqual(results.totalUnderlying, {
-        success: 'success',
-        result: 0,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
+    assert.deepEqual(
+        { ...results.totalUnderlyingEmissionsKg },
+        {
+            success: 'success',
+            result: 0,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
     data.includeUnderlyingServices = true;
-    assert.equal(results.totalUnderlying.success, 'failure');
+    assert.equal(results.totalUnderlyingEmissionsKg.success, 'failure');
     data.underlyingServices = [];
-    assert.deepEqual(results.totalUnderlying, {
-        success: 'success',
-        result: 0,
-        inputErrors: [],
-        ignoredInputs: [],
-    });
+    assert.deepEqual(
+        { ...results.totalUnderlyingEmissionsKg },
+        {
+            success: 'success',
+            result: 0,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
 });
 
 test('store-owned PUE presentation preserves supplied zero and rejects invalid energy drafts', () => {
@@ -1487,28 +1693,28 @@ test('store-owned PUE presentation preserves supplied zero and rejects invalid e
         [1.5, 1800],
     ]) {
         dc.energy.pue = pue;
-        assert.equal(results.operationalPerDc.result[0].co2Period, expected);
-        assert.equal(results.totalOperational.result, expected);
+        assert.equal(results.datacenterOperationalResults.result[0].co2Period, expected);
+        assert.equal(results.totalOperationalEmissionsKg.result, expected);
         assert.deepEqual(
-            results.operationalPerDc.result[0].pueInclusion,
+            results.datacenterOperationalResults.result[0].pueInclusion,
             pue === null ? { status: 'omitted' } : { status: 'included', value: pue },
         );
     }
     for (const invalid of [-1, NaN, Infinity, '1']) {
         dc.energy.pue = invalid;
-        assert.equal(results.operationalPerDc.success, 'failure');
-        assert.equal(results.operationalPerDc.result, null);
-        assert.equal(results.operationalPerDc.ignoredInputs[0], dc);
+        assert.equal(results.datacenterOperationalResults.success, 'failure');
+        assert.equal(results.datacenterOperationalResults.result, null);
+        assert.equal(results.datacenterOperationalResults.ignoredInputs[0], dc);
         assert.deepEqual(
-            results.operationalPerDc.inputErrors[0].issues.map((issue) => issue.path),
+            results.datacenterOperationalResults.inputErrors[0].issues.map((issue) => issue.path),
             [['energy', 'pue']],
         );
     }
     dc.energy.pue = null;
     dc.energy.carbonIntensity = 0;
-    assert.equal(results.totalOperational.result, 0);
+    assert.equal(results.totalOperationalEmissionsKg.result, 0);
     assert.equal(data.energyConsumptionStatus, 'complete');
     data.scope.functionalUnit.usageDuration = 0;
     assert.equal(data.isScopeValid, false);
-    assert.equal(results.perFunctionalUnit.result, null);
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, null);
 });

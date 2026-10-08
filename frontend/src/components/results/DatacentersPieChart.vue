@@ -4,7 +4,7 @@
 </template>
 
 <script setup lang="ts">
-import type { DatacenterOperationalResult } from 'src/stores/surveyResults';
+import type { DatacenterOperationalResult } from 'src/models/Datacenter/computations';
 
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';

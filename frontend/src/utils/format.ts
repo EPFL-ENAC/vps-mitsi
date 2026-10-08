@@ -1,8 +1,9 @@
-import type { Datacenter, PueInclusion } from 'src/models/Datacenter/schema';
+import type { DatacenterDraft } from 'src/models/Datacenter/schema';
+import type { PueInclusion } from 'src/models/Datacenter/computations';
 import type { Scope } from 'src/models/Scope/schema';
 
 /** Show both names when available, with the ID as the unfinished-draft fallback. */
-export function formatDatacenterName(dc: Pick<Datacenter, 'id' | 'generalInfo'>): string {
+export function formatDatacenterName(dc: Pick<DatacenterDraft, 'id' | 'generalInfo'>): string {
     const { abbreviation, name } = dc.generalInfo;
     return abbreviation && name ? `${abbreviation} — ${name}` : abbreviation || name || dc.id;
 }

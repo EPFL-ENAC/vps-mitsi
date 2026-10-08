@@ -5,7 +5,7 @@
                 <tr>
                     <td data-kind="text">{{ $t('resultsRowEmbodied') }}</td>
                     <td class="text-right" data-kind="number">
-                        {{ formatKg(surveyResults.totalEmbodied.result) }}
+                        {{ formatKg(surveyResults.totalEmbodiedEmissionsKg.result) }}
                     </td>
                 </tr>
                 <tr>
@@ -13,7 +13,7 @@
                     <td class="text-right" data-kind="number">
                         {{
                             formatResult(
-                                surveyResults.totalOperational.result,
+                                surveyResults.totalOperationalEmissionsKg.result,
                                 operationalResultOptions,
                             )
                         }}
@@ -25,7 +25,10 @@
                     </td>
                     <td class="text-right" data-kind="number">
                         <strong>{{
-                            formatResult(surveyResults.totalLifespan.result, combinedResultOptions)
+                            formatResult(
+                                surveyResults.totalLifespanEmissionsKg.result,
+                                combinedResultOptions,
+                            )
                         }}</strong>
                     </td>
                 </tr>
@@ -38,16 +41,16 @@
                 {{ $t('resultsChartSplitTitle') }}
             </div>
             <TotalSplitPieChart
-                :embodied="surveyResults.totalEmbodied.result"
-                :operational="surveyResults.totalOperational.result"
-                :total="surveyResults.totalLifespan.result"
+                :embodied="surveyResults.totalEmbodiedEmissionsKg.result"
+                :operational="surveyResults.totalOperationalEmissionsKg.result"
+                :total="surveyResults.totalLifespanEmissionsKg.result"
                 :labels="{
                     embodied: t('resultsRowEmbodied'),
                     operational: t('resultsRowOperational'),
                 }"
             />
             <!-- v2 (lead decision): underlying services excluded in v1 — one-line restore:
-            :underlying="surveyResults.totalUnderlying.result"  and  labels.underlying: t('resultsRowUnderlying') -->
+            :underlying="surveyResults.totalUnderlyingEmissionsKg.result"  and  labels.underlying: t('resultsRowUnderlying') -->
         </div>
     </div>
 </template>
@@ -72,16 +75,17 @@ withDefaults(
 const { t } = useI18n();
 const operationalResultOptions = computed(() => ({
     missingLabel: t('mainNotApplicable'),
-    partialLabel: surveyResults.energyCoverage.isComplete
+    partialLabel: surveyResults.operationalCalculationCoverage.isComplete
         ? ''
         : t('resultsEnergyCoverage', {
-              complete: surveyResults.energyCoverage.completeDatacenters,
-              total: surveyResults.energyCoverage.totalDatacenters,
+              complete: surveyResults.operationalCalculationCoverage.validDatacenterCount,
+              total: surveyResults.operationalCalculationCoverage.totalDatacenterCount,
           }),
 }));
 const combinedResultOptions = computed(() => ({
     missingLabel: t('mainNotApplicable'),
-    partialLabel: surveyResults.totalLifespan.success === 'partial' ? t('resultsPartial') : '',
+    partialLabel:
+        surveyResults.totalLifespanEmissionsKg.success === 'partial' ? t('resultsPartial') : '',
 }));
 </script>
 

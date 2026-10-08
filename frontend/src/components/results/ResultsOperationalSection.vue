@@ -6,7 +6,7 @@
             dense
             hide-pagination
             :pagination="{ rowsPerPage: 0 }"
-            :rows="surveyResults.operationalPerDc.result ?? []"
+            :rows="surveyResults.datacenterOperationalResults.result ?? []"
             :columns="operationalColumns"
             :row-key="(row: DatacenterOperationalResult) => row.datacenter.id"
             class="results-table"
@@ -32,7 +32,7 @@
                     <q-td class="text-right">
                         <strong>{{
                             formatResult(
-                                surveyResults.totalOperational.result,
+                                surveyResults.totalOperationalEmissionsKg.result,
                                 operationalResultOptions,
                             )
                         }}</strong>
@@ -47,8 +47,8 @@
                 {{ $t('resultsChartPieByDatacenter') }}
             </div>
             <DatacentersPieChart
-                :rows="surveyResults.operationalPerDc.result ?? []"
-                :total="surveyResults.totalOperational.result"
+                :rows="surveyResults.datacenterOperationalResults.result ?? []"
+                :total="surveyResults.totalOperationalEmissionsKg.result"
                 metric="lifespan"
             />
         </div>
@@ -57,7 +57,7 @@
 
 <script setup lang="ts">
 import { useSurveyResultsStore } from 'src/stores/surveyResults';
-import type { DatacenterOperationalResult } from 'src/stores/surveyResults';
+import type { DatacenterOperationalResult } from 'src/models/Datacenter/computations';
 
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -77,11 +77,11 @@ withDefaults(
 const { t } = useI18n();
 const operationalResultOptions = computed(() => ({
     missingLabel: t('mainNotApplicable'),
-    partialLabel: surveyResults.energyCoverage.isComplete
+    partialLabel: surveyResults.operationalCalculationCoverage.isComplete
         ? ''
         : t('resultsEnergyCoverage', {
-              complete: surveyResults.energyCoverage.completeDatacenters,
-              total: surveyResults.energyCoverage.totalDatacenters,
+              complete: surveyResults.operationalCalculationCoverage.validDatacenterCount,
+              total: surveyResults.operationalCalculationCoverage.totalDatacenterCount,
           }),
 }));
 

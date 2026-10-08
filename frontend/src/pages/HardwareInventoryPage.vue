@@ -33,9 +33,9 @@
             <div class="text-body1 text-weight-medium">
                 {{
                     $t('inventoryStats', {
-                        rows: surveyResults.rowsCount,
-                        elements: surveyResults.elementsCount.result ?? '—',
-                        total: formatKg(surveyResults.totalEmbodied.result),
+                        rows: surveyResults.hardwareRowCount,
+                        elements: surveyResults.hardwareItemCount.result ?? '—',
+                        total: formatKg(surveyResults.totalEmbodiedEmissionsKg.result),
                     })
                 }}
             </div>
@@ -68,10 +68,10 @@
         <!-- Footer -->
         <div class="row items-center q-mt-md inventory-footer">
             <div class="text-body1">
-                {{ $t('inventoryFooter', { n: surveyResults.secondHandExcludedCount }) }}
+                {{ $t('inventoryFooter', { n: surveyResults.excludedSecondHandRowCount }) }}
             </div>
             <div class="text-body1 text-weight-medium" style="margin-left: auto">
-                {{ formatKg(surveyResults.totalEmbodied.result) }}
+                {{ formatKg(surveyResults.totalEmbodiedEmissionsKg.result) }}
             </div>
         </div>
     </div>

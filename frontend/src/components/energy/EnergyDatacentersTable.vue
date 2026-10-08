@@ -81,13 +81,13 @@ import { formatDatacenterName } from 'src/utils/format';
 import { createSchemaColumn } from 'src/utils/tables';
 import {
     DatacenterEnergySchema,
-    type Datacenter,
+    type DatacenterDraft,
     type DatacenterEnergy,
 } from 'src/models/Datacenter/schema';
 
 const surveyData = useSurveyDataStore();
 
-interface EnergyColumn extends QTableColumn<Datacenter> {
+interface EnergyColumn extends QTableColumn<DatacenterDraft> {
     name: keyof DatacenterEnergy | 'datacenter';
     kind: 'datacenter' | 'text' | 'number';
     zod?: z.ZodType;
@@ -132,7 +132,7 @@ const columns = computed<EnergyColumn[]>(() => [
     column({ field: 'energyComment', kind: 'text' }),
 ]);
 
-function clearEnergy(dc: Datacenter): void {
+function clearEnergy(dc: DatacenterDraft): void {
     $q.dialog({
         title: t('energyClearConfirmTitle'),
         message: t('energyClearConfirmMessage', {

@@ -6,18 +6,20 @@
                     {{ $t('resultsFuNumber') }}
                 </th>
                 <td class="text-right" data-kind="number">
-                    {{ surveyResults.resourcesInService.result ?? '—' }}
+                    {{ surveyResults.selectedResourceFleetCount.result ?? '—' }}
                 </td>
             </tr>
             <tr>
                 <th scope="row" class="results-key text-left" data-kind="text">
                     {{ $t('resultsFuLifespanNote') }}
                 </th>
-                <td class="text-right" data-kind="number">{{ totalPerResourceText }}</td>
+                <td class="text-right" data-kind="number">
+                    {{ lifespanEmissionsPerResourceText }}
+                </td>
             </tr>
             <tr>
                 <th scope="row" class="results-key text-left" data-kind="text">{{ fuSentence }}</th>
-                <td class="text-right" data-kind="number">{{ perFunctionalUnitText }}</td>
+                <td class="text-right" data-kind="number">{{ emissionsPerFunctionalUnitText }}</td>
             </tr>
             <tr class="results-total">
                 <td colspan="2" class="text-left" data-kind="text">
@@ -47,7 +49,8 @@ const surveyResults = useSurveyResultsStore();
 const { t } = useI18n();
 const combinedResultOptions = computed(() => ({
     missingLabel: t('mainNotApplicable'),
-    partialLabel: surveyResults.totalLifespan.success === 'partial' ? t('resultsPartial') : '',
+    partialLabel:
+        surveyResults.totalLifespanEmissionsKg.success === 'partial' ? t('resultsPartial') : '',
 }));
 const fuSentence = computed(() => buildFunctionalUnitSentence(t, surveyData.scope.functionalUnit));
 
@@ -61,15 +64,15 @@ const hostedInDcs = computed(() =>
         .join(', '),
 );
 
-const totalPerResourceText = computed(() =>
-    formatResult(surveyResults.totalPerResource.result, {
+const lifespanEmissionsPerResourceText = computed(() =>
+    formatResult(surveyResults.lifespanEmissionsPerResourceKg.result, {
         ...combinedResultOptions.value,
         formatValue: (value) => `${formatKg(value)} ${t('resultsUnitKg')}`,
     }),
 );
 
-const perFunctionalUnitText = computed(() =>
-    formatResult(surveyResults.perFunctionalUnit.result, {
+const emissionsPerFunctionalUnitText = computed(() =>
+    formatResult(surveyResults.emissionsPerFunctionalUnitKg.result, {
         ...combinedResultOptions.value,
         formatValue: (value) =>
             `${value.toFixed(4)} ${t('resultsUnitKg')} / ${(value * 1000).toFixed(4)} ${t('resultsUnitG')}`,

@@ -64,10 +64,6 @@ export type EnergyMeasurements = Pick<
     'energyConsumption' | 'carbonIntensity' | 'pue'
 >;
 
-export type Datacenter = z.infer<typeof DatacenterDraftSchema>;
+export type DatacenterDraft = z.infer<typeof DatacenterDraftSchema>;
 
-/** Validated PUE presentation, produced by the results store. */
-export type PueInclusion =
-    | { status: 'unavailable' }
-    | { status: 'omitted' }
-    | { status: 'included'; value: number };
+export type Datacenter = z.infer<typeof DatacenterSchema>;

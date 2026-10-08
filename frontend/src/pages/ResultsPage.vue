@@ -29,9 +29,9 @@
         <!-- v2 FEATURE (lead decision: excluded from v1; spec contradiction — Results
              proposes the checkbox+editable table while "What we will not do yet" lists
              underlying services as a future evolution). The store already supports it:
-             includeUnderlyingServices, underlyingServices, totalUnderlying (0 while off).
+             includeUnderlyingServices, underlyingServices, totalUnderlyingEmissionsKg (0 while off).
              To enable: add an editable Quasar-grid table
-             (name / usage description / co2EstimateKg), include totalUnderlying in the
+             (name / usage description / co2EstimateKg), include totalUnderlyingEmissionsKg in the
              Total zone and the split pie. -->
 
         <!-- Total emissions -->

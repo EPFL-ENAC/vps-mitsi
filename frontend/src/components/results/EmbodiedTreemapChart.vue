@@ -39,12 +39,14 @@ function toElementTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSerie
         const categoryColor = palette(categoryIdx);
         return g.rows
             .filter(
-                (r): r is EmbodiedRow & { co2RowTotal: number } =>
-                    !r.excluded && r.co2RowTotal !== null && r.co2RowTotal > 0,
+                (r): r is EmbodiedRow & { rowEmbodiedEmissionsKg: number } =>
+                    !r.excluded &&
+                    r.rowEmbodiedEmissionsKg !== null &&
+                    r.rowEmbodiedEmissionsKg > 0,
             )
             .map((r) => ({
                 name: r.name,
-                value: r.co2RowTotal,
+                value: r.rowEmbodiedEmissionsKg,
                 itemStyle: { color: categoryColor },
             }));
     });
@@ -55,7 +57,7 @@ function toElementTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSerie
 function toCategoryTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeriesOption['data']> {
     return groups
         .flatMap((g, i) => {
-            const total = g.categoryTotal.result;
+            const total = g.totalEmbodiedEmissionsKg.result;
             if (total === null) return [];
             const categoryColor = palette(i);
             return [
@@ -65,12 +67,14 @@ function toCategoryTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeri
                     itemStyle: { color: categoryColor },
                     children: g.rows
                         .filter(
-                            (r): r is EmbodiedRow & { co2RowTotal: number } =>
-                                !r.excluded && r.co2RowTotal !== null && r.co2RowTotal > 0,
+                            (r): r is EmbodiedRow & { rowEmbodiedEmissionsKg: number } =>
+                                !r.excluded &&
+                                r.rowEmbodiedEmissionsKg !== null &&
+                                r.rowEmbodiedEmissionsKg > 0,
                         )
                         .map((r) => ({
                             name: r.name,
-                            value: r.co2RowTotal,
+                            value: r.rowEmbodiedEmissionsKg,
                             itemStyle: { color: categoryColor },
                         })),
                 },
