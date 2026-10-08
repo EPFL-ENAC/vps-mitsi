@@ -139,7 +139,7 @@ const operationalResultOptions = computed(() => ({
 }));
 const combinedResultOptions = computed(() => ({
     missingLabel: t('mainNotApplicable'),
-    partialLabel: surveyData.resultsStatus === 'partial' ? t('resultsPartial') : '',
+    partialLabel: surveyResults.totalLifespan.success === 'partial' ? t('resultsPartial') : '',
 }));
 const $q = useQuasar();
 
@@ -250,7 +250,7 @@ const embodiedText = computed<string>(() =>
 /** Operational emissions in tonnes, or a dash until the scope is valid. */
 const operationalText = computed<string>(() =>
     surveyData.isScopeValid
-        ? formatResult(surveyResults.totalOperational, {
+        ? formatResult(surveyResults.totalOperational.result, {
               ...operationalResultOptions.value,
               formatValue: (value) => `${(value / 1000).toFixed(1)} ${t('mainUnitTonnes')}`,
           })
@@ -260,7 +260,7 @@ const operationalText = computed<string>(() =>
 /** Total over the lifespan in tonnes of CO2-eq, or a dash until the scope is valid. */
 const totalLifespanText = computed<string>(() =>
     surveyData.isScopeValid
-        ? formatResult(surveyResults.totalLifespan, {
+        ? formatResult(surveyResults.totalLifespan.result, {
               ...combinedResultOptions.value,
               formatValue: (value) => `${(value / 1000).toFixed(1)} ${t('mainUnitTonnesCo2e')}`,
           })
@@ -269,7 +269,7 @@ const totalLifespanText = computed<string>(() =>
 
 /** Per-functional-unit emissions in grams of CO2-eq, or a dash when not computable. */
 const perFunctionalUnitText = computed<string>(() =>
-    formatResult(surveyResults.perFunctionalUnit, {
+    formatResult(surveyResults.perFunctionalUnit.result, {
         ...combinedResultOptions.value,
         formatValue: (value) => `${(value * 1000).toFixed(2)} ${t('mainUnitGramsCo2e')}`,
     }),

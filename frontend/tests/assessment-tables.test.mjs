@@ -7,6 +7,8 @@ import EnergyMonitoringPeriodForm from '../src/components/energy/EnergyMonitorin
 import HardwareInventoryTable from '../src/components/inventory/HardwareInventoryTable.vue';
 import ResultsPage from '../src/pages/ResultsPage.vue';
 import ResultsEmbodiedSection from '../src/components/results/ResultsEmbodiedSection.vue';
+import ResultsTotalSection from '../src/components/results/ResultsTotalSection.vue';
+import ResultsFunctionalUnitSection from '../src/components/results/ResultsFunctionalUnitSection.vue';
 import ReportPreviewPage from '../src/pages/ReportPreviewPage.vue';
 import ScopePage from '../src/pages/ScopePage.vue';
 import { ScopeDraftSchema, BoundaryItemDraftSchema } from '../src/models/Scope/schema.ts';
@@ -18,6 +20,7 @@ import {
 import { HardwareItemDraftSchema } from '../src/models/HardwareItem/schema.ts';
 import en from '../src/i18n/en-GB/index.ts';
 import { renderTables } from './helpers/render-tables.mjs';
+import { setupScope, validHardware } from './helpers/survey-fixtures.mjs';
 
 const datacenter = () =>
     DatacenterDraftSchema.parse({
@@ -183,7 +186,11 @@ test('results preserve translated report headers, excluded totals and missing op
     assert.match(result.html, /Translated datacenter/);
     assert.match(result.html, /results-strike[^>]*>24\.00<\/span>/);
     assert.match(result.html, /not counted/);
-    assert.match(result.html, /DC — Test datacenter/);
+    const operationalTable = result.tables.find((table) =>
+        table.columns.some((column) => column.name === 'pue'),
+    );
+    assert.deepEqual(operationalTable.rows, []);
+    assert.deepEqual(result.datacenterCharts[0].rows, []);
     assert.match(result.html, /data-kind="number"[^>]*>—<\/td>/);
     assert.match(result.html, /<th scope="row"/);
     assert.equal(result.results.totalEmbodied.result, 0);
@@ -204,7 +211,12 @@ test('embodied results render the available partial total while retaining unfini
     });
     assert.equal(result.results.totalEmbodied.success, 'partial');
     assert.equal(result.results.totalEmbodied.result, 24);
+    const group = result.results.embodiedByCategory[0];
+    assert.equal(group.categoryTotal.success, 'partial');
+    assert.equal(group.categoryTotal.result, 24);
+    assert.equal(group.categoryTotal.ignoredInputs[0], result.store.hardware[1]);
     assert.equal(result.tables[0].rows.length, 2);
+    assert.match(result.html, /results-category-total[\s\S]*<strong>24\.00<\/strong>/);
     assert.match(result.html, /results-total-table[\s\S]*<strong>24\.00<\/strong>/);
 });
 
@@ -273,15 +285,62 @@ test('results and report share partial totals, PUE labels, functional units and 
         assert.match(result.html, /150\.00 \(Partial — 1 of 2 datacenters\)/);
         assert.match(result.html, /150\.00 \(Partial\)/);
         assert.match(result.html, /included \(1\.5\)/);
-        assert.match(result.html, /not included/);
         assert.match(result.html, /Usage of 2 day of the service with 3 CPU/);
         const table = result.tables.find((table) =>
             table.columns.some((column) => column.name === 'pue'),
         );
-        assert.deepEqual(table.rows.map(table.rowKey), ['ready', 'draft']);
+        assert.deepEqual(table.rows.map(table.rowKey), ['ready']);
+        assert.deepEqual(
+            result.datacenterCharts[0].rows.map((row) => row.datacenter.id),
+            ['ready'],
+        );
+        assert.equal(result.datacenterCharts[0].total, 150);
         if (component === ReportPreviewPage) {
             assert.equal((result.html.match(/class="report-sheet"/g) || []).length, 5);
             assert.match(result.html, /Research service/);
         }
     }
+});
+
+test('combined totals and ratios render partial values and pass numbers to the split chart', async () => {
+    for (const component of [ResultsTotalSection, ResultsFunctionalUnitSection]) {
+        const result = await renderTables(component, {
+            props: component === ResultsTotalSection ? { showChart: true } : {},
+            setupStore(store) {
+                setupScope(store);
+                store.datacenters = [];
+                store.scope.functionalUnit.resourceType = 'CPU';
+                store.scope.functionalUnit.timeUnit = 'year';
+                store.hardware = [
+                    { ...validHardware(), cpuQuantity: 1, impactManufacturingDistributionEol: 10 },
+                    {
+                        ...validHardware(),
+                        id: 'editing',
+                        cpuQuantity: 1,
+                        impactManufacturingDistributionEol: null,
+                    },
+                ];
+            },
+        });
+        assert.equal(result.results.totalLifespan.success, 'partial');
+        if (component === ResultsTotalSection) {
+            assert.match(result.html, /10\.00 \(Partial\)/);
+            assert.equal(result.splitCharts[0].total, 10);
+            assert.equal(result.splitCharts[0].embodied, 10);
+        } else {
+            assert.match(result.html, /5\.00 kg CO₂ \(Partial\)/);
+            assert.match(result.html, /5\.0000 kg CO₂ \/ 5000\.0000 g CO₂ \(Partial\)/);
+        }
+    }
+});
+
+test('unfinished descriptive scope fields do not mark complete emission values as partial', async () => {
+    const result = await renderTables(ResultsTotalSection, {
+        setupStore(store) {
+            store.hardware = [{ ...validHardware(), impactManufacturingDistributionEol: 10 }];
+        },
+    });
+    assert.equal(result.results.totalLifespan.success, 'success');
+    assert.match(result.html, /<strong>10\.00<\/strong>/);
+    assert.doesNotMatch(result.html, /10\.00 \(Partial\)/);
 });

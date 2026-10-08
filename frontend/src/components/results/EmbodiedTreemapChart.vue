@@ -54,24 +54,27 @@ function toElementTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSerie
  *  Categories with no accounted children are omitted. */
 function toCategoryTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeriesOption['data']> {
     return groups
-        .filter((g): g is EmbodiedGroup & { categoryTotal: number } => g.categoryTotal !== null)
-        .map((g, i) => {
+        .flatMap((g, i) => {
+            const total = g.categoryTotal.result;
+            if (total === null) return [];
             const categoryColor = palette(i);
-            return {
-                name: g.category,
-                value: g.categoryTotal,
-                itemStyle: { color: categoryColor },
-                children: g.rows
-                    .filter(
-                        (r): r is EmbodiedRow & { co2RowTotal: number } =>
-                            !r.excluded && r.co2RowTotal !== null && r.co2RowTotal > 0,
-                    )
-                    .map((r) => ({
-                        name: r.name,
-                        value: r.co2RowTotal,
-                        itemStyle: { color: categoryColor },
-                    })),
-            };
+            return [
+                {
+                    name: g.category,
+                    value: total,
+                    itemStyle: { color: categoryColor },
+                    children: g.rows
+                        .filter(
+                            (r): r is EmbodiedRow & { co2RowTotal: number } =>
+                                !r.excluded && r.co2RowTotal !== null && r.co2RowTotal > 0,
+                        )
+                        .map((r) => ({
+                            name: r.name,
+                            value: r.co2RowTotal,
+                            itemStyle: { color: categoryColor },
+                        })),
+                },
+            ];
         })
         .filter((g) => (g.children?.length ?? 0) > 0);
 }

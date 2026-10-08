@@ -66,7 +66,7 @@
 
                 <div class="results-category-total text-right q-py-xs text-caption">
                     {{ $t('resultsCategoryTotal') }}:
-                    <strong>{{ formatKg(g.categoryTotal) }}</strong>
+                    <strong>{{ formatKg(g.categoryTotal.result) }}</strong>
                 </div>
             </component>
         </div>

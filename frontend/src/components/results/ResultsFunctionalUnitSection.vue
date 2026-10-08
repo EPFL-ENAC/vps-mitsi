@@ -6,7 +6,7 @@
                     {{ $t('resultsFuNumber') }}
                 </th>
                 <td class="text-right" data-kind="number">
-                    {{ surveyResults.resourcesInService ?? '—' }}
+                    {{ surveyResults.resourcesInService.result ?? '—' }}
                 </td>
             </tr>
             <tr>
@@ -47,7 +47,7 @@ const surveyResults = useSurveyResultsStore();
 const { t } = useI18n();
 const combinedResultOptions = computed(() => ({
     missingLabel: t('mainNotApplicable'),
-    partialLabel: surveyData.resultsStatus === 'partial' ? t('resultsPartial') : '',
+    partialLabel: surveyResults.totalLifespan.success === 'partial' ? t('resultsPartial') : '',
 }));
 const fuSentence = computed(() => buildFunctionalUnitSentence(t, surveyData.scope.functionalUnit));
 
@@ -62,14 +62,14 @@ const hostedInDcs = computed(() =>
 );
 
 const totalPerResourceText = computed(() =>
-    formatResult(surveyResults.totalPerResource, {
+    formatResult(surveyResults.totalPerResource.result, {
         ...combinedResultOptions.value,
         formatValue: (value) => `${formatKg(value)} ${t('resultsUnitKg')}`,
     }),
 );
 
 const perFunctionalUnitText = computed(() =>
-    formatResult(surveyResults.perFunctionalUnit, {
+    formatResult(surveyResults.perFunctionalUnit.result, {
         ...combinedResultOptions.value,
         formatValue: (value) =>
             `${value.toFixed(4)} ${t('resultsUnitKg')} / ${(value * 1000).toFixed(4)} ${t('resultsUnitG')}`,

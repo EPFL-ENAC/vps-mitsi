@@ -11,7 +11,12 @@
                 <tr>
                     <td data-kind="text">{{ $t('resultsRowOperational') }}</td>
                     <td class="text-right" data-kind="number">
-                        {{ formatResult(surveyResults.totalOperational, operationalResultOptions) }}
+                        {{
+                            formatResult(
+                                surveyResults.totalOperational.result,
+                                operationalResultOptions,
+                            )
+                        }}
                     </td>
                 </tr>
                 <tr class="results-total">
@@ -20,7 +25,7 @@
                     </td>
                     <td class="text-right" data-kind="number">
                         <strong>{{
-                            formatResult(surveyResults.totalLifespan, combinedResultOptions)
+                            formatResult(surveyResults.totalLifespan.result, combinedResultOptions)
                         }}</strong>
                     </td>
                 </tr>
@@ -34,21 +39,20 @@
             </div>
             <TotalSplitPieChart
                 :embodied="surveyResults.totalEmbodied.result"
-                :operational="surveyResults.totalOperational"
-                :total="surveyResults.totalLifespan"
+                :operational="surveyResults.totalOperational.result"
+                :total="surveyResults.totalLifespan.result"
                 :labels="{
                     embodied: t('resultsRowEmbodied'),
                     operational: t('resultsRowOperational'),
                 }"
             />
             <!-- v2 (lead decision): underlying services excluded in v1 — one-line restore:
-            :underlying="surveyResults.totalUnderlying"  and  labels.underlying: t('resultsRowUnderlying') -->
+            :underlying="surveyResults.totalUnderlying.result"  and  labels.underlying: t('resultsRowUnderlying') -->
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useSurveyResultsStore } from 'src/stores/surveyResults';
 
 import { computed } from 'vue';
@@ -56,7 +60,6 @@ import { useI18n } from 'vue-i18n';
 import { formatKg, formatResult } from 'src/utils/format';
 import TotalSplitPieChart from 'src/components/results/TotalSplitPieChart.vue';
 
-const surveyData = useSurveyDataStore();
 const surveyResults = useSurveyResultsStore();
 
 withDefaults(
@@ -78,7 +81,7 @@ const operationalResultOptions = computed(() => ({
 }));
 const combinedResultOptions = computed(() => ({
     missingLabel: t('mainNotApplicable'),
-    partialLabel: surveyData.resultsStatus === 'partial' ? t('resultsPartial') : '',
+    partialLabel: surveyResults.totalLifespan.success === 'partial' ? t('resultsPartial') : '',
 }));
 </script>
 

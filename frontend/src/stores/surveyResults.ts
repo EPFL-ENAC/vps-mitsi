@@ -3,6 +3,7 @@ import { defineStore } from 'pinia';
 import { computed } from 'vue';
 import { z } from 'zod';
 import {
+    DatacenterSchema,
     DatacenterEnergySchema,
     type Datacenter,
     type PueInclusion,
@@ -18,7 +19,10 @@ import {
     HardwareGpuFleetMeasurementsSchema,
     type HardwareCategory,
 } from 'src/models/HardwareItem/schema';
-import { UnderlyingServiceSchema } from 'src/models/UnderlyingService/schema';
+import {
+    UnderlyingServiceSchema,
+    type UnderlyingService,
+} from 'src/models/UnderlyingService/schema';
 import { MonitoringPeriodSchema } from 'src/models/MonitoringPeriod/schema';
 import { ScopeSchema } from 'src/models/Scope/schema';
 import { calculatePeriodEmissions } from 'src/models/Datacenter/utils';
@@ -42,8 +46,8 @@ import {
 export type DatacenterOperationalResult = {
     datacenter: Datacenter;
     pueInclusion: PueInclusion;
-    co2Period: number | null;
-    co2Lifespan: number | null;
+    co2Period: number;
+    co2Lifespan: number;
 };
 
 export type EnergyCoverage = {
@@ -51,6 +55,8 @@ export type EnergyCoverage = {
     totalDatacenters: number;
     isComplete: boolean;
 };
+
+export type EmissionInput = HardwareItem | Datacenter | UnderlyingService;
 
 export interface EmbodiedRow {
     id: string;
@@ -65,39 +71,23 @@ export interface EmbodiedRow {
 export interface EmbodiedGroup {
     category: HardwareCategory;
     rows: EmbodiedRow[];
-    categoryTotal: number | null;
+    categoryTotal: ComputationResult<number, HardwareItem>;
 }
 
-const NumberResultSchema = z.number();
-const PositiveResultSchema = z.number().positive();
-const CompleteValuesSchema = z.array(NumberResultSchema);
-const UnderlyingEstimatesSchema = z.array(UnderlyingServiceSchema.shape.co2EstimateKg);
+const ResourceCountSchema = z.object({ resourcesInService: z.number().positive() });
+const FunctionalUnitContextSchema = z.object({
+    scope: ScopeSchema.pick({ functionalUnit: true, lifespanYears: true }),
+});
+const UnderlyingEstimateSchema = UnderlyingServiceSchema.pick({ co2EstimateKg: true });
 const HardwareQuantitySchema = HardwareItemSchema.pick({ quantity: true });
 const HardwareUnitImpactSchema = HardwareItemSchema.pick({
     impactManufacturingDistributionEol: true,
 });
-
-/** Finite arithmetic results only; overflow is unavailable rather than a measurement. */
-function numberResult(value: unknown): number | null {
-    const parsed = NumberResultSchema.safeParse(value);
-    return parsed.success ? parsed.data : null;
-}
-
-/** Validation belongs to the store; calculation functions receive trusted inputs. */
-function validatedCalculation<S extends z.ZodType>(
-    schema: S,
-    input: unknown,
-    calculate: (input: z.output<S>) => number,
-): number | null {
-    const parsed = schema.safeParse(input);
-    return parsed.success ? numberResult(calculate(parsed.data)) : null;
-}
-
-/** An empty collection sums to zero; an incomplete collection has no total yet. */
-function completeSum(values: readonly (number | null)[]): number | null {
-    const parsed = CompleteValuesSchema.safeParse(values);
-    return parsed.success ? numberResult(sum(parsed.data)) : null;
-}
+const OperationalContextSchema = z.object({
+    monitoringPeriod: MonitoringPeriodSchema,
+    scope: ScopeSchema.pick({ lifespanYears: true }),
+});
+const OperationalDatacenterSchema = DatacenterSchema.pick({ energy: true });
 
 function pueInclusion(value: Datacenter['energy']['pue']): PueInclusion {
     const parsed = DatacenterEnergySchema.shape.pue.safeParse(value);
@@ -177,8 +167,10 @@ export const useSurveyResultsStore = defineStore('surveyResults', () => {
         return row.isSecondHand && !data.includeSecondHandEmbodied;
     }
 
-    const totalEmbodied = computed<ComputationResult<number, HardwareItem>>(() => {
-        const rows = data.hardware.filter((row) => !isSecondHandExcluded(row));
+    function embodiedTotal(
+        hardware: readonly HardwareItem[],
+    ): ComputationResult<number, HardwareItem> {
+        const rows = hardware.filter((row) => !isSecondHandExcluded(row));
         let total = 0;
         // Each error describes the ignored row at the same index.
         const inputErrors: z.ZodError[] = [];
@@ -204,49 +196,64 @@ export const useSurveyResultsStore = defineStore('surveyResults', () => {
         }
 
         return partiallySuccessfulComputation(total, inputErrors, ignoredInputs);
-    });
+    }
+
+    const totalEmbodied = computed(() => embodiedTotal(data.hardware));
 
     const secondHandExcludedCount = computed(
         () => data.hardware.filter(isSecondHandExcluded).length,
     );
 
-    /** Keep unready datacenters visible; preserve existing operational partial aggregation. */
-    const operationalPerDc = computed<DatacenterOperationalResult[]>(() => {
-        const period = MonitoringPeriodSchema.safeParse(data.monitoringPeriod);
-        const lifespan = ScopeSchema.shape.lifespanYears.safeParse(data.scope.lifespanYears);
-        return data.datacenters.map((dc) => {
-            const energy = DatacenterEnergySchema.safeParse(dc.energy);
-            const pue = pueInclusion(dc.energy.pue);
-            if (!energy.success || !period.success) {
-                return { datacenter: dc, pueInclusion: pue, co2Period: null, co2Lifespan: null };
-            }
-            const co2Period = numberResult(calculatePeriodEmissions(energy.data));
-            const monitoringYears = PositiveResultSchema.safeParse(
-                period.data.value / unitsPerYear(period.data.unit),
-            );
-            return {
-                datacenter: dc,
-                pueInclusion: pue,
-                co2Period,
-                co2Lifespan:
-                    co2Period !== null && lifespan.success && monitoringYears.success
-                        ? numberResult(co2Period * (lifespan.data / monitoringYears.data))
-                        : null,
-            };
-        });
-    });
+    const operationalPerDc = computed<ComputationResult<DatacenterOperationalResult[], Datacenter>>(
+        () => {
+            const context = OperationalContextSchema.safeParse({
+                monitoringPeriod: data.monitoringPeriod,
+                scope: data.scope,
+            });
+            if (!context.success) return failedComputation([context.error]);
 
-    const totalOperational = computed(() => {
-        const values = operationalPerDc.value
-            .map((dc) => dc.co2Lifespan)
-            .filter((value): value is number => value !== null);
-        return values.length ? numberResult(sum(values)) : null;
+            const { monitoringPeriod, scope } = context.data;
+            const monitoringYears = monitoringPeriod.value / unitsPerYear(monitoringPeriod.unit);
+            const rows: DatacenterOperationalResult[] = [];
+            // Each error describes the ignored datacenter at the same index.
+            const inputErrors: z.ZodError[] = [];
+            const ignoredInputs: Datacenter[] = [];
+
+            for (const datacenter of data.datacenters) {
+                const parsed = OperationalDatacenterSchema.safeParse(datacenter);
+                if (!parsed.success) {
+                    inputErrors.push(parsed.error);
+                    ignoredInputs.push(datacenter);
+                    continue;
+                }
+
+                const co2Period = calculatePeriodEmissions(parsed.data.energy);
+                rows.push({
+                    datacenter,
+                    pueInclusion: pueInclusion(parsed.data.energy.pue),
+                    co2Period,
+                    co2Lifespan: co2Period * (scope.lifespanYears / monitoringYears),
+                });
+            }
+
+            if (ignoredInputs.length === 0) return successfulComputation(rows);
+
+            if (rows.length === 0) {
+                return { ...failedComputation(inputErrors), ignoredInputs };
+            }
+
+            return partiallySuccessfulComputation(rows, inputErrors, ignoredInputs);
+        },
+    );
+
+    const totalOperational = computed<ComputationResult<number, Datacenter>>(() => {
+        const source = operationalPerDc.value;
+        if (source.success === 'failure') return source;
+        return { ...source, result: sum(source.result.map((row) => row.co2Lifespan)) };
     });
 
     const energyCoverage = computed<EnergyCoverage>(() => {
-        const completeDatacenters = operationalPerDc.value.filter(
-            (dc) => dc.co2Lifespan !== null,
-        ).length;
+        const completeDatacenters = operationalPerDc.value.result?.length ?? 0;
         const totalDatacenters = data.datacenters.length;
         return {
             completeDatacenters,
@@ -255,100 +262,169 @@ export const useSurveyResultsStore = defineStore('surveyResults', () => {
         };
     });
 
-    const totalUnderlying = computed(() =>
-        data.includeUnderlyingServices
-            ? validatedCalculation(
-                  UnderlyingEstimatesSchema,
-                  data.underlyingServices.map((service) => service.co2EstimateKg),
-                  sum,
-              )
-            : 0,
-    );
+    const totalUnderlying = computed<ComputationResult<number, UnderlyingService>>(() => {
+        if (!data.includeUnderlyingServices) return successfulComputation(0);
 
-    const hasEmbodiedContribution = computed(() =>
-        data.hardware.some((row) => rowSubtotal(row).result !== null),
-    );
+        let total = 0;
+        const inputErrors: z.ZodError[] = [];
+        const ignoredInputs: UnderlyingService[] = [];
 
-    const totalLifespan = computed(() => {
-        const embodied = totalEmbodied.value;
-        const underlying = totalUnderlying.value;
-        const operational = totalOperational.value;
-        if (embodied.success !== 'success' || underlying === null) return null;
-        const hasUnderlying = data.includeUnderlyingServices && data.underlyingServices.length > 0;
-        if (!hasEmbodiedContribution.value && operational === null && !hasUnderlying) return null;
-        // Preserve existing operational partial behavior until the next sweep.
-        return numberResult(embodied.result + (operational ?? 0) + underlying);
+        for (const service of data.underlyingServices) {
+            const parsed = UnderlyingEstimateSchema.safeParse(service);
+            if (!parsed.success) {
+                inputErrors.push(parsed.error);
+                ignoredInputs.push(service);
+            } else {
+                total += parsed.data.co2EstimateKg;
+            }
+        }
+
+        if (ignoredInputs.length === 0) return successfulComputation(total);
+        if (ignoredInputs.length === data.underlyingServices.length) {
+            return { ...failedComputation(inputErrors), ignoredInputs };
+        }
+        return partiallySuccessfulComputation(total, inputErrors, ignoredInputs);
     });
 
-    const resourcesInService = computed(() => {
+    const totalLifespan = computed<ComputationResult<number, EmissionInput>>(() => {
+        // Empty or disabled sources do not provide measurements or make the total partial.
+        const contributions: ComputationResult<number, EmissionInput>[] = [];
+        if (data.hardware.some((row) => !isSecondHandExcluded(row))) {
+            contributions.push(totalEmbodied.value);
+        }
+        if (data.datacenters.length > 0) contributions.push(totalOperational.value);
+        if (data.includeUnderlyingServices && data.underlyingServices.length > 0) {
+            contributions.push(totalUnderlying.value);
+        }
+
+        let total = 0;
+        let availableContributions = 0;
+        const inputErrors: z.ZodError[] = [];
+        const ignoredInputs: EmissionInput[] = [];
+        for (const contribution of contributions) {
+            inputErrors.push(...contribution.inputErrors);
+            ignoredInputs.push(...contribution.ignoredInputs);
+            if (contribution.success !== 'failure') {
+                total += contribution.result;
+                availableContributions++;
+            }
+        }
+
+        if (availableContributions === 0) {
+            return { ...failedComputation(inputErrors), ignoredInputs };
+        }
+        if (contributions.every((contribution) => contribution.success === 'success')) {
+            return successfulComputation(total);
+        }
+        return partiallySuccessfulComputation(total, inputErrors, ignoredInputs);
+    });
+
+    const resourcesInService = computed<ComputationResult<number, HardwareItem>>(() => {
         // Preserve workbook selection: CPU fleet for CPU units, GPU fleet otherwise.
         const cpu = data.scope.functionalUnit.resourceType.trim().toLowerCase() === 'cpu';
-        return completeSum(
-            data.hardware
-                .filter((row) => !isSecondHandExcluded(row))
-                .map((row) =>
-                    cpu
-                        ? validatedCalculation(
-                              HardwareCpuFleetMeasurementsSchema,
-                              row,
-                              cpuFleetTotal,
-                          )
-                        : validatedCalculation(
-                              HardwareGpuFleetMeasurementsSchema,
-                              row,
-                              gpuFleetTotal,
-                          ),
-                ),
-        );
+        const rows = data.hardware.filter((row) => !isSecondHandExcluded(row));
+        let total = 0;
+        const inputErrors: z.ZodError[] = [];
+        const ignoredInputs: HardwareItem[] = [];
+
+        for (const row of rows) {
+            if (cpu) {
+                const parsed = HardwareCpuFleetMeasurementsSchema.safeParse(row);
+                if (!parsed.success) {
+                    inputErrors.push(parsed.error);
+                    ignoredInputs.push(row);
+                    continue;
+                }
+                total += cpuFleetTotal(parsed.data);
+            } else {
+                const parsed = HardwareGpuFleetMeasurementsSchema.safeParse(row);
+                if (!parsed.success) {
+                    inputErrors.push(parsed.error);
+                    ignoredInputs.push(row);
+                    continue;
+                }
+                total += gpuFleetTotal(parsed.data);
+            }
+        }
+
+        if (ignoredInputs.length === 0) return successfulComputation(total);
+        if (ignoredInputs.length === rows.length) {
+            return { ...failedComputation(inputErrors), ignoredInputs };
+        }
+        return partiallySuccessfulComputation(total, inputErrors, ignoredInputs);
     });
 
-    const perFunctionalUnit = computed(() => {
-        const functionalUnit = ScopeSchema.shape.functionalUnit.safeParse(
-            data.scope.functionalUnit,
-        );
-        const lifespan = ScopeSchema.shape.lifespanYears.safeParse(data.scope.lifespanYears);
-        const resources = PositiveResultSchema.safeParse(resourcesInService.value);
+    const perFunctionalUnit = computed<ComputationResult<number, EmissionInput>>(() => {
+        const context = FunctionalUnitContextSchema.safeParse({ scope: data.scope });
         const total = totalLifespan.value;
-        if (!functionalUnit.success || !lifespan.success || !resources.success || total === null)
-            return null;
-        const fu = functionalUnit.data;
-        const uses = PositiveResultSchema.safeParse(
-            (lifespan.data * unitsPerYear(fu.timeUnit) * resources.data) /
-                (fu.usageDuration * fu.resourceCount),
-        );
-        return uses.success ? numberResult(total / uses.data) : null;
+        const resourceTotal = resourcesInService.value;
+        const inputErrors = [...total.inputErrors, ...resourceTotal.inputErrors];
+        const ignoredInputs: EmissionInput[] = [
+            ...total.ignoredInputs,
+            ...resourceTotal.ignoredInputs,
+        ];
+        if (!context.success) inputErrors.push(context.error);
+        if (
+            !context.success ||
+            total.success === 'failure' ||
+            resourceTotal.success !== 'success'
+        ) {
+            return { ...failedComputation(inputErrors), ignoredInputs };
+        }
+
+        const resources = ResourceCountSchema.safeParse({
+            resourcesInService: resourceTotal.result,
+        });
+        if (!resources.success) {
+            return { ...failedComputation([...inputErrors, resources.error]), ignoredInputs };
+        }
+        const { functionalUnit: fu, lifespanYears } = context.data.scope;
+        const uses =
+            (lifespanYears * unitsPerYear(fu.timeUnit) * resources.data.resourcesInService) /
+            (fu.usageDuration * fu.resourceCount);
+        return { ...total, result: total.result / uses };
     });
 
     const embodiedByCategory = computed<EmbodiedGroup[]>(() =>
         HardwareCategorySchema.options
             .map((category) => {
-                const rows = data.hardware
-                    .filter((row) => row.category === category)
-                    .map((row) => ({
-                        id: row.id,
-                        name: row.name,
-                        description: row.description ?? '',
-                        number: hardwareQuantity(row).result,
-                        co2PerUnit: hardwareImpact(row).result,
-                        co2RowTotal: rowSubtotal(row).result,
-                        excluded: isSecondHandExcluded(row),
-                    }));
+                const hardware = data.hardware.filter((row) => row.category === category);
+                const rows = hardware.map((row) => ({
+                    id: row.id,
+                    name: row.name,
+                    description: row.description ?? '',
+                    number: hardwareQuantity(row).result,
+                    co2PerUnit: hardwareImpact(row).result,
+                    co2RowTotal: rowSubtotal(row).result,
+                    excluded: isSecondHandExcluded(row),
+                }));
                 return {
                     category,
                     rows,
-                    categoryTotal: completeSum(
-                        rows.filter((row) => !row.excluded).map((row) => row.co2RowTotal),
-                    ),
+                    categoryTotal: embodiedTotal(hardware),
                 };
             })
             .filter((group) => group.rows.length > 0),
     );
 
-    const totalPerResource = computed(() => {
-        const resources = PositiveResultSchema.safeParse(resourcesInService.value);
-        return totalLifespan.value !== null && resources.success
-            ? numberResult(totalLifespan.value / resources.data)
-            : null;
+    const totalPerResource = computed<ComputationResult<number, EmissionInput>>(() => {
+        const total = totalLifespan.value;
+        const resourceTotal = resourcesInService.value;
+        const inputErrors = [...total.inputErrors, ...resourceTotal.inputErrors];
+        const ignoredInputs: EmissionInput[] = [
+            ...total.ignoredInputs,
+            ...resourceTotal.ignoredInputs,
+        ];
+        if (total.success === 'failure' || resourceTotal.success !== 'success') {
+            return { ...failedComputation(inputErrors), ignoredInputs };
+        }
+        const resources = ResourceCountSchema.safeParse({
+            resourcesInService: resourceTotal.result,
+        });
+        if (!resources.success) {
+            return { ...failedComputation([...inputErrors, resources.error]), ignoredInputs };
+        }
+        return { ...total, result: total.result / resources.data.resourcesInService };
     });
 
     return {

@@ -101,6 +101,12 @@ export async function renderTables(
         results: useSurveyResultsStore(pinia),
         dialogs,
         tables: instances.filter((instance) => instance.$options.name === 'QTable'),
+        datacenterCharts: instances.filter(
+            (instance) => instance.$options.__name === 'DatacentersPieChart',
+        ),
+        splitCharts: instances.filter(
+            (instance) => instance.$options.__name === 'TotalSplitPieChart',
+        ),
         inputs: instances.filter((instance) => instance.$options.name === 'QInput'),
         selects: instances.filter((instance) => instance.$options.name === 'QSelect'),
         toggles: instances.filter((instance) => instance.$options.name === 'QToggle'),

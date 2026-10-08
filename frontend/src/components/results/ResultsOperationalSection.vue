@@ -6,7 +6,7 @@
             dense
             hide-pagination
             :pagination="{ rowsPerPage: 0 }"
-            :rows="surveyResults.operationalPerDc"
+            :rows="surveyResults.operationalPerDc.result ?? []"
             :columns="operationalColumns"
             :row-key="(row: DatacenterOperationalResult) => row.datacenter.id"
             class="results-table"
@@ -31,7 +31,10 @@
                     <q-td></q-td>
                     <q-td class="text-right">
                         <strong>{{
-                            formatResult(surveyResults.totalOperational, operationalResultOptions)
+                            formatResult(
+                                surveyResults.totalOperational.result,
+                                operationalResultOptions,
+                            )
                         }}</strong>
                     </q-td>
                 </q-tr>
@@ -44,8 +47,8 @@
                 {{ $t('resultsChartPieByDatacenter') }}
             </div>
             <DatacentersPieChart
-                :rows="surveyResults.operationalPerDc"
-                :total="surveyResults.totalOperational"
+                :rows="surveyResults.operationalPerDc.result ?? []"
+                :total="surveyResults.totalOperational.result"
                 metric="lifespan"
             />
         </div>
