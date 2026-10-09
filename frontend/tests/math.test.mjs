@@ -1,89 +1,98 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { sum } from '../src/utils/math.ts';
+import { rowSubtotal } from '../src/models/HardwareItem/computations.ts';
+import { HardwareItemDraftSchema } from '../src/models/HardwareItem/schema.ts';
 import {
-    calculateFunctionalUnitEmissions,
-    calculateOperationalEmissions,
-    countResources,
-    rowSubtotal,
-    sum,
-} from '../src/utils/math.ts';
+    calculatePeriodEmissions,
+    calculateDatacenterOperational,
+    pueInclusion,
+} from '../src/models/Datacenter/computations.ts';
+import { DatacenterDraftSchema, DatacenterSchema } from '../src/models/Datacenter/schema.ts';
+import { TimeUnitSchema } from '../src/models/TimeUnit/schema.ts';
+import { timeUnitsPerYear } from '../src/models/TimeUnit/utils.ts';
 
-test('operational emissions include the monitoring period and lifespan', () => {
-    const input = {
-        energy: { energyConsumption: 3000, carbonIntensity: 400, pue: 1.5 },
-        monitoringPeriod: { unit: 'day', value: 30 },
-        lifespanYears: 2,
-    };
-    const result = calculateOperationalEmissions(input);
-    assert.equal(result.co2Period, 1800);
-    assert.ok(Math.abs(result.co2Lifespan - 43800) < 1e-8);
-    for (const monitoringPeriod of [
-        { unit: 'day', value: 365 },
-        { unit: 'week', value: 52 },
-        { unit: 'month', value: 12 },
-        { unit: 'year', value: 1 },
-    ]) {
-        assert.deepEqual(calculateOperationalEmissions({ ...input, monitoringPeriod }), {
-            co2Period: 1800,
-            co2Lifespan: 3600,
-        });
-    }
-    assert.deepEqual(calculateOperationalEmissions({ ...input, lifespanYears: null }), {
-        co2Period: 1800,
-        co2Lifespan: null,
+test('measured energy emissions depend only on local energy fields', () => {
+    const energy = Object.freeze({
+        energyConsumption: 3000,
+        carbonIntensity: 400,
+        pue: 1.5,
     });
-});
-
-test('PUE preserves omitted and zero conventions; measured zero consumption stays zero', () => {
-    const input = {
-        monitoringPeriod: { unit: 'year', value: 1 },
-        lifespanYears: 2,
-    };
-    for (const pue of [null, 0, 1]) {
-        assert.deepEqual(
-            calculateOperationalEmissions({
-                ...input,
-                energy: { energyConsumption: 100, carbonIntensity: 500, pue },
-            }),
-            { co2Period: 50, co2Lifespan: 100 },
-        );
+    assert.equal(calculatePeriodEmissions(energy), 1800);
+    for (const pue of [null, 1]) {
+        assert.equal(calculatePeriodEmissions(Object.freeze({ ...energy, pue })), 1200);
     }
-    assert.deepEqual(
-        calculateOperationalEmissions({
-            ...input,
-            energy: { energyConsumption: 0, carbonIntensity: 500, pue: 2 },
-        }),
-        { co2Period: 0, co2Lifespan: 0 },
-    );
+    assert.equal(calculatePeriodEmissions({ ...energy, pue: 0 }), 0);
+    assert.equal(calculatePeriodEmissions({ ...energy, carbonIntensity: 0 }), 0);
+    assert.equal(calculatePeriodEmissions({ ...energy, energyConsumption: 0 }), 0);
 });
 
-test('inventory math uses per-item impacts and counts resources across the fleet', () => {
+test('one trusted datacenter produces operational emissions without changing its inputs', () => {
+    const draft = DatacenterDraftSchema.parse({
+        id: 'dc',
+        generalInfo: { name: 'Datacenter', abbreviation: 'DC' },
+        energy: { energyConsumption: 100, carbonIntensity: 500, pue: 1.5 },
+    });
+    const validated = DatacenterSchema.parse(draft);
+    const datacenter = Object.freeze({
+        ...validated,
+        generalInfo: Object.freeze(validated.generalInfo),
+        energy: Object.freeze(validated.energy),
+    });
+    const before = JSON.stringify(datacenter);
+    const result = calculateDatacenterOperational(datacenter, 0.5, 2);
+    assert.deepEqual(result, {
+        datacenter,
+        pueInclusion: { status: 'included', value: 1.5 },
+        co2Period: 75,
+        co2Lifespan: 300,
+    });
+    assert.equal(result.datacenter, datacenter);
+    assert.equal(JSON.stringify(datacenter), before);
+});
+
+test('trusted datacenter calculations preserve optional PUE and valid zero measurements', () => {
+    for (const [patch, pue, period] of [
+        [{}, { status: 'omitted' }, 50],
+        [{ pue: 0 }, { status: 'included', value: 0 }, 0],
+        [{ carbonIntensity: 0 }, { status: 'omitted' }, 0],
+        [{ energyConsumption: 0 }, { status: 'omitted' }, 0],
+    ]) {
+        const draft = DatacenterDraftSchema.parse({
+            id: 'dc',
+            generalInfo: { name: 'Datacenter', abbreviation: 'DC' },
+            energy: { carbonIntensity: 500, energyConsumption: 100, ...patch },
+        });
+        const datacenter = DatacenterSchema.parse(draft);
+        const result = calculateDatacenterOperational(datacenter, 1, 3);
+        assert.deepEqual(result.pueInclusion, pue);
+        assert.equal(result.co2Period, period);
+        assert.equal(result.co2Lifespan, period * 3);
+    }
+    assert.deepEqual(pueInclusion(null), { status: 'omitted' });
+    assert.deepEqual(pueInclusion(0), { status: 'included', value: 0 });
+});
+
+test('inventory subtotals use per-item impacts without changing the input', () => {
     const hardware = [
-        { quantity: 44, cpuQuantity: 4, gpuQuantity: 8, impactManufacturingDistributionEol: 100 },
-        { quantity: 2, cpuQuantity: 2, gpuQuantity: 1, impactManufacturingDistributionEol: 200 },
+        Object.freeze(
+            HardwareItemDraftSchema.parse({
+                quantity: 44,
+                impactManufacturingDistributionEol: 100,
+            }),
+        ),
+        Object.freeze(
+            HardwareItemDraftSchema.parse({ quantity: 2, impactManufacturingDistributionEol: 200 }),
+        ),
     ];
     assert.equal(sum(hardware.map(rowSubtotal)), 4800);
-    assert.equal(countResources(hardware, ' CPU '), 180);
-    assert.equal(countResources(hardware, 'GPU'), 354);
-    assert.equal(countResources([], 'CPU'), 0);
+    assert.equal(rowSubtotal({ ...hardware[0], quantity: 0 }), 0);
+    assert.equal(sum([]), 0);
 });
 
-test('functional-unit emissions account for lifespan, fleet, duration and allocated resources', () => {
-    const input = {
-        totalEmissions: 770880,
-        lifespanYears: 2,
-        resourcesInService: 176,
-        functionalUnit: { timeUnit: 'hour', usageDuration: 2, resourceCount: 2 },
-    };
-    assert.equal(calculateFunctionalUnitEmissions(input), 1);
-    assert.equal(calculateFunctionalUnitEmissions({ ...input, totalEmissions: 0 }), 0);
-    assert.equal(
-        calculateFunctionalUnitEmissions({
-            ...input,
-            functionalUnit: { timeUnit: 'minute', usageDuration: 120, resourceCount: 2 },
-        }),
-        1,
+test('time conversion preserves workbook factors for every supported unit', () => {
+    assert.deepEqual(
+        Object.fromEntries(TimeUnitSchema.options.map((unit) => [unit, timeUnitsPerYear(unit)])),
+        { second: 31536000, minute: 525600, hour: 8760, day: 365, week: 52, month: 12, year: 1 },
     );
-    assert.equal(calculateFunctionalUnitEmissions({ ...input, resourcesInService: 352 }), 0.5);
-    assert.equal(calculateFunctionalUnitEmissions({ ...input, lifespanYears: 4 }), 0.5);
 });

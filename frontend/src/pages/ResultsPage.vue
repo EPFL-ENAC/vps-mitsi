@@ -3,7 +3,11 @@
         <div class="text-h4 q-mb-sm">{{ $t('resultsPageTitle') }}</div>
 
         <!-- Scope gating hint -->
-        <q-banner v-if="!mitsi.isScopeValid" inline-actions class="bg-warning text-white q-mb-md">
+        <q-banner
+            v-if="!surveyData.isScopeValid"
+            inline-actions
+            class="bg-warning text-white q-mb-md"
+        >
             {{ $t('resultsNoScopeHint') }}
         </q-banner>
 
@@ -25,9 +29,9 @@
         <!-- v2 FEATURE (lead decision: excluded from v1; spec contradiction — Results
              proposes the checkbox+editable table while "What we will not do yet" lists
              underlying services as a future evolution). The store already supports it:
-             includeUnderlyingServices, underlyingServices, totalUnderlying (0 while off).
+             includeUnderlyingServices, underlyingServices, totalUnderlyingEmissionsKg (0 while off).
              To enable: add an editable Quasar-grid table
-             (name / usage description / co2EstimateKg), include totalUnderlying in the
+             (name / usage description / co2EstimateKg), include totalUnderlyingEmissionsKg in the
              Total zone and the split pie. -->
 
         <!-- Total emissions -->
@@ -40,20 +44,14 @@
             <ResultsFunctionalUnitSection />
         </AssessmentSection>
 
-        <q-btn
-            unelevated
-            color="primary"
-            class="full-width q-mt-md"
-            :label="$t('resultsGenerateReport')"
-            :disable="!mitsi.isScopeValid"
-            @click="router.push('/report')"
-        />
+        <GenerateReportButton class="full-width q-mt-md" />
     </div>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
-import { useMitsiStore } from 'src/stores/mitsi';
+import { useSurveyDataStore } from 'src/stores/surveyData';
+
+import GenerateReportButton from 'src/components/GenerateReportButton.vue';
 import AssessmentSection from 'src/components/AssessmentSection.vue';
 import ResultsSummarySection from 'src/components/results/ResultsSummarySection.vue';
 import ResultsEmbodiedSection from 'src/components/results/ResultsEmbodiedSection.vue';
@@ -61,6 +59,5 @@ import ResultsOperationalSection from 'src/components/results/ResultsOperational
 import ResultsTotalSection from 'src/components/results/ResultsTotalSection.vue';
 import ResultsFunctionalUnitSection from 'src/components/results/ResultsFunctionalUnitSection.vue';
 
-const router = useRouter();
-const mitsi = useMitsiStore();
+const surveyData = useSurveyDataStore();
 </script>

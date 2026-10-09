@@ -1,6 +1,6 @@
 <template>
     <q-table
-        :rows="mitsi.hardware"
+        :rows="surveyData.hardware"
         :columns="visibleColumns"
         :table-colspan="visibleColumns.length + 1"
         row-key="id"
@@ -46,7 +46,9 @@
         <template v-slot:body="props">
             <q-tr
                 :props="props"
-                :class="{ 'inventory-row--excluded': mitsi.isSecondHandExcluded(props.row) }"
+                :class="{
+                    'inventory-row--excluded': surveyResults.isSecondHandExcluded(props.row),
+                }"
             >
                 <q-td
                     v-for="col in props.cols"
@@ -56,10 +58,21 @@
                 >
                     <!-- Second-hand not-counted impact -->
                     <template v-if="col.name === 'impactManufacturingDistributionEol'">
-                        <template v-if="mitsi.isSecondHandExcluded(props.row)">
-                            <span class="inventory-strike">{{
-                                formatKg(props.row.impactManufacturingDistributionEol)
-                            }}</span>
+                        <template v-if="surveyResults.isSecondHandExcluded(props.row)">
+                            <ComputationResultDisplay
+                                :computation="
+                                    surveyResults.hardwareUnitEmbodiedEmissionsKg(props.row)
+                                "
+                            >
+                                <template #default="{ result }">
+                                    <span class="inventory-strike">{{ formatKg(result) }}</span>
+                                </template>
+                                <template #failure>
+                                    <span class="inventory-strike">{{
+                                        t('mainNotApplicable')
+                                    }}</span>
+                                </template>
+                            </ComputationResultDisplay>
                             <span class="inventory-dim">({{ $t('inventoryNotCounted') }})</span>
                         </template>
                         <ZodValidatedNumberInput
@@ -74,10 +87,14 @@
 
                     <!-- Subtotal -->
                     <template v-else-if="col.name === 'subtotal'">
-                        <template v-if="mitsi.isSecondHandExcluded(props.row)">
+                        <template v-if="surveyResults.isSecondHandExcluded(props.row)">
                             <span class="inventory-dim">{{ $t('inventoryNotCounted') }}</span>
                         </template>
-                        <span v-else>{{ formatKg(col.derived ? col.derived(props.row) : 0) }}</span>
+                        <ComputationResultDisplay
+                            v-else-if="col.derived"
+                            :computation="col.derived(props.row)"
+                            :format-value="formatKg"
+                        />
                     </template>
 
                     <!-- Datacenter select (store-driven options, value = id) -->
@@ -137,7 +154,11 @@
 
                     <!-- Other derived cells (memoryTotalGb / storageTotal) -->
                     <template v-else-if="col.kind === 'derived'">
-                        <span>{{ formatKg(col.derived ? col.derived(props.row) : 0) }}</span>
+                        <ComputationResultDisplay
+                            v-if="col.derived"
+                            :computation="col.derived(props.row)"
+                            :format-value="formatKg"
+                        />
                     </template>
                 </q-td>
                 <q-td auto-width class="text-right">
@@ -155,6 +176,9 @@
 </template>
 
 <script setup lang="ts">
+import { useSurveyDataStore } from 'src/stores/surveyData';
+import { useSurveyResultsStore } from 'src/stores/surveyResults';
+
 import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInput.vue';
 import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
 import { computed } from 'vue';
@@ -162,19 +186,24 @@ import { useI18n } from 'vue-i18n';
 import { useQuasar, type QTableColumn } from 'quasar';
 import type { z } from 'zod';
 
-import type { HardwareItem, VisibilityMode } from 'src/models/mitsi';
-import { formatDatacenterName, formatKg, normalizeKey } from 'src/utils/format';
-import { rowSubtotal } from 'src/utils/math';
-import { createSchemaColumn } from 'src/utils/tables';
 import {
+    type HardwareItem,
     HardwareCategorySchema,
     HardwareItemSchema,
     StorageCasingSchema,
     StorageTechnologySchema,
     StorageTypeSchema,
-} from 'src/models/schema';
-import { useMitsiStore } from 'src/stores/mitsi';
+} from 'src/models/HardwareItem/schema';
+import type { VisibilityMode } from 'src/types/ui';
+import { formatDatacenterName, formatKg, normalizeKey } from 'src/utils/format';
+import { createSchemaColumn } from 'src/utils/tables';
+
 import { useValidation } from 'src/composables/useValidation';
+import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
+import type { ComputationResult } from 'src/utils/computation';
+
+const surveyData = useSurveyDataStore();
+const surveyResults = useSurveyResultsStore();
 
 const GROUPS = ['general', 'impact', 'cpu', 'memory', 'storage', 'gpu', 'network'] as const;
 type GroupKey = (typeof GROUPS)[number];
@@ -189,7 +218,7 @@ interface InventoryColumn extends QTableColumn<HardwareItem, keyof HardwareItem 
     zod: z.ZodType | undefined;
     options?: { label: string; value: string }[];
     /** Quasar sets col.value in body slots, so use a separate name for the calculation. */
-    derived?: (row: HardwareItem) => number;
+    derived?: (row: HardwareItem) => ComputationResult<number>;
     sort?: (a: unknown, b: unknown, rowA: HardwareItem, rowB: HardwareItem) => number;
 }
 
@@ -199,7 +228,6 @@ const props = defineProps<{
 
 const { t } = useI18n();
 const $q = useQuasar();
-const mitsi = useMitsiStore();
 const { toValidationRule } = useValidation();
 
 /** Columns are cumulative: advanced ⊇ normal ⊇ simple. */
@@ -207,7 +235,7 @@ const MODE_RANK: Record<VisibilityMode, number> = { simple: 0, normal: 1, advanc
 
 // Options for the datacenter select come from the store's datacenters.
 const datacenterOptions = computed<{ label: string; value: string }[]>(() =>
-    mitsi.datacenters.map((dc) => ({
+    surveyData.datacenters.map((dc) => ({
         label: formatDatacenterName(dc),
         value: dc.id,
     })),
@@ -289,8 +317,13 @@ const columns = computed<InventoryColumn[]>(() => [
         calc: true,
         sortable: true,
         zod: undefined,
-        derived: rowSubtotal,
-        sort: (_a, _b, rowA, rowB) => rowSubtotal(rowA) - rowSubtotal(rowB),
+        derived: surveyResults.hardwareRowEmbodiedEmissionsKg,
+        sort: (_a, _b, rowA, rowB) => {
+            const a = surveyResults.hardwareRowEmbodiedEmissionsKg(rowA).result;
+            const b = surveyResults.hardwareRowEmbodiedEmissionsKg(rowB).result;
+            if (a === null) return b === null ? 0 : 1;
+            return b === null ? -1 : a - b;
+        },
     },
 
     column({ field: 'cpuName', group: 'cpu', mode: 'normal', kind: 'text' }),
@@ -307,7 +340,7 @@ const columns = computed<InventoryColumn[]>(() => [
         mode: 'advanced',
         kind: 'derived',
         zod: undefined,
-        derived: (row) => (row.memoryQuantity || 0) * (row.memorySizeGb || 0),
+        derived: surveyResults.hardwareMemoryPerUnitGb,
     }),
 
     column({
@@ -325,7 +358,7 @@ const columns = computed<InventoryColumn[]>(() => [
         mode: 'advanced',
         kind: 'derived',
         zod: undefined,
-        derived: (row) => (row.storageQuantity || 0) * (row.storageSize || 0),
+        derived: surveyResults.hardwareStorageCapacityPerUnit,
     }),
     column({
         field: 'storageTechnology',
@@ -377,8 +410,8 @@ function confirmDeleteRow(row: HardwareItem): void {
         cancel: true,
         persistent: true,
     }).onOk(() => {
-        const i = mitsi.hardware.findIndex((h) => h.id === row.id);
-        if (i >= 0) mitsi.hardware.splice(i, 1);
+        const i = surveyData.hardware.findIndex((h) => h.id === row.id);
+        if (i >= 0) surveyData.hardware.splice(i, 1);
     });
 }
 </script>

@@ -5,7 +5,11 @@
             {{ $t('scopePageHint') }}
         </p>
 
-        <q-banner v-if="!mitsi.isScopeValid" inline-actions class="bg-warning text-white q-mb-md">
+        <q-banner
+            v-if="!surveyData.isScopeValid"
+            inline-actions
+            class="bg-warning text-white q-mb-md"
+        >
             {{ $t('scopeBlockFirstHint') }}
         </q-banner>
 
@@ -14,7 +18,7 @@
             <div class="row q-col-gutter-md">
                 <div class="col-12 col-md-4">
                     <ZodValidatedTextInput
-                        v-model="mitsi.scope.organizationName"
+                        v-model="surveyData.scope.organizationName"
                         :label="$t('scopeOrganizationLabel')"
                         :schema="ScopeSchema.shape.organizationName"
                         dense
@@ -23,7 +27,7 @@
                 </div>
                 <div class="col-12 col-md-4">
                     <ZodValidatedTextInput
-                        v-model="mitsi.scope.assessors"
+                        v-model="surveyData.scope.assessors"
                         :label="$t('scopeAssessorsLabel')"
                         :schema="ScopeSchema.shape.assessors"
                         dense
@@ -32,7 +36,7 @@
                 </div>
                 <div class="col-12 col-md-4">
                     <ZodValidatedTextInput
-                        v-model="mitsi.scope.serviceName"
+                        v-model="surveyData.scope.serviceName"
                         :label="$t('scopeServiceNameLabel')"
                         :schema="ScopeSchema.shape.serviceName"
                         dense
@@ -48,13 +52,13 @@
         <AssessmentSection
             :title="$t('scopeFunctionTitle')"
             purpose="calculation"
-            :default-opened="!mitsi.isScopeValid"
+            :default-opened="!surveyData.isScopeValid"
         >
             <div class="row q-col-gutter-md">
                 <div class="col-12">
                     <ZodValidatedTextInput
                         type="textarea"
-                        v-model="mitsi.scope.function"
+                        v-model="surveyData.scope.function"
                         :label="$t('scopeFunctionLabel')"
                         :schema="ScopeSchema.shape.function"
                         outlined
@@ -71,7 +75,7 @@
                         <span>{{ $t('scopeFuBefore') }}</span>
                         <ZodValidatedNumberInput
                             class="scope-fu-input"
-                            v-model="mitsi.scope.functionalUnit.usageDuration"
+                            v-model="surveyData.scope.functionalUnit.usageDuration"
                             :schema="FunctionalUnitSchema.shape.usageDuration"
                             dense
                             outlined
@@ -81,7 +85,7 @@
                         </ZodValidatedNumberInput>
                         <q-select
                             class="scope-fu-select"
-                            v-model="mitsi.scope.functionalUnit.timeUnit"
+                            v-model="surveyData.scope.functionalUnit.timeUnit"
                             :options="timeUnitOptions"
                             :rules="[toValidationRule(FunctionalUnitSchema.shape.timeUnit)]"
                             emit-value
@@ -97,7 +101,7 @@
                         <span>{{ $t('scopeFuMiddle') }}</span>
                         <ZodValidatedNumberInput
                             class="scope-fu-input"
-                            v-model="mitsi.scope.functionalUnit.resourceCount"
+                            v-model="surveyData.scope.functionalUnit.resourceCount"
                             :schema="FunctionalUnitSchema.shape.resourceCount"
                             dense
                             outlined
@@ -107,7 +111,7 @@
                         </ZodValidatedNumberInput>
                         <q-select
                             class="scope-fu-select scope-fu-select--grow"
-                            v-model="mitsi.scope.functionalUnit.resourceType"
+                            v-model="surveyData.scope.functionalUnit.resourceType"
                             :options="resourceTypeOptions"
                             emit-value
                             map-options
@@ -152,7 +156,7 @@
         <AssessmentSection :title="$t('scopeLifespanTitle')" purpose="calculation" default-opened>
             <ZodValidatedNumberInput
                 class="scope-lifespan"
-                v-model="mitsi.scope.lifespanYears"
+                v-model="surveyData.scope.lifespanYears"
                 :label="$t('scopeLifespanLabel')"
                 :suffix="$t('scopeLifespanYears')"
                 :schema="ScopeSchema.shape.lifespanYears"
@@ -164,6 +168,8 @@
 </template>
 
 <script setup lang="ts">
+import { useSurveyDataStore } from 'src/stores/surveyData';
+
 import AssessmentSection from 'src/components/AssessmentSection.vue';
 import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInput.vue';
 import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
@@ -172,13 +178,15 @@ import { useI18n } from 'vue-i18n';
 
 import ScopeDatacentersTable from 'src/components/scope/ScopeDatacentersTable.vue';
 import ScopeBoundaryItemsTable from 'src/components/scope/ScopeBoundaryItemsTable.vue';
-import { useMitsiStore } from 'src/stores/mitsi';
 import { useValidation } from 'src/composables/useValidation';
-import { FunctionalUnitSchema, ScopeSchema, TimeUnitSchema } from 'src/models/schema';
+import { FunctionalUnitSchema } from 'src/models/FunctionalUnit/schema';
+import { ScopeSchema } from 'src/models/Scope/schema';
+import { TimeUnitSchema } from 'src/models/TimeUnit/schema';
 import { normalizeKey } from 'src/utils/format';
 
+const surveyData = useSurveyDataStore();
+
 const { t } = useI18n();
-const mitsi = useMitsiStore();
 const { toValidationRule } = useValidation();
 
 const timeUnitOptions = computed(() =>

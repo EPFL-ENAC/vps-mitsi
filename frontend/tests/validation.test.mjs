@@ -5,13 +5,11 @@ import { renderToString } from 'vue/server-renderer';
 import { createI18n } from 'vue-i18n';
 import { useValidation } from '../src/composables/useValidation.ts';
 import { renderInventoryTable } from './helpers/render-tables.mjs';
-import {
-    DatacenterEnergySchema,
-    HardwareItemSchema,
-    FunctionalUnitSchema,
-    MonitoringPeriodSchema,
-    ScopeSchema,
-} from '../src/models/schema.ts';
+import { DatacenterEnergySchema } from '../src/models/Datacenter/schema.ts';
+import { HardwareItemSchema } from '../src/models/HardwareItem/schema.ts';
+import { FunctionalUnitSchema } from '../src/models/FunctionalUnit/schema.ts';
+import { MonitoringPeriodSchema } from '../src/models/MonitoringPeriod/schema.ts';
+import { ScopeSchema } from '../src/models/Scope/schema.ts';
 import en from '../src/i18n/en-GB/index.ts';
 
 async function validationRules() {
@@ -37,11 +35,12 @@ test('forms translate canonical errors and preserve optional empty values', asyn
     assert.equal(toValidationRule(ScopeSchema.shape.assessors)(''), 'This field is required.');
     assert.equal(toValidationRule(ScopeSchema.shape.lifespanYears)(0), 'Must be at least 1.');
     assert.equal(toValidationRule(MonitoringPeriodSchema.shape.value)(0.5), 'Must be at least 1.');
+    assert.equal(toValidationRule(DatacenterEnergySchema.shape.carbonIntensity)(0), true);
+    const pue = toValidationRule(DatacenterEnergySchema.shape.pue);
     assert.equal(
-        toValidationRule(DatacenterEnergySchema.shape.carbonIntensity)(0),
+        toValidationRule(FunctionalUnitSchema.shape.usageDuration)(0),
         'Must be greater than 0.',
     );
-    const pue = toValidationRule(DatacenterEnergySchema.shape.pue);
     for (const empty of ['', null, undefined]) assert.equal(pue(empty), true);
     assert.equal(pue(-1), 'Must be at least 0.');
     assert.equal(toValidationRule()(undefined), true);
@@ -83,4 +82,19 @@ test('numeric field rules reject negative values before submission', async () =>
         assert.equal(typeof toValidationRule(schema)(-1), 'string');
     }
     assert.equal(toValidationRule(DatacenterEnergySchema.shape.energyConsumption)(0), true);
+});
+
+test('shared issue formatting translates supported codes and preserves custom or unsupported messages', async () => {
+    const { z } = await import('zod');
+    const { formatIssue, toValidationRule } = await validationRules();
+    const translated = z.number().min(1).safeParse(0).error.issues[0];
+    assert.equal(formatIssue(translated), 'Must be at least 1.');
+    for (const schema of [
+        z.string().refine(() => false, 'Use the measurement source.'),
+        z.string().email(),
+    ]) {
+        const issue = schema.safeParse('bad').error.issues[0];
+        assert.equal(formatIssue(issue), issue.message);
+        assert.equal(toValidationRule(schema)('bad'), issue.message);
+    }
 });

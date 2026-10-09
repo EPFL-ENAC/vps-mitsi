@@ -2,20 +2,47 @@
     <q-markup-table dense flat bordered class="results-table">
         <tbody>
             <tr>
-                <td class="results-key text-left" data-kind="text">
+                <th scope="row" class="results-key text-left" data-kind="text">
                     {{ $t('resultsFuNumber') }}
+                </th>
+                <td class="text-right" data-kind="number">
+                    <ComputationResultDisplay
+                        :disable-tooltip="disableTooltip"
+                        :computation="surveyResults.selectedResourceFleetCount"
+                    >
+                        <template #ignored-input="{ input }">{{ input.name || input.id }}</template>
+                    </ComputationResultDisplay>
                 </td>
-                <td class="text-right" data-kind="number">{{ mitsi.resourcesInService }}</td>
             </tr>
             <tr>
-                <td class="results-key text-left" data-kind="text">
+                <th scope="row" class="results-key text-left" data-kind="text">
                     {{ $t('resultsFuLifespanNote') }}
+                </th>
+                <td class="text-right" data-kind="number">
+                    <ComputationResultDisplay
+                        :disable-tooltip="disableTooltip"
+                        :computation="surveyResults.lifespanEmissionsPerResourceKg"
+                        :partial-flag-label="`(${t('resultsPartial')})`"
+                    >
+                        <template #default="{ result }">{{
+                            formatResult(result, lifespanResultOptions)
+                        }}</template>
+                    </ComputationResultDisplay>
                 </td>
-                <td class="text-right" data-kind="number">{{ totalPerResourceText }}</td>
             </tr>
             <tr>
-                <td class="results-key text-left" data-kind="text">{{ fuSentence }}</td>
-                <td class="text-right" data-kind="number">{{ perFunctionalUnitText }}</td>
+                <th scope="row" class="results-key text-left" data-kind="text">{{ fuSentence }}</th>
+                <td class="text-right" data-kind="number">
+                    <ComputationResultDisplay
+                        :disable-tooltip="disableTooltip"
+                        :computation="surveyResults.emissionsPerFunctionalUnitKg"
+                        :partial-flag-label="`(${t('resultsPartial')})`"
+                    >
+                        <template #default="{ result }">{{
+                            formatResult(result, functionalUnitResultOptions)
+                        }}</template>
+                    </ComputationResultDisplay>
+                </td>
             </tr>
             <tr class="results-total">
                 <td colspan="2" class="text-left" data-kind="text">
@@ -27,18 +54,29 @@
 </template>
 
 <script setup lang="ts">
+import { useSurveyDataStore } from 'src/stores/surveyData';
+import { useSurveyResultsStore } from 'src/stores/surveyResults';
+
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useMitsiStore } from 'src/stores/mitsi';
-import { useResultFormatting } from 'src/composables/useResultFormatting';
-import { formatDatacenterName, formatKg } from 'src/utils/format';
+import {
+    buildFunctionalUnitSentence,
+    formatDatacenterName,
+    formatKg,
+    formatResult,
+} from 'src/utils/format';
+import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
+
+const surveyData = useSurveyDataStore();
+const surveyResults = useSurveyResultsStore();
+
+defineProps<{ disableTooltip?: boolean }>();
 
 const { t } = useI18n();
-const mitsi = useMitsiStore();
-const { formatCombinedResult, fuSentence } = useResultFormatting();
+const fuSentence = computed(() => buildFunctionalUnitSentence(t, surveyData.scope.functionalUnit));
 
 const hostedInDcs = computed(() =>
-    mitsi.datacenters
+    surveyData.datacenters
         .map((dc) => {
             const location = dc.energy.location.trim();
             const label = formatDatacenterName(dc);
@@ -47,20 +85,16 @@ const hostedInDcs = computed(() =>
         .join(', '),
 );
 
-const totalPerResourceText = computed(() =>
-    formatCombinedResult(
-        mitsi.totalPerResource,
-        (value) => `${formatKg(value)} ${t('resultsUnitKg')}`,
-    ),
-);
+const lifespanResultOptions = computed(() => ({
+    missingLabel: t('mainNotApplicable'),
+    formatValue: (value: number) => `${formatKg(value)} ${t('resultsUnitKg')}`,
+}));
 
-const perFunctionalUnitText = computed(() =>
-    formatCombinedResult(
-        mitsi.perFunctionalUnit,
-        (value) =>
-            `${value.toFixed(4)} ${t('resultsUnitKg')} / ${(value * 1000).toFixed(4)} ${t('resultsUnitG')}`,
-    ),
-);
+const functionalUnitResultOptions = computed(() => ({
+    missingLabel: t('mainNotApplicable'),
+    formatValue: (value: number) =>
+        `${value.toFixed(4)} ${t('resultsUnitKg')} / ${(value * 1000).toFixed(4)} ${t('resultsUnitG')}`,
+}));
 </script>
 
 <style scoped lang="scss">

@@ -5,13 +5,32 @@
                 <tr>
                     <td data-kind="text">{{ $t('resultsRowEmbodied') }}</td>
                     <td class="text-right" data-kind="number">
-                        {{ formatKg(mitsi.totalEmbodied) }}
+                        <ComputationResultDisplay
+                            :disable-tooltip="disableTooltip"
+                            :computation="surveyResults.totalEmbodiedEmissionsKg"
+                            :format-value="formatKg"
+                        >
+                            <template #ignored-input="{ input }">{{
+                                input.name || input.id
+                            }}</template>
+                        </ComputationResultDisplay>
                     </td>
                 </tr>
                 <tr>
                     <td data-kind="text">{{ $t('resultsRowOperational') }}</td>
                     <td class="text-right" data-kind="number">
-                        {{ formatOperationalResult(mitsi.totalOperational) }}
+                        <ComputationResultDisplay
+                            :disable-tooltip="disableTooltip"
+                            :computation="surveyResults.totalOperationalEmissionsKg"
+                            :missing-label="t('mainNotApplicable')"
+                        >
+                            <template #default="{ result }">
+                                {{ formatResult(result, operationalResultOptions) }}
+                            </template>
+                            <template #ignored-input="{ input }">{{
+                                formatDatacenterName(input)
+                            }}</template>
+                        </ComputationResultDisplay>
                     </td>
                 </tr>
                 <tr class="results-total">
@@ -19,7 +38,18 @@
                         <strong>{{ $t('resultsRowTotal') }}</strong>
                     </td>
                     <td class="text-right" data-kind="number">
-                        <strong>{{ formatCombinedResult(mitsi.totalLifespan) }}</strong>
+                        <strong>
+                            <ComputationResultDisplay
+                                :disable-tooltip="disableTooltip"
+                                :computation="surveyResults.totalLifespanEmissionsKg"
+                                :partial-flag-label="`(${t('resultsPartial')})`"
+                                :missing-label="t('mainNotApplicable')"
+                            >
+                                <template #default="{ result }">
+                                    {{ formatKg(result) }}
+                                </template>
+                            </ComputationResultDisplay>
+                        </strong>
                     </td>
                 </tr>
             </tbody>
@@ -27,41 +57,48 @@
 
         <!-- Split pie chart -->
         <div v-if="showChart" class="q-mt-md">
-            <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
-                {{ $t('resultsChartSplitTitle') }}
-            </div>
             <TotalSplitPieChart
-                :embodied="mitsi.totalEmbodied"
-                :operational="mitsi.totalOperational"
-                :total="mitsi.totalLifespan"
+                :disable-tooltip="disableTooltip"
+                :embodied="surveyResults.totalEmbodiedEmissionsKg"
+                :operational="surveyResults.totalOperationalEmissionsKg"
                 :labels="{
                     embodied: t('resultsRowEmbodied'),
                     operational: t('resultsRowOperational'),
                 }"
             />
-            <!-- v2 (lead decision): underlying services excluded in v1 — one-line restore:
-            :underlying="mitsi.totalUnderlying"  and  labels.underlying: t('resultsRowUnderlying') -->
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
+import { useSurveyResultsStore } from 'src/stores/surveyResults';
+
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useMitsiStore } from 'src/stores/mitsi';
-import { useResultFormatting } from 'src/composables/useResultFormatting';
-import { formatKg } from 'src/utils/format';
+import { formatDatacenterName, formatKg, formatResult } from 'src/utils/format';
 import TotalSplitPieChart from 'src/components/results/TotalSplitPieChart.vue';
+import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
+
+const surveyResults = useSurveyResultsStore();
 
 withDefaults(
     defineProps<{
         showChart?: boolean;
+        disableTooltip?: boolean;
     }>(),
     { showChart: false },
 );
 
 const { t } = useI18n();
-const mitsi = useMitsiStore();
-const { formatOperationalResult, formatCombinedResult } = useResultFormatting();
+const operationalResultOptions = computed(() => ({
+    missingLabel: t('mainNotApplicable'),
+    partialLabel: surveyResults.operationalCalculationCoverage.isComplete
+        ? ''
+        : t('resultsEnergyCoverage', {
+              complete: surveyResults.operationalCalculationCoverage.validDatacenterCount,
+              total: surveyResults.operationalCalculationCoverage.totalDatacenterCount,
+          }),
+}));
 </script>
 
 <style scoped lang="scss">

@@ -1,11 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { renderInventoryTable } from './helpers/render-tables.mjs';
-import {
-    DatacenterDraftSchema,
-    HardwareItemDraftSchema,
-    HardwareItemSchema,
-} from '../src/models/schema.ts';
+import { DatacenterDraftSchema } from '../src/models/Datacenter/schema.ts';
+import { HardwareItemDraftSchema, HardwareItemSchema } from '../src/models/HardwareItem/schema.ts';
 import en from '../src/i18n/en-GB/index.ts';
 
 test('advanced inventory covers all display fields exactly once', async () => {
@@ -119,11 +116,60 @@ test('derived columns calculate from inputs and subtotal sorts by calculated val
     });
     const { columns, html } = await renderInventoryTable({ hardware: [row] });
     const byName = Object.fromEntries(columns.map((column) => [column.name, column]));
-    assert.equal(byName.memoryTotalGb.derived(row), 64);
-    assert.equal(byName.storageTotal.derived(row), 2000);
-    assert.equal(byName.subtotal.derived(row), 36);
+    assert.equal(byName.memoryTotalGb.derived(row).result, 64);
+    assert.equal(byName.storageTotal.derived(row).result, 2000);
+    assert.equal(byName.subtotal.derived(row).result, 36);
     assert.equal(byName.subtotal.sort(undefined, undefined, row, { ...row, quantity: 1 }), 24);
-    assert.equal(byName.memoryTotalGb.derived({ ...row, memoryQuantity: null }), 0);
-    assert.equal(byName.storageTotal.derived({ ...row, storageSize: undefined }), 0);
-    assert.match(html, /<tbody>/);
+    const missingSubtotal = { ...row, quantity: null };
+    assert.equal(byName.subtotal.sort(undefined, undefined, missingSubtotal, row), 1);
+    assert.equal(byName.subtotal.sort(undefined, undefined, row, missingSubtotal), -1);
+    assert.equal(byName.subtotal.sort(undefined, undefined, missingSubtotal, missingSubtotal), 0);
+    const missingMemory = byName.memoryTotalGb.derived({ ...row, memoryQuantity: null });
+    const missingStorage = byName.storageTotal.derived({ ...row, storageSize: undefined });
+    assert.equal(missingMemory.result, null);
+    assert.equal(missingStorage.result, null);
+    assert.deepEqual(
+        missingMemory.inputErrors[0].issues.map((issue) => issue.path),
+        [['memoryQuantity']],
+    );
+    assert.deepEqual(
+        missingStorage.inputErrors[0].issues.map((issue) => issue.path),
+        [['storageSize']],
+    );
+    const derivedCells = [...html.matchAll(/<td[^>]*data-kind="derived"[^>]*>(.*?)<\/td>/gs)];
+    assert.deepEqual(
+        derivedCells.map((cell) =>
+            cell[1]
+                .replace(/<button\b[\s\S]*?<\/button>/g, '')
+                .replace(/<!--[\s\S]*?-->|<[^>]+>/g, '')
+                .trim(),
+        ),
+        ['36.00', '64.00', '2,000.00'],
+    );
+});
+
+test('derived cells and excluded impact display missing values without formatting result objects', async () => {
+    const row = HardwareItemDraftSchema.parse({ id: 'unfinished' });
+    const { html } = await renderInventoryTable({ hardware: [row] });
+    const derivedCells = [...html.matchAll(/<td[^>]*data-kind="derived"[^>]*>(.*?)<\/td>/gs)];
+    assert.deepEqual(
+        derivedCells.map((cell) =>
+            cell[1]
+                .replace(/<button\b[\s\S]*?<\/button>/g, '')
+                .replace(/<!--[\s\S]*?-->|<[^>]+>/g, '')
+                .trim(),
+        ),
+        ['—', '—', '—'],
+    );
+
+    const excluded = await renderInventoryTable({
+        hardware: [{ ...row, isSecondHand: true, impactManufacturingDistributionEol: 12 }],
+    });
+    assert.match(excluded.html, /inventory-strike[^>]*>12\.00<\/span>/);
+    assert.ok(excluded.html.includes(en.inventoryNotCounted));
+
+    const excludedMissing = await renderInventoryTable({
+        hardware: [{ ...row, isSecondHand: true }],
+    });
+    assert.match(excludedMissing.html, /inventory-strike[^>]*>—<\/span>/);
 });

@@ -2,29 +2,29 @@
     <q-markup-table dense flat bordered class="results-table">
         <tbody>
             <tr>
-                <td class="results-key text-left" data-kind="text">
+                <th scope="row" class="results-key text-left" data-kind="text">
                     {{ $t('resultsSummaryServiceName') }}
-                </td>
-                <td data-kind="text">{{ mitsi.scope.serviceName || '—' }}</td>
+                </th>
+                <td data-kind="text">{{ surveyData.scope.serviceName || '—' }}</td>
             </tr>
             <tr>
-                <td class="results-key text-left" data-kind="text">
+                <th scope="row" class="results-key text-left" data-kind="text">
                     {{ $t('resultsSummaryFunction') }}
-                </td>
-                <td data-kind="text">{{ mitsi.scope.function || '—' }}</td>
+                </th>
+                <td data-kind="text">{{ surveyData.scope.function || '—' }}</td>
             </tr>
             <tr>
-                <td class="results-key text-left" data-kind="text">
+                <th scope="row" class="results-key text-left" data-kind="text">
                     {{ $t('resultsSummaryFunctionalUnit') }}
-                </td>
+                </th>
                 <td data-kind="text">{{ fuSentence }}</td>
             </tr>
             <tr>
-                <td class="results-key text-left" data-kind="text">
+                <th scope="row" class="results-key text-left" data-kind="text">
                     {{ $t('resultsSummaryLifespan') }}
-                </td>
+                </th>
                 <td data-kind="text">
-                    {{ $t('resultsLifespanYears', { n: mitsi.scope.lifespanYears }) }}
+                    {{ $t('resultsLifespanYears', { n: surveyData.scope.lifespanYears ?? '—' }) }}
                 </td>
             </tr>
         </tbody>
@@ -32,11 +32,16 @@
 </template>
 
 <script setup lang="ts">
-import { useMitsiStore } from 'src/stores/mitsi';
-import { useResultFormatting } from 'src/composables/useResultFormatting';
+import { useSurveyDataStore } from 'src/stores/surveyData';
 
-const mitsi = useMitsiStore();
-const { fuSentence } = useResultFormatting();
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { buildFunctionalUnitSentence } from 'src/utils/format';
+
+const surveyData = useSurveyDataStore();
+
+const { t } = useI18n();
+const fuSentence = computed(() => buildFunctionalUnitSentence(t, surveyData.scope.functionalUnit));
 </script>
 
 <style scoped lang="scss">
