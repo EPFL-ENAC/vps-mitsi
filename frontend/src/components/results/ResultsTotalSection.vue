@@ -5,18 +5,23 @@
                 <tr>
                     <td data-kind="text">{{ $t('resultsRowEmbodied') }}</td>
                     <td class="text-right" data-kind="number">
-                        {{ formatKg(surveyResults.totalEmbodiedEmissionsKg.result) }}
+                        <ComputationResultDisplay
+                            :computation="surveyResults.totalEmbodiedEmissionsKg"
+                            :format-value="formatKg"
+                        />
                     </td>
                 </tr>
                 <tr>
                     <td data-kind="text">{{ $t('resultsRowOperational') }}</td>
                     <td class="text-right" data-kind="number">
-                        {{
-                            formatResult(
-                                surveyResults.totalOperationalEmissionsKg.result,
-                                operationalResultOptions,
-                            )
-                        }}
+                        <ComputationResultDisplay
+                            :computation="surveyResults.totalOperationalEmissionsKg"
+                            :missing-label="t('mainNotApplicable')"
+                        >
+                            <template #default="{ result }">
+                                {{ formatResult(result, operationalResultOptions) }}
+                            </template>
+                        </ComputationResultDisplay>
                     </td>
                 </tr>
                 <tr class="results-total">
@@ -24,12 +29,16 @@
                         <strong>{{ $t('resultsRowTotal') }}</strong>
                     </td>
                     <td class="text-right" data-kind="number">
-                        <strong>{{
-                            formatResult(
-                                surveyResults.totalLifespanEmissionsKg.result,
-                                combinedResultOptions,
-                            )
-                        }}</strong>
+                        <strong>
+                            <ComputationResultDisplay
+                                :computation="surveyResults.totalLifespanEmissionsKg"
+                                :missing-label="t('mainNotApplicable')"
+                            >
+                                <template #default="{ result }">
+                                    {{ formatResult(result, combinedResultOptions) }}
+                                </template>
+                            </ComputationResultDisplay>
+                        </strong>
                     </td>
                 </tr>
             </tbody>
@@ -62,6 +71,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { formatKg, formatResult } from 'src/utils/format';
 import TotalSplitPieChart from 'src/components/results/TotalSplitPieChart.vue';
+import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
 
 const surveyResults = useSurveyResultsStore();
 

@@ -341,6 +341,9 @@ test('unfinished descriptive scope fields do not mark complete emission values a
         },
     });
     assert.equal(result.results.totalLifespanEmissionsKg.success, 'success');
-    assert.match(result.html, /<strong>10\.00<\/strong>/);
+    assert.match(
+        result.html,
+        /<strong><span class="computation-result-display">[^<]*(?:<!--[\s\S]*?-->)?10\.00/,
+    );
     assert.doesNotMatch(result.html, /10\.00 \(Partial\)/);
 });

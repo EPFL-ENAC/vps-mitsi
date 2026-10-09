@@ -10,7 +10,8 @@ import type * as z from 'zod';
 import { useI18n } from 'vue-i18n';
 
 export function useValidation() {
-    const { t } = useI18n();
+    const i18n = useI18n();
+    const { t } = i18n;
 
     /** Map a Zod issue to a validation.* key (origin = number/string/int/…). */
     function toKey(issue: z.core.$ZodIssue): string {
@@ -26,6 +27,12 @@ export function useValidation() {
         return `validation.${issue.code}`;
     }
 
+    /** Share translated validation messages, preserving unsupported/custom Zod messages. */
+    function formatIssue(issue: z.core.$ZodIssue): string {
+        const key = toKey(issue);
+        return i18n.te(key) ? t(key, { ...issue }) : issue.message;
+    }
+
     /**
      * Wrap a strict field schema as a Quasar ValidationRule. An absent schema
      * (no rule attached) always passes. Quasar text/number inputs hand an empty
@@ -38,11 +45,9 @@ export function useValidation() {
         return (value: unknown) => {
             const v = value === '' || value === null ? undefined : value;
             const r = schema.safeParse(v);
-            return r.success
-                ? true
-                : r.error.issues.map((is) => t(toKey(is), { ...is })).join(', ');
+            return r.success ? true : r.error.issues.map(formatIssue).join(', ');
         };
     }
 
-    return { toValidationRule };
+    return { toValidationRule, formatIssue };
 }

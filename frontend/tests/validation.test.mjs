@@ -83,3 +83,18 @@ test('numeric field rules reject negative values before submission', async () =>
     }
     assert.equal(toValidationRule(DatacenterEnergySchema.shape.energyConsumption)(0), true);
 });
+
+test('shared issue formatting translates supported codes and preserves custom or unsupported messages', async () => {
+    const { z } = await import('zod');
+    const { formatIssue, toValidationRule } = await validationRules();
+    const translated = z.number().min(1).safeParse(0).error.issues[0];
+    assert.equal(formatIssue(translated), 'Must be at least 1.');
+    for (const schema of [
+        z.string().refine(() => false, 'Use the measurement source.'),
+        z.string().email(),
+    ]) {
+        const issue = schema.safeParse('bad').error.issues[0];
+        assert.equal(formatIssue(issue), issue.message);
+        assert.equal(toValidationRule(schema)('bad'), issue.message);
+    }
+});

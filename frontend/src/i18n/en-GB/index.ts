@@ -286,6 +286,20 @@ export default {
     resultsTotalEmbodied: 'Total embodied',
     resultsPartial: 'Partial',
     resultsEnergyCoverage: 'Partial — {complete} of {total} datacenters',
+    computationResult: {
+        partial: {
+            label: 'Partial result: show computation issues',
+            explanation: 'This result is incomplete. Some inputs could not be included.',
+        },
+        failure: {
+            label: 'Unavailable result: show computation issues',
+            explanation: 'This result could not be computed. Review the inputs below.',
+        },
+        validationError: 'Input validation {index}',
+        input: 'Input',
+        ignoredInputs: 'No inputs ignored. | 1 input ignored. | {count} inputs ignored.',
+        noDetails: 'No further details available.',
+    },
     resultsOperationalTitle: 'Operational emissions',
     resultsOperationalColumns: {
         datacenterId: 'Datacenter',
