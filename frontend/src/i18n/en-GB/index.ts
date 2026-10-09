@@ -285,6 +285,7 @@ export default {
     resultsCategoryTotal: 'Category total',
     resultsTotalEmbodied: 'Total embodied',
     resultsPartial: 'Partial',
+    resultsUnavailable: 'Unavailable',
     resultsEnergyCoverage: 'Partial — {complete} of {total} datacenters',
     computationResult: {
         partial: {

@@ -86,18 +86,72 @@
                 <span v-if="exportedText" class="text-caption text-grey-6 q-ml-sm">
                     · {{ exportedText }}
                 </span>
-                <span class="text-caption text-grey-8">
-                    {{ $t('mainFooterEmbodied', { value: embodiedText }) }}
-                </span>
-                <span class="text-caption text-grey-8">
-                    {{ $t('mainFooterOperational', { value: operationalText }) }}
-                </span>
-                <span class="text-caption text-grey-8">
-                    {{ $t('mainFooterTotal', { value: totalLifespanEmissionsText }) }}
-                </span>
-                <span class="text-caption text-grey-7">
-                    {{ $t('mainFooterPerFu', { value: emissionsPerFunctionalUnitText }) }}
-                </span>
+                <i18n-t
+                    keypath="mainFooterEmbodied"
+                    tag="span"
+                    scope="global"
+                    class="text-caption text-grey-8"
+                >
+                    <template #value>
+                        <ComputationResultDisplay
+                            v-if="surveyData.isScopeValid"
+                            :computation="surveyResults.totalEmbodiedEmissionsKg"
+                            :format-value="formatEmbodiedTonnes"
+                        >
+                            <template #ignored-input="{ input }">{{
+                                input.name || input.id
+                            }}</template>
+                        </ComputationResultDisplay>
+                        <template v-else>{{ t('mainNotApplicable') }}</template>
+                    </template>
+                </i18n-t>
+                <i18n-t
+                    keypath="mainFooterOperational"
+                    tag="span"
+                    scope="global"
+                    class="text-caption text-grey-8"
+                >
+                    <template #value>
+                        <ComputationResultDisplay
+                            v-if="surveyData.isScopeValid"
+                            :computation="surveyResults.totalOperationalEmissionsKg"
+                            :format-value="formatOperationalTonnes"
+                        >
+                            <template #ignored-input="{ input }">{{
+                                formatDatacenterName(input)
+                            }}</template>
+                        </ComputationResultDisplay>
+                        <template v-else>{{ t('mainNotApplicable') }}</template>
+                    </template>
+                </i18n-t>
+                <i18n-t
+                    keypath="mainFooterTotal"
+                    tag="span"
+                    scope="global"
+                    class="text-caption text-grey-8"
+                >
+                    <template #value>
+                        <ComputationResultDisplay
+                            v-if="surveyData.isScopeValid"
+                            :computation="surveyResults.totalLifespanEmissionsKg"
+                            :format-value="formatTotalTonnes"
+                        />
+                        <template v-else>{{ t('mainNotApplicable') }}</template>
+                    </template>
+                </i18n-t>
+                <i18n-t
+                    keypath="mainFooterPerFu"
+                    tag="span"
+                    scope="global"
+                    class="text-caption text-grey-7"
+                >
+                    <template #value>
+                        <ComputationResultDisplay
+                            :computation="surveyResults.emissionsPerFunctionalUnitKg"
+                            :format-value="formatFunctionalUnitGrams"
+                        />
+                    </template>
+                </i18n-t>
             </q-toolbar>
         </q-footer>
     </q-layout>
@@ -112,7 +166,8 @@ import { useQuasar, date, exportFile } from 'quasar';
 import { useI18n } from 'vue-i18n';
 
 import type { BlockKey, BlockStatus } from 'src/types/ui';
-import { formatResult } from 'src/utils/format';
+import { formatDatacenterName, formatResult } from 'src/utils/format';
+import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
 
 const surveyData = useSurveyDataStore();
 const surveyResults = useSurveyResultsStore();
@@ -241,40 +296,34 @@ function completionLabelKey(status: BlockStatus): string {
     }
 }
 
-/** Embodied emissions in tonnes, or a dash until the scope is valid. */
-const embodiedText = computed<string>(() =>
-    surveyData.isScopeValid && surveyResults.totalEmbodiedEmissionsKg.result !== null
-        ? `${(surveyResults.totalEmbodiedEmissionsKg.result / 1000).toFixed(1)} ${t('mainUnitTonnes')}`
-        : t('mainNotApplicable'),
-);
+function formatEmbodiedTonnes(value: number): string {
+    return `${(value / 1000).toFixed(1)} ${t('mainUnitTonnes')}`;
+}
 
-/** Operational emissions in tonnes, or a dash until the scope is valid. */
-const operationalText = computed<string>(() =>
-    surveyData.isScopeValid
-        ? formatResult(surveyResults.totalOperationalEmissionsKg.result, {
-              ...operationalResultOptions.value,
-              formatValue: (value) => `${(value / 1000).toFixed(1)} ${t('mainUnitTonnes')}`,
-          })
-        : t('mainNotApplicable'),
-);
+function formatOperationalTonnes(value: number): string {
+    return formatResult(value, {
+        ...operationalResultOptions.value,
+        formatValue: formatEmbodiedTonnes,
+    });
+}
 
-/** Total over the lifespan in tonnes of CO2-eq, or a dash until the scope is valid. */
-const totalLifespanEmissionsText = computed<string>(() =>
-    surveyData.isScopeValid
-        ? formatResult(surveyResults.totalLifespanEmissionsKg.result, {
-              ...combinedResultOptions.value,
-              formatValue: (value) => `${(value / 1000).toFixed(1)} ${t('mainUnitTonnesCo2e')}`,
-          })
-        : t('mainNotApplicable'),
-);
-
-/** Per-functional-unit emissions in grams of CO2-eq, or a dash when not computable. */
-const emissionsPerFunctionalUnitText = computed<string>(() =>
-    formatResult(surveyResults.emissionsPerFunctionalUnitKg.result, {
+function formatTotalTonnes(value: number): string {
+    return formatResult(value, {
         ...combinedResultOptions.value,
-        formatValue: (value) => `${(value * 1000).toFixed(2)} ${t('mainUnitGramsCo2e')}`,
-    }),
-);
+        formatValue: (result) => `${(result / 1000).toFixed(1)} ${t('mainUnitTonnesCo2e')}`,
+    });
+}
+
+function formatFunctionalUnitGrams(value: number): string {
+    return formatResult(value, {
+        missingLabel: t('mainNotApplicable'),
+        partialLabel:
+            surveyResults.emissionsPerFunctionalUnitKg.success === 'partial'
+                ? t('resultsPartial')
+                : '',
+        formatValue: (result) => `${(result * 1000).toFixed(2)} ${t('mainUnitGramsCo2e')}`,
+    });
+}
 
 const savedText = computed<string>(() =>
     surveyData.savedAt === null

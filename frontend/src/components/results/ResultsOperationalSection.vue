@@ -30,12 +30,18 @@
                     </q-td>
                     <q-td></q-td>
                     <q-td class="text-right">
-                        <strong>{{
-                            formatResult(
-                                surveyResults.totalOperationalEmissionsKg.result,
-                                operationalResultOptions,
-                            )
-                        }}</strong>
+                        <strong>
+                            <ComputationResultDisplay
+                                :computation="surveyResults.totalOperationalEmissionsKg"
+                            >
+                                <template #default="{ result }">
+                                    {{ formatResult(result, operationalResultOptions) }}
+                                </template>
+                                <template #ignored-input="{ input }">{{
+                                    formatDatacenterName(input)
+                                }}</template>
+                            </ComputationResultDisplay>
+                        </strong>
                     </q-td>
                 </q-tr>
             </template>
@@ -45,6 +51,20 @@
         <div v-if="showChart" class="q-mt-md">
             <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
                 {{ $t('resultsChartPieByDatacenter') }}
+                <ComputationResultDisplay
+                    class="q-ml-sm"
+                    :computation="surveyResults.totalOperationalEmissionsKg"
+                    :missing-label="t('resultsUnavailable')"
+                >
+                    <template #default="{ computation }">
+                        <span>{{
+                            computation.success === 'partial' ? t('resultsPartial') : ''
+                        }}</span>
+                    </template>
+                    <template #ignored-input="{ input }">{{
+                        formatDatacenterName(input)
+                    }}</template>
+                </ComputationResultDisplay>
             </div>
             <DatacentersPieChart
                 :rows="surveyResults.datacenterOperationalResults.result ?? []"
@@ -64,6 +84,7 @@ import { useI18n } from 'vue-i18n';
 import type { QTableColumn } from 'quasar';
 import { formatDatacenterName, formatKg, formatPueInclusion, formatResult } from 'src/utils/format';
 import DatacentersPieChart from 'src/components/results/DatacentersPieChart.vue';
+import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
 
 const surveyResults = useSurveyResultsStore();
 

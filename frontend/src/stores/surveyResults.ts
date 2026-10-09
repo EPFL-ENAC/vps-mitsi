@@ -49,9 +49,9 @@ export interface EmbodiedRow {
     id: string;
     name: string;
     description: string;
-    quantity: number | null;
-    unitEmbodiedEmissionsKg: number | null;
-    rowEmbodiedEmissionsKg: number | null;
+    quantity: ComputationResult<number>;
+    unitEmbodiedEmissionsKg: ComputationResult<number>;
+    rowEmbodiedEmissionsKg: ComputationResult<number>;
     excluded: boolean;
 }
 
@@ -269,9 +269,9 @@ export const useSurveyResultsStore = defineStore('surveyResults', () => {
             id: row.id,
             name: row.name,
             description: row.description ?? '',
-            quantity: hardwareQuantity(row).result,
-            unitEmbodiedEmissionsKg: hardwareUnitEmbodiedEmissionsKg(row).result,
-            rowEmbodiedEmissionsKg: hardwareRowEmbodiedEmissionsKg(row).result,
+            quantity: hardwareQuantity(row),
+            unitEmbodiedEmissionsKg: hardwareUnitEmbodiedEmissionsKg(row),
+            rowEmbodiedEmissionsKg: hardwareRowEmbodiedEmissionsKg(row),
             excluded: isSecondHandExcluded(row),
         }));
 

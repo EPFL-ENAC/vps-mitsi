@@ -30,15 +30,27 @@
 
         <!-- Stats line -->
         <div class="row items-center q-col-gutter-md q-mb-sm">
-            <div class="text-body1 text-weight-medium">
-                {{
-                    $t('inventoryStats', {
-                        rows: surveyResults.hardwareRowCount,
-                        elements: surveyResults.hardwareItemCount.result ?? '—',
-                        total: formatKg(surveyResults.totalEmbodiedEmissionsKg.result),
-                    })
-                }}
-            </div>
+            <i18n-t
+                keypath="inventoryStats"
+                tag="div"
+                class="text-body1 text-weight-medium"
+                scope="global"
+            >
+                <template #rows>{{ surveyResults.hardwareRowCount }}</template>
+                <template #elements>
+                    <ComputationResultDisplay :computation="surveyResults.hardwareItemCount">
+                        <template #ignored-input="{ input }">{{ input.name || input.id }}</template>
+                    </ComputationResultDisplay>
+                </template>
+                <template #total>
+                    <ComputationResultDisplay
+                        :computation="surveyResults.totalEmbodiedEmissionsKg"
+                        :format-value="formatKg"
+                    >
+                        <template #ignored-input="{ input }">{{ input.name || input.id }}</template>
+                    </ComputationResultDisplay>
+                </template>
+            </i18n-t>
             <div class="text-grey-7 inventory-mode-hint">
                 {{ $t('inventoryModeHint') }}
             </div>
@@ -71,7 +83,12 @@
                 {{ $t('inventoryFooter', { n: surveyResults.excludedSecondHandRowCount }) }}
             </div>
             <div class="text-body1 text-weight-medium" style="margin-left: auto">
-                {{ formatKg(surveyResults.totalEmbodiedEmissionsKg.result) }}
+                <ComputationResultDisplay
+                    :computation="surveyResults.totalEmbodiedEmissionsKg"
+                    :format-value="formatKg"
+                >
+                    <template #ignored-input="{ input }">{{ input.name || input.id }}</template>
+                </ComputationResultDisplay>
             </div>
         </div>
     </div>
@@ -85,6 +102,7 @@ import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import HardwareInventoryTable from 'src/components/inventory/HardwareInventoryTable.vue';
+import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
 import type { VisibilityMode } from 'src/types/ui';
 import { formatKg } from 'src/utils/format';
 

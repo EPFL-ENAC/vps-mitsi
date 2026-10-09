@@ -658,7 +658,7 @@ test('quantities validate only their required field and retain Zod diagnostics',
             ignoredInputs: [],
         },
     );
-    assert.equal(results.embodiedEmissionsByCategory[0].rows[0].quantity, 2);
+    assert.equal(results.embodiedEmissionsByCategory[0].rows[0].quantity.result, 2);
 
     for (const invalid of [null, undefined, '', NaN, Infinity, -Infinity, 0, -1, 0.5, '12']) {
         row.quantity = invalid;
@@ -672,7 +672,13 @@ test('quantities validate only their required field and retain Zod diagnostics',
         assert.ok(
             count.inputErrors[0].issues.every((issue) => issue.path.join('.') === 'quantity'),
         );
-        assert.equal(results.embodiedEmissionsByCategory[0].rows[0].quantity, null);
+        const quantity = results.embodiedEmissionsByCategory[0].rows[0].quantity;
+        assert.equal(quantity.result, null);
+        assert.equal(quantity.success, 'failure');
+        assert.deepEqual(
+            quantity.inputErrors[0].issues.map((issue) => issue.path),
+            [['quantity']],
+        );
         assert.ok(Object.is(row.quantity, invalid));
     }
 });
@@ -871,7 +877,13 @@ test('category totals distinguish partial, failed, and excluded groups using ori
         },
     );
     assert.equal(groups.server.rows.length, 2);
-    assert.equal(groups.server.rows[1].rowEmbodiedEmissionsKg, null);
+    const unfinishedImpact = groups.server.rows[1].rowEmbodiedEmissionsKg;
+    assert.equal(unfinishedImpact.result, null);
+    assert.equal(unfinishedImpact.success, 'failure');
+    assert.deepEqual(
+        unfinishedImpact.inputErrors[0].issues.map((issue) => issue.path),
+        [['impactManufacturingDistributionEol']],
+    );
     assert.equal(results.totalEmbodiedEmissionsKg.result, 20);
 
     data.hardware[1].impactManufacturingDistributionEol = 20;

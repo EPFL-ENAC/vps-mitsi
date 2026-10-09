@@ -49,12 +49,39 @@
                                 :props="props"
                                 :data-kind="col.kind"
                             >
-                                <template v-if="col.name === 'co2RowTotal'">
-                                    <span :class="{ 'results-strike': props.row.excluded }">
-                                        {{ col.value }}
-                                    </span>
+                                <template v-if="col.computation">
+                                    <ComputationResultDisplay
+                                        :computation="col.computation(props.row)"
+                                    >
+                                        <template #default="{ result }">
+                                            <span
+                                                :class="{
+                                                    'results-strike':
+                                                        col.name === 'co2RowTotal' &&
+                                                        props.row.excluded,
+                                                }"
+                                            >
+                                                {{
+                                                    col.formatValue
+                                                        ? col.formatValue(result)
+                                                        : result
+                                                }}
+                                            </span>
+                                        </template>
+                                        <template #failure>
+                                            <span
+                                                :class="{
+                                                    'results-strike':
+                                                        col.name === 'co2RowTotal' &&
+                                                        props.row.excluded,
+                                                }"
+                                            >
+                                                {{ t('mainNotApplicable') }}
+                                            </span>
+                                        </template>
+                                    </ComputationResultDisplay>
                                     <span
-                                        v-if="props.row.excluded"
+                                        v-if="col.name === 'co2RowTotal' && props.row.excluded"
                                         class="results-not-counted q-ml-xs"
                                     >
                                         ({{ $t('inventoryNotCounted') }})
@@ -70,7 +97,16 @@
 
                 <div class="results-category-total text-right q-py-xs text-caption">
                     {{ $t('resultsCategoryTotal') }}:
-                    <strong>{{ formatKg(g.totalEmbodiedEmissionsKg.result) }}</strong>
+                    <strong>
+                        <ComputationResultDisplay
+                            :computation="g.totalEmbodiedEmissionsKg"
+                            :format-value="formatKg"
+                        >
+                            <template #ignored-input="{ input }">{{
+                                input.name || input.id
+                            }}</template>
+                        </ComputationResultDisplay>
+                    </strong>
                 </div>
             </component>
         </div>
@@ -82,9 +118,16 @@
                         <strong>{{ $t('resultsTotalEmbodied') }}</strong>
                     </td>
                     <td class="text-right">
-                        <strong>{{
-                            formatKg(surveyResults.totalEmbodiedEmissionsKg.result)
-                        }}</strong>
+                        <strong>
+                            <ComputationResultDisplay
+                                :computation="surveyResults.totalEmbodiedEmissionsKg"
+                                :format-value="formatKg"
+                            >
+                                <template #ignored-input="{ input }">{{
+                                    input.name || input.id
+                                }}</template>
+                            </ComputationResultDisplay>
+                        </strong>
                     </td>
                 </tr>
             </tbody>
@@ -95,6 +138,18 @@
             <div class="col-12 col-md-6">
                 <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
                     {{ $t('resultsChartTreemapByElement') }}
+                    <ComputationResultDisplay
+                        class="q-ml-sm"
+                        :computation="surveyResults.totalEmbodiedEmissionsKg"
+                        :missing-label="t('resultsUnavailable')"
+                    >
+                        <template #default="{ computation }">
+                            <span>{{
+                                computation.success === 'partial' ? t('resultsPartial') : ''
+                            }}</span>
+                        </template>
+                        <template #ignored-input="{ input }">{{ input.name || input.id }}</template>
+                    </ComputationResultDisplay>
                 </div>
                 <EmbodiedTreemapChart
                     :groups="surveyResults.embodiedEmissionsByCategory"
@@ -105,6 +160,18 @@
             <div class="col-12 col-md-6">
                 <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
                     {{ $t('resultsChartTreemapByCategory') }}
+                    <ComputationResultDisplay
+                        class="q-ml-sm"
+                        :computation="surveyResults.totalEmbodiedEmissionsKg"
+                        :missing-label="t('resultsUnavailable')"
+                    >
+                        <template #default="{ computation }">
+                            <span>{{
+                                computation.success === 'partial' ? t('resultsPartial') : ''
+                            }}</span>
+                        </template>
+                        <template #ignored-input="{ input }">{{ input.name || input.id }}</template>
+                    </ComputationResultDisplay>
                 </div>
                 <EmbodiedTreemapChart
                     :groups="surveyResults.embodiedEmissionsByCategory"
@@ -125,6 +192,8 @@ import { useI18n } from 'vue-i18n';
 import { QExpansionItem, type QTableColumn } from 'quasar';
 import { formatKg, normalizeKey } from 'src/utils/format';
 import EmbodiedTreemapChart from 'src/components/results/EmbodiedTreemapChart.vue';
+import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
+import type { ComputationResult } from 'src/utils/computation';
 
 const surveyData = useSurveyDataStore();
 const surveyResults = useSurveyResultsStore();
@@ -148,6 +217,8 @@ type EmbodiedRow = (typeof surveyResults.embodiedEmissionsByCategory)[number]['r
 
 interface EmbodiedTableColumn extends QTableColumn<EmbodiedRow> {
     kind: 'text' | 'number';
+    computation?: (row: EmbodiedRow) => ComputationResult<number>;
+    formatValue?: (value: number) => string;
 }
 
 const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
@@ -169,21 +240,26 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
         name: 'number',
         label: t('resultsEmbodiedColumns.number'),
         align: 'right',
-        field: (row) => row.quantity ?? '—',
+        field: (row) => row.quantity.result,
+        computation: (row) => row.quantity,
         kind: 'number',
     },
     {
         name: 'co2PerUnit',
         label: t('resultsEmbodiedColumns.co2PerUnit'),
         align: 'right',
-        field: (row) => formatKg(row.unitEmbodiedEmissionsKg),
+        field: (row) => row.unitEmbodiedEmissionsKg.result,
+        computation: (row) => row.unitEmbodiedEmissionsKg,
+        formatValue: formatKg,
         kind: 'number',
     },
     {
         name: 'co2RowTotal',
         label: t('resultsEmbodiedColumns.co2RowTotal'),
         align: 'right',
-        field: (row) => formatKg(row.rowEmbodiedEmissionsKg),
+        field: (row) => row.rowEmbodiedEmissionsKg.result,
+        computation: (row) => row.rowEmbodiedEmissionsKg,
+        formatValue: formatKg,
         kind: 'number',
     },
 ]);

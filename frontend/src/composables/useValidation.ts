@@ -14,7 +14,7 @@ export function useValidation() {
     const { t } = i18n;
 
     /** Map a Zod issue to a validation.* key (origin = number/string/int/…). */
-    function toKey(issue: z.core.$ZodIssue): string {
+    function zodIssueToTranslationKey(issue: z.core.$ZodIssue): string {
         if (issue.code === 'too_small')
             return `validation.too_small.${issue.origin}.${
                 issue.inclusive ? 'inclusive' : 'exclusive'
@@ -29,7 +29,7 @@ export function useValidation() {
 
     /** Share translated validation messages, preserving unsupported/custom Zod messages. */
     function formatIssue(issue: z.core.$ZodIssue): string {
-        const key = toKey(issue);
+        const key = zodIssueToTranslationKey(issue);
         return i18n.te(key) ? t(key, { ...issue }) : issue.message;
     }
 

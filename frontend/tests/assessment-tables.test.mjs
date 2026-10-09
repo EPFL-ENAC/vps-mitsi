@@ -191,7 +191,10 @@ test('results preserve translated report headers, excluded totals and missing op
     );
     assert.deepEqual(operationalTable.rows, []);
     assert.deepEqual(result.datacenterCharts[0].rows, []);
-    assert.match(result.html, /data-kind="number"[^>]*>—<\/td>/);
+    assert.match(
+        result.html,
+        /data-kind="number"[^>]*>[\s\S]*?class="computation-result-display">[\s\S]*?—/,
+    );
     assert.match(result.html, /<th scope="row"/);
     assert.equal(result.results.totalEmbodiedEmissionsKg.result, 0);
 });
@@ -216,8 +219,14 @@ test('embodied results render the available partial total while retaining unfini
     assert.equal(group.totalEmbodiedEmissionsKg.result, 24);
     assert.equal(group.totalEmbodiedEmissionsKg.ignoredInputs[0], result.store.hardware[1]);
     assert.equal(result.tables[0].rows.length, 2);
-    assert.match(result.html, /results-category-total[\s\S]*<strong>24\.00<\/strong>/);
-    assert.match(result.html, /results-total-table[\s\S]*<strong>24\.00<\/strong>/);
+    assert.match(
+        result.html,
+        /results-category-total[\s\S]*<strong><span class="computation-result-display">[\s\S]*?24\.00/,
+    );
+    assert.match(
+        result.html,
+        /results-total-table[\s\S]*<strong><span class="computation-result-display">[\s\S]*?24\.00/,
+    );
 });
 
 test('select and toggle edits write through to the store', async () => {
@@ -302,7 +311,7 @@ test('results and report share partial totals, PUE labels, functional units and 
     }
 });
 
-test('combined totals and ratios render partial values and pass numbers to the split chart', async () => {
+test('combined totals and ratios render partial values and pass computations to the split chart', async () => {
     for (const component of [ResultsTotalSection, ResultsFunctionalUnitSection]) {
         const result = await renderTables(component, {
             props: component === ResultsTotalSection ? { showChart: true } : {},
@@ -325,8 +334,11 @@ test('combined totals and ratios render partial values and pass numbers to the s
         assert.equal(result.results.totalLifespanEmissionsKg.success, 'partial');
         if (component === ResultsTotalSection) {
             assert.match(result.html, /10\.00 \(Partial\)/);
-            assert.equal(result.splitCharts[0].total, 10);
-            assert.equal(result.splitCharts[0].embodied, 10);
+            assert.equal(result.splitCharts[0].embodied, result.results.totalEmbodiedEmissionsKg);
+            assert.equal(
+                result.splitCharts[0].operational,
+                result.results.totalOperationalEmissionsKg,
+            );
         } else {
             assert.match(result.html, /5\.00 kg CO₂ \(Partial\)/);
             assert.match(result.html, /5\.0000 kg CO₂ \/ 5000\.0000 g CO₂ \(Partial\)/);

@@ -19,6 +19,8 @@ export function load(url, context, nextLoad) {
             const { descriptor } = parse(source, { filename: url });
             source = compileScript(descriptor, { id: url, inlineTemplate: true }).content;
         }
+        // Match Vite's public base URL when rendering layouts in Node.
+        source = source.replaceAll('import.meta.env.BASE_URL', JSON.stringify('/'));
         return {
             format: 'module',
             source: ts.transpileModule(source, {

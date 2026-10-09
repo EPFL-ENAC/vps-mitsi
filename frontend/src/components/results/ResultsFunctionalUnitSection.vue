@@ -6,7 +6,11 @@
                     {{ $t('resultsFuNumber') }}
                 </th>
                 <td class="text-right" data-kind="number">
-                    {{ surveyResults.selectedResourceFleetCount.result ?? '—' }}
+                    <ComputationResultDisplay
+                        :computation="surveyResults.selectedResourceFleetCount"
+                    >
+                        <template #ignored-input="{ input }">{{ input.name || input.id }}</template>
+                    </ComputationResultDisplay>
                 </td>
             </tr>
             <tr>
@@ -14,12 +18,26 @@
                     {{ $t('resultsFuLifespanNote') }}
                 </th>
                 <td class="text-right" data-kind="number">
-                    {{ lifespanEmissionsPerResourceText }}
+                    <ComputationResultDisplay
+                        :computation="surveyResults.lifespanEmissionsPerResourceKg"
+                    >
+                        <template #default="{ result }">{{
+                            formatResult(result, lifespanResultOptions)
+                        }}</template>
+                    </ComputationResultDisplay>
                 </td>
             </tr>
             <tr>
                 <th scope="row" class="results-key text-left" data-kind="text">{{ fuSentence }}</th>
-                <td class="text-right" data-kind="number">{{ emissionsPerFunctionalUnitText }}</td>
+                <td class="text-right" data-kind="number">
+                    <ComputationResultDisplay
+                        :computation="surveyResults.emissionsPerFunctionalUnitKg"
+                    >
+                        <template #default="{ result }">{{
+                            formatResult(result, functionalUnitResultOptions)
+                        }}</template>
+                    </ComputationResultDisplay>
+                </td>
             </tr>
             <tr class="results-total">
                 <td colspan="2" class="text-left" data-kind="text">
@@ -42,16 +60,12 @@ import {
     formatKg,
     formatResult,
 } from 'src/utils/format';
+import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
 
 const surveyData = useSurveyDataStore();
 const surveyResults = useSurveyResultsStore();
 
 const { t } = useI18n();
-const combinedResultOptions = computed(() => ({
-    missingLabel: t('mainNotApplicable'),
-    partialLabel:
-        surveyResults.totalLifespanEmissionsKg.success === 'partial' ? t('resultsPartial') : '',
-}));
 const fuSentence = computed(() => buildFunctionalUnitSentence(t, surveyData.scope.functionalUnit));
 
 const hostedInDcs = computed(() =>
@@ -64,20 +78,22 @@ const hostedInDcs = computed(() =>
         .join(', '),
 );
 
-const lifespanEmissionsPerResourceText = computed(() =>
-    formatResult(surveyResults.lifespanEmissionsPerResourceKg.result, {
-        ...combinedResultOptions.value,
-        formatValue: (value) => `${formatKg(value)} ${t('resultsUnitKg')}`,
-    }),
-);
+const lifespanResultOptions = computed(() => ({
+    missingLabel: t('mainNotApplicable'),
+    partialLabel:
+        surveyResults.lifespanEmissionsPerResourceKg.success === 'partial'
+            ? t('resultsPartial')
+            : '',
+    formatValue: (value: number) => `${formatKg(value)} ${t('resultsUnitKg')}`,
+}));
 
-const emissionsPerFunctionalUnitText = computed(() =>
-    formatResult(surveyResults.emissionsPerFunctionalUnitKg.result, {
-        ...combinedResultOptions.value,
-        formatValue: (value) =>
-            `${value.toFixed(4)} ${t('resultsUnitKg')} / ${(value * 1000).toFixed(4)} ${t('resultsUnitG')}`,
-    }),
-);
+const functionalUnitResultOptions = computed(() => ({
+    missingLabel: t('mainNotApplicable'),
+    partialLabel:
+        surveyResults.emissionsPerFunctionalUnitKg.success === 'partial' ? t('resultsPartial') : '',
+    formatValue: (value: number) =>
+        `${value.toFixed(4)} ${t('resultsUnitKg')} / ${(value * 1000).toFixed(4)} ${t('resultsUnitG')}`,
+}));
 </script>
 
 <style scoped lang="scss">

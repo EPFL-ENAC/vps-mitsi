@@ -1,6 +1,20 @@
 <template>
-    <v-chart v-if="props.total !== null" class="split-pie" :option="chartOption" autoresize />
-    <div v-else class="text-grey-6 text-center q-py-md">{{ t('mainNotApplicable') }}</div>
+    <div>
+        <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
+            {{ t('resultsChartSplitTitle') }}
+            <ComputationResultDisplay
+                class="q-ml-sm"
+                :computation="splitChartStatus"
+                :missing-label="t('resultsUnavailable')"
+            >
+                <template #default="{ computation }">
+                    <span>{{ computation.success === 'partial' ? t('resultsPartial') : '' }}</span>
+                </template>
+            </ComputationResultDisplay>
+        </div>
+        <v-chart v-if="data.length" class="split-pie" :option="chartOption" autoresize />
+        <div v-else class="text-grey-6 text-center q-py-md">{{ t('mainNotApplicable') }}</div>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -18,6 +32,8 @@ import {
 import { CanvasRenderer } from 'echarts/renderers';
 import { OKABEITO } from 'src/utils/charts';
 import { formatKg } from 'src/utils/format';
+import { ComputationResult } from 'src/utils/computation';
+import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
 
 echarts.use([PieChart, TooltipComponent, LegendComponent, CanvasRenderer]);
 
@@ -25,42 +41,39 @@ type ECOption = echarts.ComposeOption<
     PieSeriesOption | TooltipComponentOption | LegendComponentOption
 >;
 
-const props = withDefaults(
-    defineProps<{
-        embodied: number | null;
-        operational: number | null;
-        total: number | null;
-        labels: { embodied: string; operational: string; underlying?: string };
-        /** v2 (lead decision): underlying services excluded in v1 — pass only when enabled. */
-        underlying?: number;
-    }>(),
-    {},
-);
+const props = defineProps<{
+    embodied: ComputationResult<number, unknown>;
+    operational: ComputationResult<number, unknown>;
+    labels: { embodied: string; operational: string };
+}>();
 
 const { t } = useI18n();
 
-/** Split pie: exactly two wedges in v1 (Embodied vs Operational). The optional
- *  underlying wedge appears only when supplied (v2, lead decision). */
-const data = computed(() => {
-    if (props.embodied === null) return [];
-    const wedges = [
-        { name: props.labels.embodied, value: props.embodied },
-        { name: props.labels.operational, value: props.operational ?? 0 },
-    ];
-    // v2: underlying-services wedge — only present when its contribution is supplied.
-    if (props.underlying !== undefined) {
-        wedges.push({
-            name: props.labels.underlying ?? 'Underlying services',
-            value: props.underlying,
-        });
-    }
-    return wedges;
+const splitChartStatus = computed(() => {
+    const { embodied, operational } = props;
+    return embodied.success === 'success' && operational.success === 'success'
+        ? ComputationResult.success(undefined)
+        : ComputationResult.partial(
+              undefined,
+              [...embodied.inputErrors, ...operational.inputErrors],
+              [...embodied.ignoredInputs, ...operational.ignoredInputs],
+          );
 });
 
+/** Failed sources are omitted; available sources keep their value and colour. */
+const data = computed(() =>
+    [
+        { computation: props.embodied, name: props.labels.embodied, color: OKABEITO[0] },
+        { computation: props.operational, name: props.labels.operational, color: OKABEITO[1] },
+    ].flatMap(({ computation, name, color }) =>
+        computation.success === 'failure'
+            ? []
+            : [{ name, value: computation.result, itemStyle: { color } }],
+    ),
+);
+
 const chartOption = computed<ECOption>(() => {
-    if (props.embodied === null) return {};
-    // Wedges sum to 100% over the shown contributions (underlying omitted in v1).
-    const denom = props.embodied + (props.operational ?? 0) + (props.underlying ?? 0) || 1;
+    const denom = data.value.reduce((total, slice) => total + slice.value, 0) || 1;
     return {
         tooltip: {
             trigger: 'item',

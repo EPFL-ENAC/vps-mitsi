@@ -59,11 +59,20 @@
                     <!-- Second-hand not-counted impact -->
                     <template v-if="col.name === 'impactManufacturingDistributionEol'">
                         <template v-if="surveyResults.isSecondHandExcluded(props.row)">
-                            <span class="inventory-strike">{{
-                                formatKg(
-                                    surveyResults.hardwareUnitEmbodiedEmissionsKg(props.row).result,
-                                )
-                            }}</span>
+                            <ComputationResultDisplay
+                                :computation="
+                                    surveyResults.hardwareUnitEmbodiedEmissionsKg(props.row)
+                                "
+                            >
+                                <template #default="{ result }">
+                                    <span class="inventory-strike">{{ formatKg(result) }}</span>
+                                </template>
+                                <template #failure>
+                                    <span class="inventory-strike">{{
+                                        t('mainNotApplicable')
+                                    }}</span>
+                                </template>
+                            </ComputationResultDisplay>
                             <span class="inventory-dim">({{ $t('inventoryNotCounted') }})</span>
                         </template>
                         <ZodValidatedNumberInput
@@ -81,9 +90,11 @@
                         <template v-if="surveyResults.isSecondHandExcluded(props.row)">
                             <span class="inventory-dim">{{ $t('inventoryNotCounted') }}</span>
                         </template>
-                        <span v-else>{{
-                            formatKg(col.derived ? col.derived(props.row) : null)
-                        }}</span>
+                        <ComputationResultDisplay
+                            v-else-if="col.derived"
+                            :computation="col.derived(props.row)"
+                            :format-value="formatKg"
+                        />
                     </template>
 
                     <!-- Datacenter select (store-driven options, value = id) -->
@@ -143,7 +154,11 @@
 
                     <!-- Other derived cells (memoryTotalGb / storageTotal) -->
                     <template v-else-if="col.kind === 'derived'">
-                        <span>{{ formatKg(col.derived ? col.derived(props.row) : null) }}</span>
+                        <ComputationResultDisplay
+                            v-if="col.derived"
+                            :computation="col.derived(props.row)"
+                            :format-value="formatKg"
+                        />
                     </template>
                 </q-td>
                 <q-td auto-width class="text-right">
@@ -184,6 +199,8 @@ import { formatDatacenterName, formatKg, normalizeKey } from 'src/utils/format';
 import { createSchemaColumn } from 'src/utils/tables';
 
 import { useValidation } from 'src/composables/useValidation';
+import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
+import type { ComputationResult } from 'src/utils/computation';
 
 const surveyData = useSurveyDataStore();
 const surveyResults = useSurveyResultsStore();
@@ -201,7 +218,7 @@ interface InventoryColumn extends QTableColumn<HardwareItem, keyof HardwareItem 
     zod: z.ZodType | undefined;
     options?: { label: string; value: string }[];
     /** Quasar sets col.value in body slots, so use a separate name for the calculation. */
-    derived?: (row: HardwareItem) => number | null;
+    derived?: (row: HardwareItem) => ComputationResult<number>;
     sort?: (a: unknown, b: unknown, rowA: HardwareItem, rowB: HardwareItem) => number;
 }
 
@@ -300,7 +317,7 @@ const columns = computed<InventoryColumn[]>(() => [
         calc: true,
         sortable: true,
         zod: undefined,
-        derived: (row) => surveyResults.hardwareRowEmbodiedEmissionsKg(row).result,
+        derived: surveyResults.hardwareRowEmbodiedEmissionsKg,
         sort: (_a, _b, rowA, rowB) => {
             const a = surveyResults.hardwareRowEmbodiedEmissionsKg(rowA).result;
             const b = surveyResults.hardwareRowEmbodiedEmissionsKg(rowB).result;
@@ -323,7 +340,7 @@ const columns = computed<InventoryColumn[]>(() => [
         mode: 'advanced',
         kind: 'derived',
         zod: undefined,
-        derived: (row) => surveyResults.hardwareMemoryPerUnitGb(row).result,
+        derived: surveyResults.hardwareMemoryPerUnitGb,
     }),
 
     column({
@@ -341,7 +358,7 @@ const columns = computed<InventoryColumn[]>(() => [
         mode: 'advanced',
         kind: 'derived',
         zod: undefined,
-        derived: (row) => surveyResults.hardwareStorageCapacityPerUnit(row).result,
+        derived: surveyResults.hardwareStorageCapacityPerUnit,
     }),
     column({
         field: 'storageTechnology',

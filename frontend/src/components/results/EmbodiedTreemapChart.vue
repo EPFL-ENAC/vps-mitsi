@@ -4,7 +4,7 @@
 </template>
 
 <script setup lang="ts">
-import type { EmbodiedGroup, EmbodiedRow } from 'src/stores/surveyResults';
+import type { EmbodiedGroup } from 'src/stores/surveyResults';
 
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -37,18 +37,12 @@ const { t } = useI18n();
 function toElementTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeriesOption['data']> {
     return groups.flatMap((g, categoryIdx) => {
         const categoryColor = palette(categoryIdx);
-        return g.rows
-            .filter(
-                (r): r is EmbodiedRow & { rowEmbodiedEmissionsKg: number } =>
-                    !r.excluded &&
-                    r.rowEmbodiedEmissionsKg !== null &&
-                    r.rowEmbodiedEmissionsKg > 0,
-            )
-            .map((r) => ({
-                name: r.name,
-                value: r.rowEmbodiedEmissionsKg,
-                itemStyle: { color: categoryColor },
-            }));
+        return g.rows.flatMap((row) => {
+            const value = row.rowEmbodiedEmissionsKg.result;
+            return row.excluded || value === null || !(value > 0)
+                ? []
+                : [{ name: row.name, value, itemStyle: { color: categoryColor } }];
+        });
     });
 }
 
@@ -65,18 +59,12 @@ function toCategoryTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeri
                     name: g.category,
                     value: total,
                     itemStyle: { color: categoryColor },
-                    children: g.rows
-                        .filter(
-                            (r): r is EmbodiedRow & { rowEmbodiedEmissionsKg: number } =>
-                                !r.excluded &&
-                                r.rowEmbodiedEmissionsKg !== null &&
-                                r.rowEmbodiedEmissionsKg > 0,
-                        )
-                        .map((r) => ({
-                            name: r.name,
-                            value: r.rowEmbodiedEmissionsKg,
-                            itemStyle: { color: categoryColor },
-                        })),
+                    children: g.rows.flatMap((row) => {
+                        const value = row.rowEmbodiedEmissionsKg.result;
+                        return row.excluded || value === null || !(value > 0)
+                            ? []
+                            : [{ name: row.name, value, itemStyle: { color: categoryColor } }];
+                    }),
                 },
             ];
         })

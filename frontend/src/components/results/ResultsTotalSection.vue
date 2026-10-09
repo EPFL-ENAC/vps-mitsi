@@ -8,7 +8,11 @@
                         <ComputationResultDisplay
                             :computation="surveyResults.totalEmbodiedEmissionsKg"
                             :format-value="formatKg"
-                        />
+                        >
+                            <template #ignored-input="{ input }">{{
+                                input.name || input.id
+                            }}</template>
+                        </ComputationResultDisplay>
                     </td>
                 </tr>
                 <tr>
@@ -21,6 +25,9 @@
                             <template #default="{ result }">
                                 {{ formatResult(result, operationalResultOptions) }}
                             </template>
+                            <template #ignored-input="{ input }">{{
+                                formatDatacenterName(input)
+                            }}</template>
                         </ComputationResultDisplay>
                     </td>
                 </tr>
@@ -46,20 +53,14 @@
 
         <!-- Split pie chart -->
         <div v-if="showChart" class="q-mt-md">
-            <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
-                {{ $t('resultsChartSplitTitle') }}
-            </div>
             <TotalSplitPieChart
-                :embodied="surveyResults.totalEmbodiedEmissionsKg.result"
-                :operational="surveyResults.totalOperationalEmissionsKg.result"
-                :total="surveyResults.totalLifespanEmissionsKg.result"
+                :embodied="surveyResults.totalEmbodiedEmissionsKg"
+                :operational="surveyResults.totalOperationalEmissionsKg"
                 :labels="{
                     embodied: t('resultsRowEmbodied'),
                     operational: t('resultsRowOperational'),
                 }"
             />
-            <!-- v2 (lead decision): underlying services excluded in v1 — one-line restore:
-            :underlying="surveyResults.totalUnderlyingEmissionsKg.result"  and  labels.underlying: t('resultsRowUnderlying') -->
         </div>
     </div>
 </template>
@@ -69,7 +70,7 @@ import { useSurveyResultsStore } from 'src/stores/surveyResults';
 
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { formatKg, formatResult } from 'src/utils/format';
+import { formatDatacenterName, formatKg, formatResult } from 'src/utils/format';
 import TotalSplitPieChart from 'src/components/results/TotalSplitPieChart.vue';
 import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
 

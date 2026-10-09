@@ -25,6 +25,17 @@ import {
     QToolbar,
     QToolbarTitle,
     QSpace,
+    QLayout,
+    QHeader,
+    QFooter,
+    QDrawer,
+    QPageContainer,
+    QList,
+    QItem,
+    QIcon,
+    QFile,
+    QBtnToggle,
+    Ripple,
 } from 'quasar';
 import HardwareInventoryTable from '../../src/components/inventory/HardwareInventoryTable.vue';
 import { useSurveyDataStore } from '../../src/stores/surveyData.ts';
@@ -80,7 +91,18 @@ export async function renderTables(
                 QToolbar,
                 QToolbarTitle,
                 QSpace,
+                QLayout,
+                QHeader,
+                QFooter,
+                QDrawer,
+                QPageContainer,
+                QList,
+                QItem,
+                QIcon,
+                QFile,
+                QBtnToggle,
             },
+            directives: { Ripple },
         },
         context,
     );
@@ -111,6 +133,21 @@ export async function renderTables(
         selects: instances.filter((instance) => instance.$options.name === 'QSelect'),
         toggles: instances.filter((instance) => instance.$options.name === 'QToggle'),
         buttons: instances.filter((instance) => instance.$options.name === 'QBtn'),
+        computations: instances.filter(
+            (instance) => instance.$options.__name === 'ComputationResultDisplay',
+        ),
+        tooltips: instances.filter((instance) => instance.$options.name === 'QTooltip'),
+        charts: instances.filter((instance) => instance.$props.option !== undefined),
+        renderAgain: async () =>
+            (
+                await renderTables(component, {
+                    props,
+                    messages,
+                    setupStore(nextStore) {
+                        nextStore.$patch(store.$state);
+                    },
+                })
+            ).html,
     };
 }
 
