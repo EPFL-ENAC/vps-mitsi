@@ -45,6 +45,11 @@ export type OperationalCalculationCoverage = {
 
 export type EmissionInput = HardwareItem | DatacenterDraft | UnderlyingService;
 
+export interface NamedComputation {
+    name: string;
+    computation: ComputationResult<unknown, unknown>;
+}
+
 export interface EmbodiedRow {
     id: string;
     name: string;
@@ -310,7 +315,43 @@ export const useSurveyResultsStore = defineStore('surveyResults', () => {
         },
     );
 
+    function allUnsuccessfulComputations(): NamedComputation[] {
+        const computations: NamedComputation[] = [
+            { name: 'hardwareItemCount', computation: hardwareItemCount.value },
+            {
+                name: 'totalEmbodiedEmissionsKg',
+                computation: totalEmbodiedEmissionsKg.value,
+            },
+            {
+                name: 'datacenterOperationalResults',
+                computation: datacenterOperationalResults.value,
+            },
+            {
+                name: 'totalOperationalEmissionsKg',
+                computation: totalOperationalEmissionsKg.value,
+            },
+            {
+                name: 'totalLifespanEmissionsKg',
+                computation: totalLifespanEmissionsKg.value,
+            },
+            {
+                name: 'selectedResourceFleetCount',
+                computation: selectedResourceFleetCount.value,
+            },
+            {
+                name: 'lifespanEmissionsPerResourceKg',
+                computation: lifespanEmissionsPerResourceKg.value,
+            },
+            {
+                name: 'emissionsPerFunctionalUnitKg',
+                computation: emissionsPerFunctionalUnitKg.value,
+            },
+        ];
+        return computations.filter(({ computation }) => computation.success !== 'success');
+    }
+
     return {
+        allUnsuccessfulComputations,
         isSecondHandExcluded,
         hardwareUnitEmbodiedEmissionsKg,
         hardwareRowEmbodiedEmissionsKg,

@@ -44,21 +44,14 @@
             <ResultsFunctionalUnitSection />
         </AssessmentSection>
 
-        <q-btn
-            unelevated
-            color="primary"
-            class="full-width q-mt-md"
-            :label="$t('resultsGenerateReport')"
-            :disable="!surveyData.isScopeValid"
-            @click="router.push('/report')"
-        />
+        <GenerateReportButton class="full-width q-mt-md" />
     </div>
 </template>
 
 <script setup lang="ts">
 import { useSurveyDataStore } from 'src/stores/surveyData';
 
-import { useRouter } from 'vue-router';
+import GenerateReportButton from 'src/components/GenerateReportButton.vue';
 import AssessmentSection from 'src/components/AssessmentSection.vue';
 import ResultsSummarySection from 'src/components/results/ResultsSummarySection.vue';
 import ResultsEmbodiedSection from 'src/components/results/ResultsEmbodiedSection.vue';
@@ -67,6 +60,4 @@ import ResultsTotalSection from 'src/components/results/ResultsTotalSection.vue'
 import ResultsFunctionalUnitSection from 'src/components/results/ResultsFunctionalUnitSection.vue';
 
 const surveyData = useSurveyDataStore();
-
-const router = useRouter();
 </script>

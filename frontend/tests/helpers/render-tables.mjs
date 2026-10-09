@@ -16,6 +16,8 @@ import {
     QMarkupTable,
     QCard,
     QCardSection,
+    QCardActions,
+    QDialog,
     QExpansionItem,
     QItemSection,
     QItemLabel,
@@ -82,6 +84,8 @@ export async function renderTables(
                 QMarkupTable,
                 QCard,
                 QCardSection,
+                QCardActions,
+                QDialog,
                 QExpansionItem,
                 QItemSection,
                 QItemLabel,
@@ -120,8 +124,10 @@ export async function renderTables(
     return {
         html,
         store,
+        router,
         results: useSurveyResultsStore(pinia),
         dialogs,
+        modalDialogs: instances.filter((instance) => instance.$options.name === 'QDialog'),
         tables: instances.filter((instance) => instance.$options.name === 'QTable'),
         datacenterCharts: instances.filter(
             (instance) => instance.$options.__name === 'DatacentersPieChart',

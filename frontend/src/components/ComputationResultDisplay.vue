@@ -24,7 +24,12 @@ function isIncomplete(computation: C): computation is Incomplete {
 const props = defineProps<{
     computation: C;
     formatValue?: (value: Available['result']) => string;
+    /** Hide available values and their default slot; failure labels and diagnostics remain. */
+    hideValue?: boolean;
     missingLabel?: string;
+    disableTooltip?: boolean;
+    /** Optional partial-status label beside the interactive indicator; plain mode uses its status. */
+    partialFlagLabel?: string;
 }>();
 
 defineSlots<{
@@ -55,6 +60,7 @@ function cancelHide() {
 }
 
 function showTooltip() {
+    if (props.disableTooltip) return;
     cancelHide();
     tooltipOpen.value = true;
 }
@@ -127,6 +133,14 @@ watch(tooltipOpen, (open) => {
 });
 
 watch(() => props.computation.success, dismissTooltip);
+watch(
+    () => props.disableTooltip,
+    () => {
+        focused.value = false;
+        dismissTooltip();
+        removeListeners();
+    },
+);
 
 onBeforeUnmount(() => {
     cancelHide();
@@ -137,7 +151,7 @@ onBeforeUnmount(() => {
 <template>
     <span class="computation-result-display">
         <slot
-            v-if="isAvailable(computation)"
+            v-if="!hideValue && isAvailable(computation)"
             :result="computation.result"
             :computation="computation"
         >
@@ -147,8 +161,18 @@ onBeforeUnmount(() => {
             {{ missingLabel ?? t('mainNotApplicable') }}
         </slot>
 
+        <span
+            v-if="isIncomplete(computation) && disableTooltip"
+            class="computation-result-display__status"
+            :class="`computation-result-display__status--${computation.success}`"
+        >
+            {{ t(`computationResult.${computation.success}.status`) }}
+        </span>
+        <span v-else-if="computation.success === 'partial' && partialFlagLabel">{{
+            ' ' + partialFlagLabel
+        }}</span>
         <button
-            v-if="isIncomplete(computation)"
+            v-if="isIncomplete(computation) && !disableTooltip"
             ref="indicator"
             type="button"
             class="computation-result-display__indicator"
@@ -264,12 +288,20 @@ onBeforeUnmount(() => {
     font-size: 18px;
 }
 
-.computation-result-display__indicator--partial {
+.computation-result-display__indicator--partial,
+.computation-result-display__status--partial {
     color: #946200;
 }
 
-.computation-result-display__indicator--failure {
+.computation-result-display__indicator--failure,
+.computation-result-display__status--failure {
     color: #c1001a;
+}
+
+.computation-result-display__status {
+    margin-left: 4px;
+    font-size: 0.85em;
+    font-weight: normal;
 }
 
 .computation-result-display__indicator:focus-visible {

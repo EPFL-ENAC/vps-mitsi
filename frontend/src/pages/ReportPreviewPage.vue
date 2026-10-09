@@ -111,12 +111,12 @@
 
                 <!-- Sheet 3: Embodied emissions -->
                 <ReportSheet :title="$t('resultsEmbodiedTitle')">
-                    <ResultsEmbodiedSection show-chart />
+                    <ResultsEmbodiedSection disable-tooltip show-chart />
                 </ReportSheet>
 
                 <!-- Sheet 4: Operational Emissions -->
                 <ReportSheet :title="$t('resultsOperationalTitle')">
-                    <ResultsOperationalSection show-chart />
+                    <ResultsOperationalSection disable-tooltip show-chart />
                 </ReportSheet>
 
                 <!-- Sheet 5: Results & Functional Unit -->
@@ -124,12 +124,12 @@
                     <div class="text-subtitle2 text-weight-bold q-mb-xs">
                         {{ $t('resultsTotalTitle') }}
                     </div>
-                    <ResultsTotalSection class="q-mb-lg" show-chart />
+                    <ResultsTotalSection disable-tooltip class="q-mb-lg" show-chart />
 
                     <div class="text-subtitle2 text-weight-bold q-mb-xs">
                         {{ $t('resultsFuTitle') }}
                     </div>
-                    <ResultsFunctionalUnitSection />
+                    <ResultsFunctionalUnitSection disable-tooltip />
                 </ReportSheet>
             </template>
         </div>

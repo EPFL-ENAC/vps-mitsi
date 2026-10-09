@@ -7,6 +7,7 @@
                 </th>
                 <td class="text-right" data-kind="number">
                     <ComputationResultDisplay
+                        :disable-tooltip="disableTooltip"
                         :computation="surveyResults.selectedResourceFleetCount"
                     >
                         <template #ignored-input="{ input }">{{ input.name || input.id }}</template>
@@ -19,7 +20,9 @@
                 </th>
                 <td class="text-right" data-kind="number">
                     <ComputationResultDisplay
+                        :disable-tooltip="disableTooltip"
                         :computation="surveyResults.lifespanEmissionsPerResourceKg"
+                        :partial-flag-label="`(${t('resultsPartial')})`"
                     >
                         <template #default="{ result }">{{
                             formatResult(result, lifespanResultOptions)
@@ -31,7 +34,9 @@
                 <th scope="row" class="results-key text-left" data-kind="text">{{ fuSentence }}</th>
                 <td class="text-right" data-kind="number">
                     <ComputationResultDisplay
+                        :disable-tooltip="disableTooltip"
                         :computation="surveyResults.emissionsPerFunctionalUnitKg"
+                        :partial-flag-label="`(${t('resultsPartial')})`"
                     >
                         <template #default="{ result }">{{
                             formatResult(result, functionalUnitResultOptions)
@@ -65,6 +70,8 @@ import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vu
 const surveyData = useSurveyDataStore();
 const surveyResults = useSurveyResultsStore();
 
+defineProps<{ disableTooltip?: boolean }>();
+
 const { t } = useI18n();
 const fuSentence = computed(() => buildFunctionalUnitSentence(t, surveyData.scope.functionalUnit));
 
@@ -80,17 +87,11 @@ const hostedInDcs = computed(() =>
 
 const lifespanResultOptions = computed(() => ({
     missingLabel: t('mainNotApplicable'),
-    partialLabel:
-        surveyResults.lifespanEmissionsPerResourceKg.success === 'partial'
-            ? t('resultsPartial')
-            : '',
     formatValue: (value: number) => `${formatKg(value)} ${t('resultsUnitKg')}`,
 }));
 
 const functionalUnitResultOptions = computed(() => ({
     missingLabel: t('mainNotApplicable'),
-    partialLabel:
-        surveyResults.emissionsPerFunctionalUnitKg.success === 'partial' ? t('resultsPartial') : '',
     formatValue: (value: number) =>
         `${value.toFixed(4)} ${t('resultsUnitKg')} / ${(value * 1000).toFixed(4)} ${t('resultsUnitG')}`,
 }));

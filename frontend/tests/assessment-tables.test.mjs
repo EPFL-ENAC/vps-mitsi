@@ -22,6 +22,8 @@ import en from '../src/i18n/en-GB/index.ts';
 import { renderTables } from './helpers/render-tables.mjs';
 import { setupScope, validHardware } from './helpers/survey-fixtures.mjs';
 
+const text = (html) => html.replace(/<[^>]*>/g, '');
+
 const datacenter = () =>
     DatacenterDraftSchema.parse({
         id: 'dc-1',
@@ -292,7 +294,12 @@ test('results and report share partial totals, PUE labels, functional units and 
             },
         });
         assert.match(result.html, /150\.00 \(Partial — 1 of 2 datacenters\)/);
-        assert.match(result.html, /150\.00 \(Partial\)/);
+        if (component === ReportPreviewPage) {
+            assert.match(result.html, /150\.00[\s\S]*?status--partial">Partial result/);
+            assert.doesNotMatch(result.html, /150\.00 \(Partial\)/);
+        } else {
+            assert.match(text(result.html), /150\.00 \(Partial\)/);
+        }
         assert.match(result.html, /included \(1\.5\)/);
         assert.match(result.html, /Usage of 2 day of the service with 3 CPU/);
         const table = result.tables.find((table) =>
@@ -333,15 +340,15 @@ test('combined totals and ratios render partial values and pass computations to 
         });
         assert.equal(result.results.totalLifespanEmissionsKg.success, 'partial');
         if (component === ResultsTotalSection) {
-            assert.match(result.html, /10\.00 \(Partial\)/);
+            assert.match(text(result.html), /10\.00 \(Partial\)/);
             assert.equal(result.splitCharts[0].embodied, result.results.totalEmbodiedEmissionsKg);
             assert.equal(
                 result.splitCharts[0].operational,
                 result.results.totalOperationalEmissionsKg,
             );
         } else {
-            assert.match(result.html, /5\.00 kg CO₂ \(Partial\)/);
-            assert.match(result.html, /5\.0000 kg CO₂ \/ 5000\.0000 g CO₂ \(Partial\)/);
+            assert.match(text(result.html), /5\.00 kg CO₂ \(Partial\)/);
+            assert.match(text(result.html), /5\.0000 kg CO₂ \/ 5000\.0000 g CO₂ \(Partial\)/);
         }
     }
 });

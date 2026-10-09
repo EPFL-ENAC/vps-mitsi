@@ -32,6 +32,7 @@
                     <q-td class="text-right">
                         <strong>
                             <ComputationResultDisplay
+                                :disable-tooltip="disableTooltip"
                                 :computation="surveyResults.totalOperationalEmissionsKg"
                             >
                                 <template #default="{ result }">
@@ -52,15 +53,13 @@
             <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
                 {{ $t('resultsChartPieByDatacenter') }}
                 <ComputationResultDisplay
+                    :disable-tooltip="disableTooltip"
                     class="q-ml-sm"
                     :computation="surveyResults.totalOperationalEmissionsKg"
-                    :missing-label="t('resultsUnavailable')"
+                    :missing-label="disableTooltip ? '' : t('resultsUnavailable')"
+                    hide-value
+                    :partial-flag-label="t('resultsPartial')"
                 >
-                    <template #default="{ computation }">
-                        <span>{{
-                            computation.success === 'partial' ? t('resultsPartial') : ''
-                        }}</span>
-                    </template>
                     <template #ignored-input="{ input }">{{
                         formatDatacenterName(input)
                     }}</template>
@@ -91,6 +90,7 @@ const surveyResults = useSurveyResultsStore();
 withDefaults(
     defineProps<{
         showChart?: boolean;
+        disableTooltip?: boolean;
     }>(),
     { showChart: false },
 );

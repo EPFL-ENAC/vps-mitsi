@@ -37,6 +37,111 @@ async function renderResult(computation, { props = {}, slots = {}, messages = en
 const text = (html) => html.replace(/<[^>]*>/g, '');
 const errorFor = (schema, input) => schema.safeParse(input).error;
 
+test('disabled tooltips preserve values, formatting and slots with plain translated statuses', async () => {
+    for (const computation of [
+        ComputationResult.success(0),
+        ComputationResult.partial(0),
+        ComputationResult.failure(),
+    ]) {
+        const result = await renderResult(computation, {
+            props: { disableTooltip: true, formatValue: formatKg },
+            slots: {
+                indicator: () => assert.fail('No diagnostic indicator in plain mode'),
+                tooltip: () => assert.fail('No diagnostic tooltip in plain mode'),
+            },
+        });
+        assert.equal(result.tooltip, undefined);
+        assert.doesNotMatch(result.html, /<button|info_outline|aria-describedby/);
+        if (computation.success === 'success') assert.equal(text(result.html), '0.00');
+        else {
+            assert.match(result.html, new RegExp(`status--${computation.success}`));
+            assert.match(
+                text(result.html),
+                computation.success === 'partial'
+                    ? /0\.00\s*Partial result/
+                    : /—\s*Failed computation/,
+            );
+        }
+    }
+    const translated = await renderResult(ComputationResult.partial(2), {
+        props: { disableTooltip: true },
+        messages: {
+            ...en,
+            computationResult: {
+                ...en.computationResult,
+                partial: { ...en.computationResult.partial, status: 'Incomplete value' },
+            },
+        },
+        slots: { default: ({ result }) => h('b', `${result} kg`) },
+    });
+    assert.match(translated.html, /<b>2 kg<\/b>/);
+    assert.match(text(translated.html), /Incomplete value/);
+    const missing = await renderResult(ComputationResult.failure(), {
+        props: { disableTooltip: true, missingLabel: 'Not measured' },
+    });
+    assert.match(text(missing.html), /Not measured\s*Failed computation/);
+    const customFailure = await renderResult(ComputationResult.failure(), {
+        props: { disableTooltip: true },
+        slots: { failure: () => h('b', 'No measurement') },
+    });
+    assert.match(customFailure.html, /<b>No measurement<\/b>/);
+    assert.match(text(customFailure.html), /Failed computation/);
+});
+
+test('partial flag labels keep formatted values and slots and are replaced in plain mode', async () => {
+    for (const disableTooltip of [false, true]) {
+        const partial = await renderResult(ComputationResult.partial(0), {
+            props: { partialFlagLabel: 'Incomplete', disableTooltip, formatValue: formatKg },
+        });
+        assert.match(text(partial.html), /0\.00/);
+        assert.match(text(partial.html), disableTooltip ? /Partial result/ : /Incomplete/);
+        assert.doesNotMatch(text(partial.html), disableTooltip ? /Incomplete/ : /Partial result/);
+        assert.equal(Boolean(partial.tooltip), !disableTooltip);
+        const slotted = await renderResult(ComputationResult.partial(2), {
+            props: { partialFlagLabel: '(Partial)', disableTooltip },
+            slots: { default: ({ result }) => h('b', `${result} kg`) },
+        });
+        assert.match(slotted.html, /<b>2 kg<\/b>/);
+        assert.match(text(slotted.html), disableTooltip ? /Partial result/ : /\(Partial\)/);
+    }
+    for (const computation of [ComputationResult.success(0), ComputationResult.failure()]) {
+        const result = await renderResult(computation, {
+            props: { partialFlagLabel: 'Incomplete' },
+        });
+        assert.doesNotMatch(text(result.html), /Incomplete/);
+    }
+});
+
+test('hidden values skip formatting and default slots while retaining flags and failure labels', async () => {
+    for (const disableTooltip of [false, true]) {
+        for (const computation of [ComputationResult.success(0), ComputationResult.partial(0)]) {
+            const result = await renderResult(computation, {
+                props: {
+                    hideValue: true,
+                    disableTooltip,
+                    partialFlagLabel: 'Incomplete',
+                    formatValue: () => assert.fail('Hidden values should not be formatted'),
+                },
+                slots: { default: () => assert.fail('Hidden default slots should not render') },
+            });
+            assert.doesNotMatch(text(result.html), /0/);
+            if (computation.success === 'success') {
+                assert.equal(text(result.html), '');
+                assert.equal(result.tooltip, undefined);
+            } else {
+                assert.match(text(result.html), disableTooltip ? /Partial result/ : /Incomplete/);
+                assert.equal(Boolean(result.tooltip), !disableTooltip);
+            }
+        }
+        const failed = await renderResult(ComputationResult.failure(), {
+            props: { hideValue: true, disableTooltip, missingLabel: 'Unavailable' },
+        });
+        assert.match(text(failed.html), /Unavailable/);
+        assert.equal(Boolean(failed.tooltip), !disableTooltip);
+        if (disableTooltip) assert.match(text(failed.html), /Failed computation/);
+    }
+});
+
 test('successful values preserve zero and arbitrary values without an indicator or tooltip', async () => {
     for (const value of [0, 'ready', false, { count: 2 }]) {
         const result = await renderResult(ComputationResult.success(value));

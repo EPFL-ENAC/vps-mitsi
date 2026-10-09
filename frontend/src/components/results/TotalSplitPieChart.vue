@@ -3,14 +3,13 @@
         <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
             {{ t('resultsChartSplitTitle') }}
             <ComputationResultDisplay
+                :disable-tooltip="disableTooltip"
                 class="q-ml-sm"
                 :computation="splitChartStatus"
-                :missing-label="t('resultsUnavailable')"
-            >
-                <template #default="{ computation }">
-                    <span>{{ computation.success === 'partial' ? t('resultsPartial') : '' }}</span>
-                </template>
-            </ComputationResultDisplay>
+                :missing-label="disableTooltip ? '' : t('resultsUnavailable')"
+                hide-value
+                :partial-flag-label="t('resultsPartial')"
+            />
         </div>
         <v-chart v-if="data.length" class="split-pie" :option="chartOption" autoresize />
         <div v-else class="text-grey-6 text-center q-py-md">{{ t('mainNotApplicable') }}</div>
@@ -42,6 +41,7 @@ type ECOption = echarts.ComposeOption<
 >;
 
 const props = defineProps<{
+    disableTooltip?: boolean;
     embodied: ComputationResult<number, unknown>;
     operational: ComputationResult<number, unknown>;
     labels: { embodied: string; operational: string };

@@ -289,10 +289,12 @@ export default {
     resultsEnergyCoverage: 'Partial — {complete} of {total} datacenters',
     computationResult: {
         partial: {
+            status: 'Partial result',
             label: 'Partial result: show computation issues',
             explanation: 'This result is incomplete. Some inputs could not be included.',
         },
         failure: {
+            status: 'Failed computation',
             label: 'Unavailable result: show computation issues',
             explanation: 'This result could not be computed. Review the inputs below.',
         },
@@ -300,6 +302,16 @@ export default {
         input: 'Input',
         ignoredInputs: 'No inputs ignored. | 1 input ignored. | {count} inputs ignored.',
         noDetails: 'No further details available.',
+    },
+    computationNames: {
+        hardwareItemCount: 'Hardware element count',
+        totalEmbodiedEmissionsKg: 'Total embodied emissions',
+        datacenterOperationalResults: 'Datacenter calculations',
+        totalOperationalEmissionsKg: 'Total operational emissions',
+        totalLifespanEmissionsKg: 'Total lifespan emissions',
+        selectedResourceFleetCount: 'Functional-unit resource count',
+        lifespanEmissionsPerResourceKg: 'Lifespan emissions per resource',
+        emissionsPerFunctionalUnitKg: 'Emissions per functional unit',
     },
     resultsOperationalTitle: 'Operational emissions',
     resultsOperationalColumns: {
@@ -326,6 +338,11 @@ export default {
     resultsChartSplitTitle: 'Emissions repartition',
     resultsColPercent: '%',
     resultsGenerateReport: 'Generate report',
+    reportWarningTitle: 'Incomplete computations',
+    reportWarningMessage:
+        'Some computations are incomplete or have failed. The report will include their available values and statuses. You can go back to review the inputs or generate the report anyway.',
+    reportWarningCancel: 'Cancel',
+    reportWarningContinue: 'Generate anyway',
     // --- Report (printable; see src/pages/ReportPreviewPage.vue) ---
     reportToolbarTitle: 'Report',
     reportPrint: 'Print',

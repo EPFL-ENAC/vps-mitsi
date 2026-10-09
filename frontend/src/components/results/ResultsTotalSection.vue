@@ -6,6 +6,7 @@
                     <td data-kind="text">{{ $t('resultsRowEmbodied') }}</td>
                     <td class="text-right" data-kind="number">
                         <ComputationResultDisplay
+                            :disable-tooltip="disableTooltip"
                             :computation="surveyResults.totalEmbodiedEmissionsKg"
                             :format-value="formatKg"
                         >
@@ -19,6 +20,7 @@
                     <td data-kind="text">{{ $t('resultsRowOperational') }}</td>
                     <td class="text-right" data-kind="number">
                         <ComputationResultDisplay
+                            :disable-tooltip="disableTooltip"
                             :computation="surveyResults.totalOperationalEmissionsKg"
                             :missing-label="t('mainNotApplicable')"
                         >
@@ -38,11 +40,13 @@
                     <td class="text-right" data-kind="number">
                         <strong>
                             <ComputationResultDisplay
+                                :disable-tooltip="disableTooltip"
                                 :computation="surveyResults.totalLifespanEmissionsKg"
+                                :partial-flag-label="`(${t('resultsPartial')})`"
                                 :missing-label="t('mainNotApplicable')"
                             >
                                 <template #default="{ result }">
-                                    {{ formatResult(result, combinedResultOptions) }}
+                                    {{ formatKg(result) }}
                                 </template>
                             </ComputationResultDisplay>
                         </strong>
@@ -54,6 +58,7 @@
         <!-- Split pie chart -->
         <div v-if="showChart" class="q-mt-md">
             <TotalSplitPieChart
+                :disable-tooltip="disableTooltip"
                 :embodied="surveyResults.totalEmbodiedEmissionsKg"
                 :operational="surveyResults.totalOperationalEmissionsKg"
                 :labels="{
@@ -79,6 +84,7 @@ const surveyResults = useSurveyResultsStore();
 withDefaults(
     defineProps<{
         showChart?: boolean;
+        disableTooltip?: boolean;
     }>(),
     { showChart: false },
 );
@@ -92,11 +98,6 @@ const operationalResultOptions = computed(() => ({
               complete: surveyResults.operationalCalculationCoverage.validDatacenterCount,
               total: surveyResults.operationalCalculationCoverage.totalDatacenterCount,
           }),
-}));
-const combinedResultOptions = computed(() => ({
-    missingLabel: t('mainNotApplicable'),
-    partialLabel:
-        surveyResults.totalLifespanEmissionsKg.success === 'partial' ? t('resultsPartial') : '',
 }));
 </script>
 

@@ -40,7 +40,6 @@
                             {{ props.col.label }}
                         </q-th>
                     </template>
-
                     <template #body="props">
                         <q-tr :props="props" :class="{ 'results-excluded': props.row.excluded }">
                             <q-td
@@ -51,6 +50,7 @@
                             >
                                 <template v-if="col.computation">
                                     <ComputationResultDisplay
+                                        :disable-tooltip="disableTooltip"
                                         :computation="col.computation(props.row)"
                                     >
                                         <template #default="{ result }">
@@ -99,6 +99,7 @@
                     {{ $t('resultsCategoryTotal') }}:
                     <strong>
                         <ComputationResultDisplay
+                            :disable-tooltip="disableTooltip"
                             :computation="g.totalEmbodiedEmissionsKg"
                             :format-value="formatKg"
                         >
@@ -120,6 +121,7 @@
                     <td class="text-right">
                         <strong>
                             <ComputationResultDisplay
+                                :disable-tooltip="disableTooltip"
                                 :computation="surveyResults.totalEmbodiedEmissionsKg"
                                 :format-value="formatKg"
                             >
@@ -139,15 +141,13 @@
                 <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
                     {{ $t('resultsChartTreemapByElement') }}
                     <ComputationResultDisplay
+                        :disable-tooltip="disableTooltip"
                         class="q-ml-sm"
                         :computation="surveyResults.totalEmbodiedEmissionsKg"
-                        :missing-label="t('resultsUnavailable')"
+                        :missing-label="disableTooltip ? '' : t('resultsUnavailable')"
+                        hide-value
+                        :partial-flag-label="t('resultsPartial')"
                     >
-                        <template #default="{ computation }">
-                            <span>{{
-                                computation.success === 'partial' ? t('resultsPartial') : ''
-                            }}</span>
-                        </template>
                         <template #ignored-input="{ input }">{{ input.name || input.id }}</template>
                     </ComputationResultDisplay>
                 </div>
@@ -161,15 +161,13 @@
                 <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
                     {{ $t('resultsChartTreemapByCategory') }}
                     <ComputationResultDisplay
+                        :disable-tooltip="disableTooltip"
                         class="q-ml-sm"
                         :computation="surveyResults.totalEmbodiedEmissionsKg"
-                        :missing-label="t('resultsUnavailable')"
+                        :missing-label="disableTooltip ? '' : t('resultsUnavailable')"
+                        hide-value
+                        :partial-flag-label="t('resultsPartial')"
                     >
-                        <template #default="{ computation }">
-                            <span>{{
-                                computation.success === 'partial' ? t('resultsPartial') : ''
-                            }}</span>
-                        </template>
                         <template #ignored-input="{ input }">{{ input.name || input.id }}</template>
                     </ComputationResultDisplay>
                 </div>
@@ -203,6 +201,7 @@ withDefaults(
         showToggle?: boolean;
         interactive?: boolean;
         showChart?: boolean;
+        disableTooltip?: boolean;
     }>(),
     {
         showToggle: false,
