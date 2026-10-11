@@ -230,7 +230,7 @@ test('plain report sections preserve units, coverage, precision, exclusions, zer
         const contents = text(failed.html);
         assert.match(contents, /— Failed computation/);
         if (component === ResultsTotalSection)
-            assert.match(contents, /Emissions repartition Partial result/);
+            assert.match(contents, /Emissions repartition Failed computation/);
         else
             assert.ok(
                 contents.includes(

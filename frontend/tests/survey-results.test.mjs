@@ -916,9 +916,8 @@ test('resource sums report selected CPU or GPU measurements and preserve exclusi
     const data = useSurveyDataStore();
     const results = useSurveyResultsStore();
     for (const [resourceType, field, otherField, expected] of [
-        [' CPU ', 'cpuQuantity', 'gpuQuantity', 6],
+        ['CPU', 'cpuQuantity', 'gpuQuantity', 6],
         ['GPU', 'gpuQuantity', 'cpuQuantity', 8],
-        ['other', 'gpuQuantity', 'cpuQuantity', 8],
     ]) {
         data.scope.functionalUnit.resourceType = resourceType;
         data.includeSecondHandEmbodied = false;
@@ -992,7 +991,7 @@ test('resource selection and functional-unit scaling are composed from current a
     setupScope(data);
     data.scope.lifespanYears = 2;
     data.scope.functionalUnit = {
-        resourceType: ' CPU ',
+        resourceType: 'CPU',
         timeUnit: 'hour',
         usageDuration: 2,
         resourceCount: 2,
@@ -1015,11 +1014,9 @@ test('resource selection and functional-unit scaling are composed from current a
     data.scope.lifespanYears = 4;
     assert.equal(results.emissionsPerFunctionalUnitKg.result, 0.5);
     data.scope.lifespanYears = 2;
-    for (const resourceType of ['GPU', 'other']) {
-        data.scope.functionalUnit.resourceType = resourceType;
-        assert.equal(results.selectedResourceFleetCount.result, 352);
-        assert.equal(results.emissionsPerFunctionalUnitKg.result, 0.5);
-    }
+    data.scope.functionalUnit.resourceType = 'GPU';
+    assert.equal(results.selectedResourceFleetCount.result, 352);
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, 0.5);
     data.hardware[0].impactManufacturingDistributionEol = 0;
     assert.equal(results.emissionsPerFunctionalUnitKg.result, 0);
     data.hardware = [];
@@ -1729,4 +1726,72 @@ test('store-owned PUE presentation preserves supplied zero and rejects invalid e
     data.scope.functionalUnit.usageDuration = 0;
     assert.equal(data.isScopeValid, false);
     assert.equal(results.emissionsPerFunctionalUnitKg.result, null);
+});
+
+test('invalid resource selections fail before hardware validation and propagate to both ratios', () => {
+    const data = useSurveyDataStore();
+    const results = useSurveyResultsStore();
+    setupScope(data);
+    data.monitoringPeriod.unit = 'year';
+    data.datacenters[0].energy = DatacenterEnergyDraftSchema.parse({
+        carbonIntensity: 1000,
+        energyConsumption: 100,
+    });
+    const invalidSelections = ['', undefined, null, ' ', 'cpu', 'gpu', ' CPU ', 'GPU ', 'other'];
+    const ready = {
+        ...validHardware(),
+        cpuQuantity: 3,
+        gpuQuantity: 4,
+        impactManufacturingDistributionEol: 10,
+    };
+    for (const hardware of [
+        [],
+        [ready],
+        [{ ...ready, quantity: null, cpuQuantity: null, gpuQuantity: null }],
+    ]) {
+        data.hardware = hardware;
+        for (const resourceType of invalidSelections) {
+            data.scope.functionalUnit.resourceType = resourceType;
+            const fleet = results.selectedResourceFleetCount;
+            assert.equal(fleet.success, 'failure');
+            assert.equal(fleet.result, null);
+            assert.deepEqual(fleet.ignoredInputs, []);
+            assert.equal(fleet.inputErrors.length, 1);
+            assert.ok(fleet.inputErrors[0] instanceof z.ZodError);
+            assert.deepEqual(fleet.inputErrors[0].issues[0].path, [
+                'scope',
+                'functionalUnit',
+                'resourceType',
+            ]);
+            assert.equal(fleet.inputErrors[0].issues[0].code, 'invalid_value');
+            assert.deepEqual(fleet.inputErrors[0].issues[0].values, ['CPU', 'GPU']);
+            for (const ratio of [
+                results.emissionsPerFunctionalUnitKg,
+                results.lifespanEmissionsPerResourceKg,
+            ]) {
+                assert.equal(ratio.success, 'failure');
+                assert.equal(ratio.result, null);
+                assert.ok(ratio.inputErrors.includes(fleet.inputErrors[0]));
+            }
+            assert.equal(data.isScopeValid, false);
+            assert.equal(results.totalOperationalEmissionsKg.result, 100);
+            if (hardware.length === 1 && hardware[0].quantity !== null) {
+                assert.equal(results.totalEmbodiedEmissionsKg.result, 10);
+                assert.equal(results.totalLifespanEmissionsKg.result, 110);
+            }
+        }
+    }
+    data.hardware = [ready];
+    for (const [resourceType, expectedFleet] of [
+        ['CPU', 3],
+        ['GPU', 4],
+    ]) {
+        data.scope.functionalUnit.resourceType = resourceType;
+        assert.equal(results.selectedResourceFleetCount.success, 'success');
+        assert.equal(results.selectedResourceFleetCount.result, expectedFleet);
+        assert.equal(results.emissionsPerFunctionalUnitKg.success, 'success');
+        assert.equal(results.lifespanEmissionsPerResourceKg.success, 'success');
+        assert.equal(data.isScopeValid, true);
+        assert.equal(data.resultsStatus, 'complete');
+    }
 });

@@ -160,18 +160,35 @@ for (const embodiedStatus of statuses) {
             const expectedStatus =
                 embodiedStatus === 'success' && operationalStatus === 'success'
                     ? 'success'
-                    : 'partial';
+                    : embodiedStatus === 'failure' && operationalStatus === 'failure'
+                      ? 'failure'
+                      : 'partial';
             const display = result.computations.at(-1);
             assert.equal(display.computation.success, expectedStatus);
-            assert.equal(display.computation.result, undefined);
+            assert.equal(
+                display.computation.result,
+                expectedStatus === 'failure' ? null : undefined,
+            );
             assert.equal(
                 text(heading(result.html, en.resultsChartSplitTitle)),
-                expectedStatus === 'success' ? '' : 'Partial',
+                expectedStatus === 'success'
+                    ? ''
+                    : expectedStatus === 'failure'
+                      ? 'Unavailable'
+                      : 'Partial',
             );
-            assert.doesNotMatch(
-                heading(result.html, en.resultsChartSplitTitle),
-                /Unavailable|indicator--failure/,
-            );
+            if (expectedStatus === 'failure') {
+                assert.match(heading(result.html, en.resultsChartSplitTitle), /indicator--failure/);
+                assert.doesNotMatch(
+                    heading(result.html, en.resultsChartSplitTitle),
+                    /Partial|indicator--partial/,
+                );
+            } else {
+                assert.doesNotMatch(
+                    heading(result.html, en.resultsChartSplitTitle),
+                    /Unavailable|indicator--failure/,
+                );
+            }
             assert.deepEqual(display.computation.inputErrors, [
                 ...result.results.totalEmbodiedEmissionsKg.inputErrors,
                 ...result.results.totalOperationalEmissionsKg.inputErrors,

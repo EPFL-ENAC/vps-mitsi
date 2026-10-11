@@ -18,6 +18,7 @@ import {
     DatacenterGeneralInfoSchema,
 } from '../src/models/Datacenter/schema.ts';
 import { HardwareItemDraftSchema } from '../src/models/HardwareItem/schema.ts';
+import { ResourceTypeSchema } from '../src/models/FunctionalUnit/schema.ts';
 import en from '../src/i18n/en-GB/index.ts';
 import { renderTables } from './helpers/render-tables.mjs';
 import { setupScope, validHardware } from './helpers/survey-fixtures.mjs';
@@ -365,4 +366,29 @@ test('unfinished descriptive scope fields do not mark complete emission values a
         /<strong><span class="computation-result-display">[^<]*(?:<!--[\s\S]*?-->)?10\.00/,
     );
     assert.doesNotMatch(result.html, /10\.00 \(Partial\)/);
+});
+
+test('resource select derives translated options from the enum and requires a supported selection', async () => {
+    const labels = { CPU: 'Processors', GPU: 'Graphics processors' };
+    const result = await renderTables(ScopePage, {
+        messages: { ...en, scopeResourceType: labels },
+        setupStore: setupScope,
+    });
+    const resourceSelect = result.selects[1];
+    assert.deepEqual(
+        resourceSelect.options,
+        ResourceTypeSchema.options.map((value) => ({ value, label: labels[value] })),
+    );
+    for (const invalid of ['', null, undefined, 'cpu', 'other']) {
+        assert.equal(typeof resourceSelect.rules[0](invalid), 'string');
+    }
+    for (const resourceType of ['CPU', 'GPU']) {
+        assert.equal(resourceSelect.rules[0](resourceType), true);
+        resourceSelect.$emit('update:modelValue', resourceType);
+        assert.equal(result.store.scope.functionalUnit.resourceType, resourceType);
+        assert.equal(result.store.isScopeValid, true);
+    }
+    resourceSelect.$emit('update:modelValue', '');
+    assert.equal(result.store.scope.functionalUnit.resourceType, '');
+    assert.equal(result.store.isScopeValid, false);
 });

@@ -49,16 +49,11 @@ const props = defineProps<{
 
 const { t } = useI18n();
 
-const splitChartStatus = computed(() => {
-    const { embodied, operational } = props;
-    return embodied.success === 'success' && operational.success === 'success'
-        ? ComputationResult.success(undefined)
-        : ComputationResult.partial(
-              undefined,
-              [...embodied.inputErrors, ...operational.inputErrors],
-              [...embodied.ignoredInputs, ...operational.ignoredInputs],
-          );
-});
+// The purpose of this strange line is to capture the "partiality" of the 2 computations.
+// We discard the actual result (with .map(() => undefined)) because we only care about the "success" | "partial" | "failure" status of the computations, as it is only used in the ComputationResultDisplay.
+const splitChartStatus = computed(() =>
+    ComputationResult.sum([props.embodied, props.operational]).map(() => undefined),
+);
 
 /** Failed sources are omitted; available sources keep their value and colour. */
 const data = computed(() =>

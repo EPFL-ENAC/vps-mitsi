@@ -20,6 +20,7 @@ import {
 } from 'src/models/UnderlyingService/schema';
 import { MonitoringPeriodSchema } from 'src/models/MonitoringPeriod/schema';
 import { ScopeSchema } from 'src/models/Scope/schema';
+import { ResourceTypeSchema } from 'src/models/FunctionalUnit/schema';
 import {
     calculateDatacenterOperational,
     type DatacenterOperationalResult,
@@ -68,6 +69,11 @@ export interface EmbodiedGroup {
 
 // Retain the existing Zod diagnostic path while renaming the public fleet-count result.
 const ResourceCountSchema = z.object({ resourcesInService: z.number().positive() });
+const ResourceSelectionContextSchema = z.object({
+    scope: z.object({
+        functionalUnit: ScopeSchema.shape.functionalUnit.pick({ resourceType: true }),
+    }),
+});
 const FunctionalUnitContextSchema = z.object({
     scope: ScopeSchema.pick({ functionalUnit: true, lifespanYears: true }),
 });
@@ -215,11 +221,12 @@ export const useSurveyResultsStore = defineStore('surveyResults', () => {
 
     /** Selected CPU/GPU fleet count, applying the same second-hand exclusion as embodied emissions. */
     const selectedResourceFleetCount = computed<ComputationResult<number, HardwareItem>>(() => {
-        // Preserve workbook selection: CPU fleet for CPU units, GPU fleet otherwise.
-        const cpu = data.scope.functionalUnit.resourceType.trim().toLowerCase() === 'cpu';
+        const selection = ResourceSelectionContextSchema.safeParse({ scope: data.scope });
+        if (!selection.success) return ComputationResult.failure([selection.error]);
+        const { resourceType } = selection.data.scope.functionalUnit;
         const excludedIfNeeded = data.hardware.filter((row) => !isSecondHandExcluded(row));
 
-        if (cpu) {
+        if (resourceType === ResourceTypeSchema.enum.CPU) {
             return ComputationResult.bulkValidateAndMap(
                 excludedIfNeeded,
                 HardwareCpuFleetMeasurementsSchema,

@@ -9,7 +9,7 @@ function validScope() {
         serviceName: 'Service',
         function: 'Research',
         lifespanYears: 1,
-        functionalUnit: { usageDuration: 1, resourceCount: 1 },
+        functionalUnit: { usageDuration: 1, resourceCount: 1, resourceType: 'CPU' },
     });
 }
 export function setupScope(store) {

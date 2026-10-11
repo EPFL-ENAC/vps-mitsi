@@ -113,6 +113,7 @@
                             class="scope-fu-select scope-fu-select--grow"
                             v-model="surveyData.scope.functionalUnit.resourceType"
                             :options="resourceTypeOptions"
+                            :rules="[toValidationRule(FunctionalUnitSchema.shape.resourceType)]"
                             emit-value
                             map-options
                             dense
@@ -179,7 +180,7 @@ import { useI18n } from 'vue-i18n';
 import ScopeDatacentersTable from 'src/components/scope/ScopeDatacentersTable.vue';
 import ScopeBoundaryItemsTable from 'src/components/scope/ScopeBoundaryItemsTable.vue';
 import { useValidation } from 'src/composables/useValidation';
-import { FunctionalUnitSchema } from 'src/models/FunctionalUnit/schema';
+import { FunctionalUnitSchema, ResourceTypeSchema } from 'src/models/FunctionalUnit/schema';
 import { ScopeSchema } from 'src/models/Scope/schema';
 import { TimeUnitSchema } from 'src/models/TimeUnit/schema';
 import { normalizeKey } from 'src/utils/format';
@@ -196,10 +197,12 @@ const timeUnitOptions = computed(() =>
     })),
 );
 
-const resourceTypeOptions = computed(() => [
-    { label: t('scopeResourceTypeCpu'), value: 'CPU' },
-    { label: t('scopeResourceTypeGpu'), value: 'GPU' },
-]);
+const resourceTypeOptions = computed(() =>
+    ResourceTypeSchema.options.map((value) => ({
+        value,
+        label: t(`scopeResourceType.${value}`),
+    })),
+);
 </script>
 
 <style scoped>

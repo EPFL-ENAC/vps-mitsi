@@ -12,7 +12,11 @@ import {
     DatacenterEnergyDraftSchema,
     DatacenterEnergySchema,
 } from '../src/models/Datacenter/schema.ts';
-import { FunctionalUnitDraftSchema } from '../src/models/FunctionalUnit/schema.ts';
+import {
+    FunctionalUnitDraftSchema,
+    FunctionalUnitSchema,
+    ResourceTypeSchema,
+} from '../src/models/FunctionalUnit/schema.ts';
 import { HardwareItemDraftSchema, HardwareItemSchema } from '../src/models/HardwareItem/schema.ts';
 import {
     MITSI_SCHEMA_VERSION,
@@ -191,7 +195,7 @@ test('scope validates its own fields independently of datacenters', () => {
         serviceName: 'Service',
         function: 'Research',
         lifespanYears: 1,
-        functionalUnit: { usageDuration: 1, resourceCount: 1 },
+        functionalUnit: { usageDuration: 1, resourceCount: 1, resourceType: 'CPU' },
     });
     assert.equal(ScopeSchema.safeParse(valid).success, true);
     for (const patch of [
@@ -247,4 +251,34 @@ test('nullable numbers preserve bounds and distinguish missing values from zero'
     });
     assert.equal(DatacenterEnergySchema.safeParse(energy).success, true);
     assert.equal(DatacenterEnergyDraftSchema.safeParse({ carbonIntensity: 0 }).success, true);
+});
+
+test('resource selection uses exact enum values while drafts retain an unanswered selection', () => {
+    assert.deepEqual(ResourceTypeSchema.options, ['CPU', 'GPU']);
+    const input = { timeUnit: 'hour', usageDuration: 1, resourceCount: 1 };
+    assert.equal(FunctionalUnitDraftSchema.parse(input).resourceType, '');
+    assert.equal(FunctionalUnitSchema.safeParse(input).success, false);
+    for (const resourceType of ['CPU', 'GPU']) {
+        assert.equal(
+            FunctionalUnitSchema.parse({ ...input, resourceType }).resourceType,
+            resourceType,
+        );
+        assert.equal(
+            FunctionalUnitDraftSchema.parse({ ...input, resourceType }).resourceType,
+            resourceType,
+        );
+    }
+    for (const resourceType of ['', undefined, null, ' ', 'cpu', 'gpu', ' CPU ', 'other']) {
+        const parsed = FunctionalUnitSchema.safeParse({ ...input, resourceType });
+        assert.equal(parsed.success, false);
+        assert.deepEqual(parsed.error.issues[0].path, ['resourceType']);
+        assert.equal(parsed.error.issues[0].code, 'invalid_value');
+        assert.deepEqual(parsed.error.issues[0].values, ResourceTypeSchema.options);
+        if (resourceType !== '' && resourceType !== undefined) {
+            assert.equal(
+                FunctionalUnitDraftSchema.safeParse({ ...input, resourceType }).success,
+                false,
+            );
+        }
+    }
 });

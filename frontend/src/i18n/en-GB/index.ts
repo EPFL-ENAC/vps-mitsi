@@ -94,8 +94,10 @@ export default {
     scopeTimeUnit_week: 'week',
     scopeTimeUnit_month: 'month',
     scopeTimeUnit_year: 'year',
-    scopeResourceTypeCpu: 'CPU',
-    scopeResourceTypeGpu: 'GPU',
+    scopeResourceType: {
+        CPU: 'CPU',
+        GPU: 'GPU',
+    },
     scopeFuTimeUnitTooltip: "e.g. hours — 'for 2 hours with 2 CPUs'",
     scopeFuDurationTooltip: "e.g. 2 — 'for 2 hours with 2 CPUs'",
     scopeFuResourceCountTooltip: 'e.g. 2 CPUs — one usage uses 2 resources',
