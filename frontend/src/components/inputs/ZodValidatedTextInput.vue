@@ -1,35 +1,42 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref } from 'vue';
 import { QInput, type ValidationRule } from 'quasar';
 import type { z } from 'zod';
-import { useValidation } from 'src/composables/useValidation';
+import { useValidation, isSchemaRequired } from 'src/composables/useValidation';
 
 defineOptions({ inheritAttrs: false });
 
-const props = defineProps<{
-    schema: z.ZodType;
-    rules?: ValidationRule[];
-}>();
+// Without `required: undefined`, Vue defaults an omitted Boolean prop to `false`,
+// so `props.required ?? isSchemaRequired(...)` would never reach the schema check
+const props = withDefaults(
+    defineProps<{
+        schema: z.ZodType;
+        label?: string;
+        rules?: ValidationRule[];
+        required?: boolean | undefined;
+    }>(),
+    { required: undefined },
+);
 
-// Preserve editable values, including cleared fields.
 const model = defineModel<string | number | null | undefined>({ required: true });
 const input = ref<QInput>();
-const { toValidationRule, registerForInitialValidation } = useValidation();
+const { toValidationRule } = useValidation();
 
+const isRequired = computed(() => props.required ?? isSchemaRequired(props.schema));
 const rules = computed(() => [toValidationRule(props.schema), ...(props.rules ?? [])]);
-
-// Registering the input in the global composable queue.
-onMounted(() => {
-    if (input.value) {
-        registerForInitialValidation(() => void input.value?.validate());
-    }
-});
 
 defineExpose({ input });
 </script>
 
 <template>
-    <QInput ref="input" v-bind="$attrs" v-model="model" :rules="rules">
+    <QInput
+        ref="input"
+        v-bind="$attrs"
+        :class="{ 'zod-required': isRequired }"
+        :label="props.label"
+        v-model="model"
+        :rules="rules"
+    >
         <template v-for="(_, name) in $slots" #[name]="slotProps">
             <slot :name="name" v-bind="slotProps ?? {}" />
         </template>

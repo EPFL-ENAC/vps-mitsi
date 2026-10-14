@@ -20,7 +20,9 @@
                     :props="props"
                     :data-kind="col.kind"
                 >
-                    {{ col.label }}
+                    <span :class="{ 'zod-required-label': isSchemaRequired(col.zod) }">
+                        {{ col.label }}
+                    </span>
                 </q-th>
                 <q-th auto-width />
             </q-tr>
@@ -80,6 +82,7 @@ import { formatDatacenterName } from 'src/utils/format';
 import { createSchemaColumn } from 'src/utils/tables';
 import { DatacenterEnergySchema } from 'src/models/schema';
 import type { Datacenter, DatacenterEnergy } from 'src/models/mitsi';
+import { isSchemaRequired } from 'src/composables/useValidation';
 
 interface EnergyColumn extends QTableColumn<Datacenter> {
     name: keyof DatacenterEnergy | 'datacenter';

@@ -21,7 +21,9 @@
                     :props="props"
                     :data-kind="col.kind"
                 >
-                    {{ col.label }}
+                    <span :class="{ 'zod-required-label': isSchemaRequired(col.zod) }">
+                        {{ col.label }}
+                    </span>
                 </q-th>
                 <q-th auto-width />
             </q-tr>
@@ -69,6 +71,7 @@ import { useI18n } from 'vue-i18n';
 import { BoundaryItemSchema } from 'src/models/schema';
 import { createSchemaColumn } from 'src/utils/tables';
 import { useMitsiStore } from 'src/stores/mitsi';
+import { isSchemaRequired } from 'src/composables/useValidation';
 
 interface BoundaryColumn extends QTableColumn<BoundaryItem> {
     field: Exclude<keyof BoundaryItem, 'id'>;

@@ -21,7 +21,9 @@
                     :props="props"
                     :data-kind="col.kind"
                 >
-                    {{ col.label }}
+                    <span :class="{ 'zod-required-label': isSchemaRequired(col.zod) }">
+                        {{ col.label }}
+                    </span>
                 </q-th>
                 <q-th auto-width />
             </q-tr>
@@ -72,6 +74,7 @@ import { DatacenterGeneralInfoSchema } from 'src/models/schema';
 import { useMitsiStore } from 'src/stores/mitsi';
 import { formatDatacenterName } from 'src/utils/format';
 import { createSchemaColumn } from 'src/utils/tables';
+import { isSchemaRequired } from 'src/composables/useValidation';
 
 interface DatacenterColumn extends QTableColumn<Datacenter> {
     name: keyof DatacenterGeneralInfo | 'usedBy';

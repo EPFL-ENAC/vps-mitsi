@@ -65,7 +65,9 @@
 
                 <div class="col-12">
                     <div class="text-subtitle2 q-mb-xs">
-                        {{ $t('scopeFunctionalUnitLabel') }}
+                        <span :class="{ 'zod-required-label': fuRequired }">
+                            {{ $t('scopeFunctionalUnitLabel') }}
+                        </span>
                     </div>
                     <div class="scope-fu row items-center q-gutter-sm flex-nowrap">
                         <span>{{ $t('scopeFuBefore') }}</span>
@@ -170,6 +172,7 @@ import AssessmentSection from 'src/components/AssessmentSection.vue';
 import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInput.vue';
 import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
 import ZodValidatedSelect from 'src/components/inputs/ZodValidatedSelect.vue';
+import { isSchemaRequired } from 'src/composables/useValidation';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
@@ -181,6 +184,8 @@ import { normalizeKey } from 'src/utils/format';
 
 const { t } = useI18n();
 const mitsi = useMitsiStore();
+
+const fuRequired = computed(() => Object.values(FunctionalUnitSchema.shape).some(isSchemaRequired));
 
 const timeUnitOptions = computed(() =>
     TimeUnitSchema.options.map((unit) => ({

@@ -134,3 +134,12 @@ body {
     font-weight: 500;
     font-size: 0.85rem;
 }
+
+// ─── Zod Required Asterisk ──────────────────────────────────────────────────
+.zod-required .q-field__label::after,
+.q-field.zod-required .q-field__label::after,
+.zod-required-label::after {
+    content: ' *';
+    color: var(--q-negative, #c1001a);
+    font-weight: 800;
+}
