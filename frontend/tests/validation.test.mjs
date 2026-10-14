@@ -4,7 +4,7 @@ import { createSSRApp, h } from 'vue';
 import { renderToString } from 'vue/server-renderer';
 import { createI18n } from 'vue-i18n';
 import { useValidation } from '../src/composables/useValidation.ts';
-import { renderInventoryTable } from './helpers/inventory-table.mjs';
+import { renderInventoryTable } from './helpers/render-tables.mjs';
 import {
     DatacenterEnergySchema,
     HardwareItemSchema,

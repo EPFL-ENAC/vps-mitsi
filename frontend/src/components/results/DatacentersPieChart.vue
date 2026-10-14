@@ -18,7 +18,7 @@ import {
 import { CanvasRenderer } from 'echarts/renderers';
 import { OKABEITO } from 'src/utils/charts';
 import type { DatacenterOperationalResult } from 'src/stores/mitsi';
-import { formatKg } from 'src/utils/format';
+import { formatDatacenterName, formatKg } from 'src/utils/format';
 
 echarts.use([PieChart, TooltipComponent, LegendComponent, CanvasRenderer]);
 
@@ -29,8 +29,7 @@ type ECOption = echarts.ComposeOption<
 const props = withDefaults(
     defineProps<{
         rows: DatacenterOperationalResult[];
-        labelFor: (id: string) => string;
-        total: number | null; // denominator (totalOperational), null -> dash
+        total: number | null;
         metric?: 'period' | 'lifespan';
     }>(),
     { metric: 'lifespan' },
@@ -38,18 +37,15 @@ const props = withDefaults(
 
 const { t } = useI18n();
 
-/** Ready slices only — null/non-positive values are filtered out
- *  (unready datacenters stay visible as "Partial" in the table). */
 const slices = computed(() =>
     props.rows
         .map((r) => ({
-            name: props.labelFor(r.datacenterId),
+            name: formatDatacenterName(r.datacenter),
             value: r[props.metric === 'period' ? 'co2Period' : 'co2Lifespan'],
         }))
         .filter((d): d is { name: string; value: number } => d.value !== null && d.value > 0),
 );
 
-/** Reactive option fed straight to vue-echarts; autoresize handles expand/collapse. */
 const chartOption = computed<ECOption>(() => ({
     tooltip: {
         trigger: 'item',

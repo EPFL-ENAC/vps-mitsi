@@ -53,7 +53,7 @@ export type RemoveDatacenterResult =
     | { removed: false; reason: 'in_use'; usage: DatacenterDeletionBlock };
 
 export type DatacenterOperationalResult = {
-    datacenterId: string;
+    datacenter: Datacenter;
     co2Period: number | null;
     co2Lifespan: number | null;
 };
@@ -144,10 +144,10 @@ export const useMitsiStore = defineStore('mitsi', () => {
         return datacenters.value.map((dc) => {
             const energy = DatacenterEnergySchema.safeParse(dc.energy);
             if (!energy.success || !period.success) {
-                return { datacenterId: dc.id, co2Period: null, co2Lifespan: null };
+                return { datacenter: dc, co2Period: null, co2Lifespan: null };
             }
             return {
-                datacenterId: dc.id,
+                datacenter: dc,
                 ...calculateOperationalEmissions({
                     energy: energy.data,
                     monitoringPeriod: period.data,

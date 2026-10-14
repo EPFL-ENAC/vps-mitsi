@@ -78,7 +78,7 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import HardwareInventoryTable from 'src/components/inventory/HardwareInventoryTable.vue';
-import type { VisibilityMode } from 'src/models/inventory-columns';
+import type { VisibilityMode } from 'src/models/mitsi';
 import { formatKg } from 'src/utils/format';
 import { useMitsiStore } from 'src/stores/mitsi';
 

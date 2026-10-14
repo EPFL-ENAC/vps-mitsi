@@ -35,3 +35,13 @@ export function buildFunctionalUnitSentence(
         type: fu.resourceType,
     });
 }
+
+/** PUE mention per the assessment convention: omitted (null) or zero PUE
+ *  no multiplier was applied. */
+export function formatPueInclusion(
+    t: (key: string, params?: Record<string, unknown>) => string,
+    pue: number | null | string,
+): string {
+    if (pue === null || pue === 0 || pue === '') return t('resultsPueNotIncluded');
+    return t('resultsPueIncluded', { value: pue });
+}

@@ -3,7 +3,10 @@ import { test } from 'node:test';
 import ScopeDatacentersTable from '../src/components/scope/ScopeDatacentersTable.vue';
 import ScopeBoundaryItemsTable from '../src/components/scope/ScopeBoundaryItemsTable.vue';
 import EnergyDatacentersTable from '../src/components/energy/EnergyDatacentersTable.vue';
+import EnergyMonitoringPeriodForm from '../src/components/energy/EnergyMonitoringPeriodForm.vue';
+import HardwareInventoryTable from '../src/components/inventory/HardwareInventoryTable.vue';
 import ResultsPage from '../src/pages/ResultsPage.vue';
+import ScopePage from '../src/pages/ScopePage.vue';
 import {
     DatacenterDraftSchema,
     DatacenterEnergySchema,
@@ -182,4 +185,34 @@ test('results preserve translated report headers, excluded totals and missing op
     assert.match(result.html, /data-kind="number"[^>]*>—<\/td>/);
     assert.match(result.html, /<th scope="row"/);
     assert.equal(result.store.totalEmbodied, 0);
+});
+
+test('select and toggle edits write through to the store', async () => {
+    const inventory = await renderTables(HardwareInventoryTable, {
+        props: { mode: 'simple' },
+        setupStore(store) {
+            store.datacenters = [datacenter()];
+            store.hardware = [HardwareItemDraftSchema.parse({ id: 'h1' })];
+        },
+    });
+    const [category, datacenterSelect] = inventory.selects;
+    category.$emit('update:modelValue', 'storage_bay');
+    datacenterSelect.$emit('update:modelValue', 'dc-1');
+    inventory.toggles[0].$emit('update:modelValue', true);
+    const row = inventory.store.hardware[0];
+    assert.deepEqual(
+        [row.category, row.datacenterId, row.isSecondHand],
+        ['storage_bay', 'dc-1', true],
+    );
+
+    const period = await renderTables(EnergyMonitoringPeriodForm);
+    period.selects[0].$emit('update:modelValue', 'week');
+    assert.equal(period.store.monitoringPeriod.unit, 'week');
+
+    const scope = await renderTables(ScopePage);
+    const [timeUnit, resourceType] = scope.selects;
+    timeUnit.$emit('update:modelValue', 'day');
+    resourceType.$emit('update:modelValue', 'GPU');
+    assert.equal(scope.store.scope.functionalUnit.timeUnit, 'day');
+    assert.equal(scope.store.scope.functionalUnit.resourceType, 'GPU');
 });

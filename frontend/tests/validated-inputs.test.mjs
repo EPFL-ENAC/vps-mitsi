@@ -49,25 +49,23 @@ test('number inputs convert values without clamping, defaulting or losing clear 
     assert.equal(input.rules[0](1.5), 'Must be a whole number.');
 });
 
-test('schema attributes override caller bounds and additional rules cannot replace validation', async () => {
-    const extraRule = (value) => value !== 3 || 'Three is reserved';
+test('schema attributes and validation override caller-supplied ones', async () => {
     const { html, input } = await renderInput(ZodValidatedNumberInput, {
         schema: z.number().int().min(1).max(5),
         type: 'text',
         min: -100,
         max: 100,
         step: 0.25,
-        rules: [extraRule],
+        rules: [() => 'Caller rule'],
     });
     assert.match(html, /type="number"/);
     assert.match(html, /min="1"/);
     assert.match(html, /max="5"/);
     assert.match(html, /step="1"/);
-    assert.equal(input.rules.length, 2);
+    assert.equal(input.rules.length, 1);
     assert.equal(input.rules[0](0), 'Must be at least 1.');
-    assert.equal(input.rules[1](3), 'Three is reserved');
-    assert.equal(await input.validate(3), false);
-    assert.equal(await input.validate(2), true);
+    assert.equal(await input.validate(6), false);
+    assert.equal(await input.validate(3), true);
 });
 
 test('nullable decimals accept clearing and unbounded attributes are omitted', async () => {

@@ -1,6 +1,7 @@
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMitsiStore } from 'src/stores/mitsi';
-import { formatKg } from 'src/utils/format';
+import { buildFunctionalUnitSentence, formatKg, normalizeKey } from 'src/utils/format';
 
 /** Keep partial-result labels consistent in Results and the persistent footer. */
 export function useResultFormatting() {
@@ -31,5 +32,17 @@ export function useResultFormatting() {
         return mitsi.resultsPartial ? `${formatted} (${t('resultsPartial')})` : formatted;
     }
 
-    return { formatOperationalResult, formatCombinedResult };
+    const timeUnitLabel = computed(() =>
+        t('scopeTimeUnit_' + normalizeKey(mitsi.scope.functionalUnit.timeUnit)),
+    );
+
+    const fuSentence = computed(() =>
+        buildFunctionalUnitSentence(t, mitsi.scope.functionalUnit, timeUnitLabel.value),
+    );
+
+    return {
+        formatOperationalResult,
+        formatCombinedResult,
+        fuSentence,
+    };
 }

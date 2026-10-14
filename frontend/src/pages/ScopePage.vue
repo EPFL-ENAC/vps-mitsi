@@ -81,8 +81,7 @@
                         </ZodValidatedNumberInput>
                         <q-select
                             class="scope-fu-select"
-                            :model-value="mitsi.scope.functionalUnit.timeUnit"
-                            @update:model-value="(v) => (mitsi.scope.functionalUnit.timeUnit = v)"
+                            v-model="mitsi.scope.functionalUnit.timeUnit"
                             :options="timeUnitOptions"
                             :rules="[toValidationRule(FunctionalUnitSchema.shape.timeUnit)]"
                             emit-value
@@ -108,12 +107,7 @@
                         </ZodValidatedNumberInput>
                         <q-select
                             class="scope-fu-select scope-fu-select--grow"
-                            :model-value="mitsi.scope.functionalUnit.resourceType"
-                            @update:model-value="
-                                (v) => {
-                                    mitsi.scope.functionalUnit.resourceType = String(v ?? '');
-                                }
-                            "
+                            v-model="mitsi.scope.functionalUnit.resourceType"
                             :options="resourceTypeOptions"
                             emit-value
                             map-options

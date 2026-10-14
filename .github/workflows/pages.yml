@@ -25,7 +25,7 @@ jobs:
       - working-directory: frontend
         run: npm run build
         env:
-          PUBLIC_PATH: /vps-mitsi/
+          PUBLIC_PATH: /
       - name: SPA fallback
         run: cp frontend/dist/spa/index.html frontend/dist/spa/404.html
       - uses: actions/configure-pages@v4

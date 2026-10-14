@@ -14,10 +14,7 @@
         <div class="col-2">
             <q-select
                 class="full-width"
-                :model-value="mitsi.monitoringPeriod.unit"
-                @update:model-value="
-                    (v) => (mitsi.monitoringPeriod.unit = String(v ?? '') as MonitoringUnit)
-                "
+                v-model="mitsi.monitoringPeriod.unit"
                 :options="monitoringUnitOptions"
                 :rules="[toValidationRule(MonitoringPeriodSchema.shape.unit)]"
                 emit-value
@@ -56,7 +53,6 @@ import { useMitsiStore } from 'src/stores/mitsi';
 import { useValidation } from 'src/composables/useValidation';
 import { MonitoringPeriodSchema, MonitoringUnitSchema } from 'src/models/schema';
 import { normalizeKey } from 'src/utils/format';
-import type { MonitoringUnit } from 'src/models/mitsi';
 
 const mitsi = useMitsiStore();
 const { t } = useI18n();

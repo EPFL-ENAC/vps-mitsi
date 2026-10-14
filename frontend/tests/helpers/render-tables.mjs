@@ -9,6 +9,8 @@ import {
     QTh,
     QTd,
     QBtn,
+    QInput,
+    QSelect,
     QToggle,
     QMarkupTable,
     QCard,
@@ -20,6 +22,7 @@ import {
     QBanner,
     QTooltip,
 } from 'quasar';
+import HardwareInventoryTable from '../../src/components/inventory/HardwareInventoryTable.vue';
 import { useMitsiStore } from '../../src/stores/mitsi.ts';
 import en from '../../src/i18n/en-GB/index.ts';
 
@@ -50,6 +53,8 @@ export async function renderTables(
                 QTh,
                 QTd,
                 QBtn,
+                QInput,
+                QSelect,
                 QToggle,
                 QMarkupTable,
                 QCard,
@@ -81,6 +86,26 @@ export async function renderTables(
         dialogs,
         tables: instances.filter((instance) => instance.$options.name === 'QTable'),
         inputs: instances.filter((instance) => instance.$options.name === 'QInput'),
+        selects: instances.filter((instance) => instance.$options.name === 'QSelect'),
+        toggles: instances.filter((instance) => instance.$options.name === 'QToggle'),
         buttons: instances.filter((instance) => instance.$options.name === 'QBtn'),
     };
+}
+
+/** Inspect the columns passed to the real QTable, in the widest mode by default. */
+export async function renderInventoryTable({
+    mode = 'advanced',
+    hardware = [],
+    datacenters = [],
+    messages,
+} = {}) {
+    const { html, tables } = await renderTables(HardwareInventoryTable, {
+        props: { mode },
+        setupStore(store) {
+            store.hardware = hardware;
+            store.datacenters = datacenters;
+        },
+        messages,
+    });
+    return { html, columns: tables[0].columns };
 }
