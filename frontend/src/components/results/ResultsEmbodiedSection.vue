@@ -2,15 +2,19 @@
     <div class="results-embodied-wrapper">
         <div v-if="showToggle" class="row items-center q-mb-md">
             <q-toggle
-                v-model="mitsi.includeSecondHandEmbodied"
+                v-model="surveyData.includeSecondHandEmbodied"
                 :label="$t('resultsSecondHandToggle')"
                 color="primary"
             />
         </div>
 
-        <div v-for="g in mitsi.embodiedByCategory" :key="g.category" class="q-mb-md">
+        <div
+            v-for="g in surveyResults.embodiedEmissionsByCategory"
+            :key="g.category"
+            class="q-mb-md"
+        >
             <component
-                :is="interactive ? 'q-expansion-item' : 'div'"
+                :is="interactive ? QExpansionItem : 'div'"
                 :label="t('inventoryCategory_' + normalizeKey(g.category))"
                 default-opened
                 dense
@@ -36,7 +40,6 @@
                             {{ props.col.label }}
                         </q-th>
                     </template>
-
                     <template #body="props">
                         <q-tr :props="props" :class="{ 'results-excluded': props.row.excluded }">
                             <q-td
@@ -45,12 +48,40 @@
                                 :props="props"
                                 :data-kind="col.kind"
                             >
-                                <template v-if="col.name === 'co2RowTotal'">
-                                    <span :class="{ 'results-strike': props.row.excluded }">
-                                        {{ col.value }}
-                                    </span>
+                                <template v-if="col.computation">
+                                    <ComputationResultDisplay
+                                        :disable-tooltip="disableTooltip"
+                                        :computation="col.computation(props.row)"
+                                    >
+                                        <template #default="{ result }">
+                                            <span
+                                                :class="{
+                                                    'results-strike':
+                                                        col.name === 'co2RowTotal' &&
+                                                        props.row.excluded,
+                                                }"
+                                            >
+                                                {{
+                                                    col.formatValue
+                                                        ? col.formatValue(result)
+                                                        : result
+                                                }}
+                                            </span>
+                                        </template>
+                                        <template #failure>
+                                            <span
+                                                :class="{
+                                                    'results-strike':
+                                                        col.name === 'co2RowTotal' &&
+                                                        props.row.excluded,
+                                                }"
+                                            >
+                                                {{ t('mainNotApplicable') }}
+                                            </span>
+                                        </template>
+                                    </ComputationResultDisplay>
                                     <span
-                                        v-if="props.row.excluded"
+                                        v-if="col.name === 'co2RowTotal' && props.row.excluded"
                                         class="results-not-counted q-ml-xs"
                                     >
                                         ({{ $t('inventoryNotCounted') }})
@@ -66,7 +97,17 @@
 
                 <div class="results-category-total text-right q-py-xs text-caption">
                     {{ $t('resultsCategoryTotal') }}:
-                    <strong>{{ formatKg(g.categoryTotal) }}</strong>
+                    <strong>
+                        <ComputationResultDisplay
+                            :disable-tooltip="disableTooltip"
+                            :computation="g.totalEmbodiedEmissionsKg"
+                            :format-value="formatKg"
+                        >
+                            <template #ignored-input="{ input }">{{
+                                input.name || input.id
+                            }}</template>
+                        </ComputationResultDisplay>
+                    </strong>
                 </div>
             </component>
         </div>
@@ -78,7 +119,17 @@
                         <strong>{{ $t('resultsTotalEmbodied') }}</strong>
                     </td>
                     <td class="text-right">
-                        <strong>{{ formatKg(mitsi.totalEmbodied) }}</strong>
+                        <strong>
+                            <ComputationResultDisplay
+                                :disable-tooltip="disableTooltip"
+                                :computation="surveyResults.totalEmbodiedEmissionsKg"
+                                :format-value="formatKg"
+                            >
+                                <template #ignored-input="{ input }">{{
+                                    input.name || input.id
+                                }}</template>
+                            </ComputationResultDisplay>
+                        </strong>
                     </td>
                 </tr>
             </tbody>
@@ -89,20 +140,40 @@
             <div class="col-12 col-md-6">
                 <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
                     {{ $t('resultsChartTreemapByElement') }}
+                    <ComputationResultDisplay
+                        :disable-tooltip="disableTooltip"
+                        class="q-ml-sm"
+                        :computation="surveyResults.totalEmbodiedEmissionsKg"
+                        :missing-label="disableTooltip ? '' : t('resultsUnavailable')"
+                        hide-value
+                        :partial-flag-label="t('resultsPartial')"
+                    >
+                        <template #ignored-input="{ input }">{{ input.name || input.id }}</template>
+                    </ComputationResultDisplay>
                 </div>
                 <EmbodiedTreemapChart
-                    :groups="mitsi.embodiedByCategory"
-                    :grand-total="mitsi.totalEmbodied"
+                    :groups="surveyResults.embodiedEmissionsByCategory"
+                    :grand-total="surveyResults.totalEmbodiedEmissionsKg.result"
                     variant="element"
                 />
             </div>
             <div class="col-12 col-md-6">
                 <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
                     {{ $t('resultsChartTreemapByCategory') }}
+                    <ComputationResultDisplay
+                        :disable-tooltip="disableTooltip"
+                        class="q-ml-sm"
+                        :computation="surveyResults.totalEmbodiedEmissionsKg"
+                        :missing-label="disableTooltip ? '' : t('resultsUnavailable')"
+                        hide-value
+                        :partial-flag-label="t('resultsPartial')"
+                    >
+                        <template #ignored-input="{ input }">{{ input.name || input.id }}</template>
+                    </ComputationResultDisplay>
                 </div>
                 <EmbodiedTreemapChart
-                    :groups="mitsi.embodiedByCategory"
-                    :grand-total="mitsi.totalEmbodied"
+                    :groups="surveyResults.embodiedEmissionsByCategory"
+                    :grand-total="surveyResults.totalEmbodiedEmissionsKg.result"
                     variant="category"
                 />
             </div>
@@ -111,18 +182,26 @@
 </template>
 
 <script setup lang="ts">
+import { useSurveyDataStore } from 'src/stores/surveyData';
+import { useSurveyResultsStore } from 'src/stores/surveyResults';
+
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { QTableColumn } from 'quasar';
-import { useMitsiStore } from 'src/stores/mitsi';
+import { QExpansionItem, type QTableColumn } from 'quasar';
 import { formatKg, normalizeKey } from 'src/utils/format';
 import EmbodiedTreemapChart from 'src/components/results/EmbodiedTreemapChart.vue';
+import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
+import type { ComputationResult } from 'src/utils/computation';
+
+const surveyData = useSurveyDataStore();
+const surveyResults = useSurveyResultsStore();
 
 withDefaults(
     defineProps<{
         showToggle?: boolean;
         interactive?: boolean;
         showChart?: boolean;
+        disableTooltip?: boolean;
     }>(),
     {
         showToggle: false,
@@ -132,12 +211,13 @@ withDefaults(
 );
 
 const { t } = useI18n();
-const mitsi = useMitsiStore();
 
-type EmbodiedRow = (typeof mitsi.embodiedByCategory)[number]['rows'][number];
+type EmbodiedRow = (typeof surveyResults.embodiedEmissionsByCategory)[number]['rows'][number];
 
 interface EmbodiedTableColumn extends QTableColumn<EmbodiedRow> {
     kind: 'text' | 'number';
+    computation?: (row: EmbodiedRow) => ComputationResult<number>;
+    formatValue?: (value: number) => string;
 }
 
 const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
@@ -159,21 +239,26 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
         name: 'number',
         label: t('resultsEmbodiedColumns.number'),
         align: 'right',
-        field: (row) => row.number,
+        field: (row) => row.quantity.result,
+        computation: (row) => row.quantity,
         kind: 'number',
     },
     {
         name: 'co2PerUnit',
         label: t('resultsEmbodiedColumns.co2PerUnit'),
         align: 'right',
-        field: (row) => formatKg(row.co2PerUnit),
+        field: (row) => row.unitEmbodiedEmissionsKg.result,
+        computation: (row) => row.unitEmbodiedEmissionsKg,
+        formatValue: formatKg,
         kind: 'number',
     },
     {
         name: 'co2RowTotal',
         label: t('resultsEmbodiedColumns.co2RowTotal'),
         align: 'right',
-        field: (row) => formatKg(row.co2RowTotal),
+        field: (row) => row.rowEmbodiedEmissionsKg.result,
+        computation: (row) => row.rowEmbodiedEmissionsKg,
+        formatValue: formatKg,
         kind: 'number',
     },
 ]);

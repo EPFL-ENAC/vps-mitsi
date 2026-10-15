@@ -4,6 +4,8 @@
 </template>
 
 <script setup lang="ts">
+import type { DatacenterOperationalResult } from 'src/models/Datacenter/computations';
+
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import VChart from 'vue-echarts';
@@ -17,7 +19,6 @@ import {
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { OKABEITO } from 'src/utils/charts';
-import type { DatacenterOperationalResult } from 'src/stores/mitsi';
 import { formatDatacenterName, formatKg } from 'src/utils/format';
 
 echarts.use([PieChart, TooltipComponent, LegendComponent, CanvasRenderer]);

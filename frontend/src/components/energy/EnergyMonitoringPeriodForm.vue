@@ -14,7 +14,7 @@
         <div class="col-2">
             <q-select
                 class="full-width"
-                v-model="mitsi.monitoringPeriod.unit"
+                v-model="surveyData.monitoringPeriod.unit"
                 :options="monitoringUnitOptions"
                 :rules="[toValidationRule(MonitoringPeriodSchema.shape.unit)]"
                 emit-value
@@ -27,7 +27,7 @@
         <div class="col-2">
             <ZodValidatedNumberInput
                 class="full-width"
-                v-model="mitsi.monitoringPeriod.value"
+                v-model="surveyData.monitoringPeriod.value"
                 :schema="MonitoringPeriodSchema.shape.value"
                 dense
                 outlined
@@ -37,7 +37,7 @@
         <div class="col-8">
             <q-input
                 class="full-width"
-                v-model="mitsi.monitoringPeriod.comment"
+                v-model="surveyData.monitoringPeriod.comment"
                 dense
                 outlined
                 hide-bottom-space
@@ -47,14 +47,16 @@
 </template>
 
 <script setup lang="ts">
+import { useSurveyDataStore } from 'src/stores/surveyData';
+
 import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInput.vue';
 import { useI18n } from 'vue-i18n';
-import { useMitsiStore } from 'src/stores/mitsi';
 import { useValidation } from 'src/composables/useValidation';
-import { MonitoringPeriodSchema, MonitoringUnitSchema } from 'src/models/schema';
+import { MonitoringPeriodSchema, MonitoringUnitSchema } from 'src/models/MonitoringPeriod/schema';
 import { normalizeKey } from 'src/utils/format';
 
-const mitsi = useMitsiStore();
+const surveyData = useSurveyDataStore();
+
 const { t } = useI18n();
 const { toValidationRule } = useValidation();
 

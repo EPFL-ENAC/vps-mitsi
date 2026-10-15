@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { z } from 'zod';
 import { numberInputAttributes } from '../src/utils/number-input.ts';
-import { DatacenterEnergySchema, HardwareItemSchema } from '../src/models/schema.ts';
+import { DatacenterEnergySchema } from '../src/models/Datacenter/schema.ts';
+import { HardwareItemSchema } from '../src/models/HardwareItem/schema.ts';
 import { renderInventoryTable } from './helpers/render-tables.mjs';
 
 test('native bounds distinguish integers, decimals and unbounded numbers', () => {
