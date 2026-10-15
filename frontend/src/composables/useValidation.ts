@@ -6,8 +6,19 @@
  * validation messages and normalizes empty inputs.
  */
 import type { ValidationRule } from 'quasar';
-import type * as z from 'zod';
+import type { z } from 'zod';
 import { useI18n } from 'vue-i18n';
+
+/**
+ * Checks whether the field is required.
+ * If the schema does not allow undefined, null, or an empty string, the field is required.
+ */
+export function isSchemaRequired(schema?: z.ZodType): boolean {
+    if (!schema) return false;
+    const allowsUndefined = schema.safeParse(undefined).success;
+    const allowsNull = schema.safeParse(null).success;
+    return !allowsUndefined && !allowsNull;
+}
 
 export function useValidation() {
     const i18n = useI18n();
@@ -49,5 +60,5 @@ export function useValidation() {
         };
     }
 
-    return { toValidationRule, formatIssue };
+    return { toValidationRule, formatIssue,  isSchemaRequired };
 }

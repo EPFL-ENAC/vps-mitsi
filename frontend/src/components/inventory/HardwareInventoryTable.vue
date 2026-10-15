@@ -36,7 +36,12 @@
                     :props="props"
                     :data-kind="col.kind"
                 >
-                    <span class="inventory-th-label">{{ col.label }}</span>
+                    <span
+                        class="inventory-th-label"
+                        :class="{ 'zod-required-label': isSchemaRequired(col.zod) }"
+                    >
+                        {{ col.label }}
+                    </span>
                     <span v-if="col.calc" class="inventory-calc-badge">∑</span>
                 </q-th>
                 <q-th auto-width />
@@ -99,12 +104,12 @@
 
                     <!-- Datacenter select (store-driven options, value = id) -->
                     <template v-else-if="col.kind === 'datacenter'">
-                        <q-select
+                        <ZodValidatedSelect
                             v-model="props.row.datacenterId"
+                            :schema="col.zod"
                             :options="col.options"
                             emit-value
                             map-options
-                            :rules="[toValidationRule(col.zod)]"
                             dense
                             outlined
                             hide-bottom-space
@@ -113,12 +118,12 @@
 
                     <!-- Schema enum select (translated options) -->
                     <template v-else-if="col.kind === 'enum'">
-                        <q-select
+                        <ZodValidatedSelect
                             v-model="props.row[col.field]"
+                            :schema="col.zod"
                             :options="col.options"
                             emit-value
                             map-options
-                            :rules="[toValidationRule(col.zod)]"
                             dense
                             outlined
                             hide-bottom-space
@@ -181,6 +186,8 @@ import { useSurveyResultsStore } from 'src/stores/surveyResults';
 
 import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInput.vue';
 import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
+import ZodValidatedSelect from 'src/components/inputs/ZodValidatedSelect.vue';
+import { isSchemaRequired } from 'src/composables/useValidation';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useQuasar, type QTableColumn } from 'quasar';
@@ -198,7 +205,6 @@ import type { VisibilityMode } from 'src/types/ui';
 import { formatDatacenterName, formatKg, normalizeKey } from 'src/utils/format';
 import { createSchemaColumn } from 'src/utils/tables';
 
-import { useValidation } from 'src/composables/useValidation';
 import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
 import type { ComputationResult } from 'src/utils/computation';
 
@@ -228,7 +234,6 @@ const props = defineProps<{
 
 const { t } = useI18n();
 const $q = useQuasar();
-const { toValidationRule } = useValidation();
 
 /** Columns are cumulative: advanced ⊇ normal ⊇ simple. */
 const MODE_RANK: Record<VisibilityMode, number> = { simple: 0, normal: 1, advanced: 2 };

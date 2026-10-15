@@ -20,7 +20,9 @@
                     :props="props"
                     :data-kind="col.kind"
                 >
-                    {{ col.label }}
+                    <span :class="{ 'zod-required-label': isSchemaRequired(col.zod) }">
+                        {{ col.label }}
+                    </span>
                 </q-th>
                 <q-th auto-width />
             </q-tr>
@@ -79,6 +81,7 @@ import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.v
 import { useI18n } from 'vue-i18n';
 import { formatDatacenterName } from 'src/utils/format';
 import { createSchemaColumn } from 'src/utils/tables';
+import { isSchemaRequired } from 'src/composables/useValidation';
 import {
     DatacenterEnergySchema,
     type DatacenterDraft,

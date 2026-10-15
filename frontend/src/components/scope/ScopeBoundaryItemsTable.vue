@@ -21,7 +21,9 @@
                     :props="props"
                     :data-kind="col.kind"
                 >
-                    {{ col.label }}
+                    <span :class="{ 'zod-required-label': isSchemaRequired(col.zod) }">
+                        {{ col.label }}
+                    </span>
                 </q-th>
                 <q-th auto-width />
             </q-tr>
@@ -69,7 +71,8 @@ import { type BoundaryItem, BoundaryItemSchema } from 'src/models/Scope/schema';
 import { useI18n } from 'vue-i18n';
 
 import { createSchemaColumn } from 'src/utils/tables';
-
+import { isSchemaRequired } from 'src/composables/useValidation';
+  
 const surveyData = useSurveyDataStore();
 
 interface BoundaryColumn extends QTableColumn<BoundaryItem> {

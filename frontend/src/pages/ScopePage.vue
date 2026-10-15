@@ -69,7 +69,9 @@
 
                 <div class="col-12">
                     <div class="text-subtitle2 q-mb-xs">
-                        {{ $t('scopeFunctionalUnitLabel') }}
+                        <span :class="{ 'zod-required-label': fuRequired }">
+                            {{ $t('scopeFunctionalUnitLabel') }}
+                        </span>
                     </div>
                     <div class="scope-fu row items-center q-gutter-sm flex-nowrap">
                         <span>{{ $t('scopeFuBefore') }}</span>
@@ -83,11 +85,11 @@
                         >
                             <q-tooltip>{{ $t('scopeFuDurationTooltip') }}</q-tooltip>
                         </ZodValidatedNumberInput>
-                        <q-select
+                        <ZodValidatedSelect
                             class="scope-fu-select"
                             v-model="surveyData.scope.functionalUnit.timeUnit"
                             :options="timeUnitOptions"
-                            :rules="[toValidationRule(FunctionalUnitSchema.shape.timeUnit)]"
+                            :schema="FunctionalUnitSchema.shape.timeUnit"
                             emit-value
                             map-options
                             dense
@@ -97,7 +99,7 @@
                             <q-tooltip anchor="top middle" self="top middle">{{
                                 $t('scopeFuTimeUnitTooltip')
                             }}</q-tooltip>
-                        </q-select>
+                        </ZodValidatedSelect>
                         <span>{{ $t('scopeFuMiddle') }}</span>
                         <ZodValidatedNumberInput
                             class="scope-fu-input"
@@ -109,20 +111,21 @@
                         >
                             <q-tooltip>{{ $t('scopeFuResourceCountTooltip') }}</q-tooltip>
                         </ZodValidatedNumberInput>
-                        <q-select
+                        <ZodValidatedSelect
                             class="scope-fu-select scope-fu-select--grow"
                             v-model="surveyData.scope.functionalUnit.resourceType"
                             :options="resourceTypeOptions"
-                            :rules="[toValidationRule(FunctionalUnitSchema.shape.resourceType)]"
+                            :schema="FunctionalUnitSchema.shape.resourceType"
                             emit-value
                             map-options
                             dense
                             outlined
+                            hide-bottom-space
                         >
                             <q-tooltip anchor="center right" self="center left">{{
                                 $t('scopeFuResourceTypeTooltip')
                             }}</q-tooltip>
-                        </q-select>
+                        </ZodValidatedSelect>
                     </div>
                 </div>
             </div>
@@ -174,12 +177,13 @@ import { useSurveyDataStore } from 'src/stores/surveyData';
 import AssessmentSection from 'src/components/AssessmentSection.vue';
 import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInput.vue';
 import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
+import ZodValidatedSelect from 'src/components/inputs/ZodValidatedSelect.vue';
+import { isSchemaRequired } from 'src/composables/useValidation';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import ScopeDatacentersTable from 'src/components/scope/ScopeDatacentersTable.vue';
 import ScopeBoundaryItemsTable from 'src/components/scope/ScopeBoundaryItemsTable.vue';
-import { useValidation } from 'src/composables/useValidation';
 import { FunctionalUnitSchema, ResourceTypeSchema } from 'src/models/FunctionalUnit/schema';
 import { ScopeSchema } from 'src/models/Scope/schema';
 import { TimeUnitSchema } from 'src/models/TimeUnit/schema';
@@ -188,7 +192,7 @@ import { normalizeKey } from 'src/utils/format';
 const surveyData = useSurveyDataStore();
 
 const { t } = useI18n();
-const { toValidationRule } = useValidation();
+const fuRequired = computed(() => Object.values(FunctionalUnitSchema.shape).some(isSchemaRequired));
 
 const timeUnitOptions = computed(() =>
     TimeUnitSchema.options.map((unit) => ({
