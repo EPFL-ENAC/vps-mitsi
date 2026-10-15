@@ -3,7 +3,7 @@
         <div class="col-2">
             <ZodValidatedSelect
                 class="full-width"
-                v-model="surveyData.monitoringPeriod.unit
+                v-model="surveyData.monitoringPeriod.unit"
                 :label="$t('energyMonitorUnitLabel')"
                 :schema="MonitoringPeriodSchema.shape.unit"
                 :options="monitoringUnitOptions"
@@ -46,7 +46,6 @@ import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInp
 import ZodValidatedSelect from 'src/components/inputs/ZodValidatedSelect.vue';
 import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
 import { useI18n } from 'vue-i18n';
-import { useValidation } from 'src/composables/useValidation';
 import { MonitoringPeriodSchema, MonitoringUnitSchema } from 'src/models/MonitoringPeriod/schema';
 import { normalizeKey } from 'src/utils/format';
 

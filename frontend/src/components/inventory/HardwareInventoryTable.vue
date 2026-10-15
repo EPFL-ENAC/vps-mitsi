@@ -205,7 +205,6 @@ import type { VisibilityMode } from 'src/types/ui';
 import { formatDatacenterName, formatKg, normalizeKey } from 'src/utils/format';
 import { createSchemaColumn } from 'src/utils/tables';
 
-import { useValidation } from 'src/composables/useValidation';
 import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
 import type { ComputationResult } from 'src/utils/computation';
 
@@ -235,7 +234,6 @@ const props = defineProps<{
 
 const { t } = useI18n();
 const $q = useQuasar();
-const { toValidationRule } = useValidation();
 
 /** Columns are cumulative: advanced ⊇ normal ⊇ simple. */
 const MODE_RANK: Record<VisibilityMode, number> = { simple: 0, normal: 1, advanced: 2 };

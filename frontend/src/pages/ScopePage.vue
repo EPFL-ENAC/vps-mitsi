@@ -184,7 +184,6 @@ import { useI18n } from 'vue-i18n';
 
 import ScopeDatacentersTable from 'src/components/scope/ScopeDatacentersTable.vue';
 import ScopeBoundaryItemsTable from 'src/components/scope/ScopeBoundaryItemsTable.vue';
-import { useValidation } from 'src/composables/useValidation';
 import { FunctionalUnitSchema, ResourceTypeSchema } from 'src/models/FunctionalUnit/schema';
 import { ScopeSchema } from 'src/models/Scope/schema';
 import { TimeUnitSchema } from 'src/models/TimeUnit/schema';
@@ -194,7 +193,6 @@ const surveyData = useSurveyDataStore();
 
 const { t } = useI18n();
 const fuRequired = computed(() => Object.values(FunctionalUnitSchema.shape).some(isSchemaRequired));
-const { toValidationRule } = useValidation();
 
 const timeUnitOptions = computed(() =>
     TimeUnitSchema.options.map((unit) => ({
