@@ -61,17 +61,19 @@
 </template>
 
 <script setup lang="ts">
+import { useSurveyDataStore } from 'src/stores/surveyData';
+
 import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
 import { computed } from 'vue';
 import type { QTableColumn } from 'quasar';
 import type { z } from 'zod';
-import type { BoundaryItem } from 'src/models/mitsi';
+import { type BoundaryItem, BoundaryItemSchema } from 'src/models/Scope/schema';
 import { useI18n } from 'vue-i18n';
 
-import { BoundaryItemSchema } from 'src/models/schema';
 import { createSchemaColumn } from 'src/utils/tables';
-import { useMitsiStore } from 'src/stores/mitsi';
 import { isSchemaRequired } from 'src/composables/useValidation';
+  
+const surveyData = useSurveyDataStore();
 
 interface BoundaryColumn extends QTableColumn<BoundaryItem> {
     field: Exclude<keyof BoundaryItem, 'id'>;
@@ -84,10 +86,9 @@ const props = defineProps<{
 }>();
 
 const { t } = useI18n();
-const mitsi = useMitsiStore();
 
 const items = computed(() =>
-    props.kind === 'included' ? mitsi.scope.includedItems : mitsi.scope.excludedItems,
+    props.kind === 'included' ? surveyData.scope.includedItems : surveyData.scope.excludedItems,
 );
 
 type ColumnSpec = Omit<BoundaryColumn, 'name' | 'label' | 'zod'> & {
@@ -118,7 +119,7 @@ const columns = computed<BoundaryColumn[]>(() => [
 ]);
 
 function addItem(): void {
-    mitsi.addBoundaryItem(props.kind);
+    surveyData.addBoundaryItem(props.kind);
 }
 
 function removeItem(id: string): void {

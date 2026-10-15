@@ -7,7 +7,8 @@ import { Quasar } from 'quasar';
 import { z } from 'zod';
 import ZodValidatedNumberInput from '../src/components/inputs/ZodValidatedNumberInput.vue';
 import ZodValidatedTextInput from '../src/components/inputs/ZodValidatedTextInput.vue';
-import { DatacenterEnergySchema, HardwareItemSchema } from '../src/models/schema.ts';
+import { DatacenterEnergySchema } from '../src/models/Datacenter/schema.ts';
+import { HardwareItemSchema } from '../src/models/HardwareItem/schema.ts';
 import en from '../src/i18n/en-GB/index.ts';
 
 /** Render the real Quasar input and capture its public API, without a DOM stub. */
@@ -43,10 +44,19 @@ test('number inputs convert values without clamping, defaulting or losing clear 
     const { input, updates } = await renderInput(ZodValidatedNumberInput, {
         schema: HardwareItemSchema.shape.quantity,
     });
-    for (const value of ['2', '1.5', '-1', '', null]) input.$emit('update:modelValue', value);
-    assert.deepEqual(updates, [2, 1.5, -1, '', null]);
+    for (const value of ['2', '1.5', '-1', 0, 'invalid', '', null])
+        input.$emit('update:modelValue', value);
+    assert.deepEqual(updates, [2, 1.5, -1, 0, 'invalid', null, null]);
     assert.equal(input.rules[0](-1), 'Must be at least 1.');
     assert.equal(input.rules[0](1.5), 'Must be a whole number.');
+});
+
+test('optional numeric inputs normalize clearing to undefined and preserve zero', async () => {
+    const { input, updates } = await renderInput(ZodValidatedNumberInput, {
+        schema: HardwareItemSchema.shape.rackUnit,
+    });
+    for (const value of ['', null, undefined, 0]) input.$emit('update:modelValue', value);
+    assert.deepEqual(updates, [undefined, undefined, undefined, 0]);
 });
 
 test('schema attributes and validation override caller-supplied ones', async () => {

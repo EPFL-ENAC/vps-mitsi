@@ -1,0 +1,1 @@
+This codebase is driven by zod. If you need to make sure some types are correct/validated, use a zod schema instead of manual checks

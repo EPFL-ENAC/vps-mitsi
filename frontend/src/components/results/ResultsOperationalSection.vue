@@ -6,9 +6,9 @@
             dense
             hide-pagination
             :pagination="{ rowsPerPage: 0 }"
-            :rows="mitsi.operationalPerDc"
+            :rows="surveyResults.datacenterOperationalResults.result ?? []"
             :columns="operationalColumns"
-            row-key="datacenter.id"
+            :row-key="(row: DatacenterOperationalResult) => row.datacenter.id"
             class="results-table"
         >
             <template #header-cell="props">
@@ -30,7 +30,19 @@
                     </q-td>
                     <q-td></q-td>
                     <q-td class="text-right">
-                        <strong>{{ formatOperationalResult(mitsi.totalOperational) }}</strong>
+                        <strong>
+                            <ComputationResultDisplay
+                                :disable-tooltip="disableTooltip"
+                                :computation="surveyResults.totalOperationalEmissionsKg"
+                            >
+                                <template #default="{ result }">
+                                    {{ formatResult(result, operationalResultOptions) }}
+                                </template>
+                                <template #ignored-input="{ input }">{{
+                                    formatDatacenterName(input)
+                                }}</template>
+                            </ComputationResultDisplay>
+                        </strong>
                     </q-td>
                 </q-tr>
             </template>
@@ -40,10 +52,22 @@
         <div v-if="showChart" class="q-mt-md">
             <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
                 {{ $t('resultsChartPieByDatacenter') }}
+                <ComputationResultDisplay
+                    :disable-tooltip="disableTooltip"
+                    class="q-ml-sm"
+                    :computation="surveyResults.totalOperationalEmissionsKg"
+                    :missing-label="disableTooltip ? '' : t('resultsUnavailable')"
+                    hide-value
+                    :partial-flag-label="t('resultsPartial')"
+                >
+                    <template #ignored-input="{ input }">{{
+                        formatDatacenterName(input)
+                    }}</template>
+                </ComputationResultDisplay>
             </div>
             <DatacentersPieChart
-                :rows="mitsi.operationalPerDc"
-                :total="mitsi.totalOperational"
+                :rows="surveyResults.datacenterOperationalResults.result ?? []"
+                :total="surveyResults.totalOperationalEmissionsKg.result"
                 metric="lifespan"
             />
         </div>
@@ -51,24 +75,36 @@
 </template>
 
 <script setup lang="ts">
+import { useSurveyResultsStore } from 'src/stores/surveyResults';
+import type { DatacenterOperationalResult } from 'src/models/Datacenter/computations';
+
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { QTableColumn } from 'quasar';
-import { useMitsiStore, type DatacenterOperationalResult } from 'src/stores/mitsi';
-import { useResultFormatting } from 'src/composables/useResultFormatting';
-import { formatDatacenterName, formatKg, formatPueInclusion } from 'src/utils/format';
+import { formatDatacenterName, formatKg, formatPueInclusion, formatResult } from 'src/utils/format';
 import DatacentersPieChart from 'src/components/results/DatacentersPieChart.vue';
+import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
+
+const surveyResults = useSurveyResultsStore();
 
 withDefaults(
     defineProps<{
         showChart?: boolean;
+        disableTooltip?: boolean;
     }>(),
     { showChart: false },
 );
 
 const { t } = useI18n();
-const mitsi = useMitsiStore();
-const { formatOperationalResult } = useResultFormatting();
+const operationalResultOptions = computed(() => ({
+    missingLabel: t('mainNotApplicable'),
+    partialLabel: surveyResults.operationalCalculationCoverage.isComplete
+        ? ''
+        : t('resultsEnergyCoverage', {
+              complete: surveyResults.operationalCalculationCoverage.validDatacenterCount,
+              total: surveyResults.operationalCalculationCoverage.totalDatacenterCount,
+          }),
+}));
 
 interface OperationalTableColumn extends QTableColumn<DatacenterOperationalResult> {
     kind: 'text' | 'number';
@@ -86,7 +122,7 @@ const operationalColumns = computed<OperationalTableColumn[]>(() => [
         name: 'pue',
         label: t('resultsOperationalColumns.pue'),
         align: 'left',
-        field: (row) => formatPueInclusion(t, row.datacenter.energy.pue),
+        field: (row) => formatPueInclusion(t, row.pueInclusion),
         kind: 'text',
     },
     {
