@@ -15,9 +15,9 @@ jobs:
       fail-fast: false
       matrix:
         command:
-          - frontend-typecheck
-          - frontend-lint
-          - frontend-format
+          - typecheck
+          - lint
+          - format:check
 
     steps:
       - name: Checkout code
@@ -32,4 +32,5 @@ jobs:
         run: make install
 
       - name: Run ${{ matrix.command }}
-        run: npx lefthook run pre-commit --command ${{ matrix.command }} --all-files
+        working-directory: frontend
+        run: npm run ${{ matrix.command }}

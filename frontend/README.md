@@ -11,20 +11,21 @@ Quasar prints the development URL, normally <http://localhost:9000>.
 
 ## Validation
 
-```sh
-npm test
-npm run typecheck
-npm run lint
-```
-
-To check formatting without modifying or staging files:
+Run these commands from `frontend/`:
 
 ```sh
-npx --no -- prettier --check "src/**/*.{ts,vue,scss}" --ignore-path .gitignore
+npm run check          # Formatting, lint, types, then tests
+npm run format:check   # Check source formatting without changing files
+npm run lint           # Lint source files without applying fixes
+npm run typecheck      # Check TypeScript types
+npm test              # Run the test suite
+npm run format        # Format source files without staging them
 ```
 
-`npm run format` invokes the existing Lefthook command, which rewrites and stages
-matching files. Use it only when those changes are intended.
+npm scripts define the checks; Lefthook, Make, and CI call those scripts. Lint and
+formatting currently cover `src/`. The pre-commit hook checks formatting, lint, and
+types when matching source files are staged. Run `npm run format` and stage the
+changes yourself when formatting needs fixing.
 
 ## Production builds
 

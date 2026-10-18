@@ -26,11 +26,15 @@ sent to a backend.
 Run these commands from `frontend/`:
 
 ```sh
-npm test
-npm run typecheck
-npm run lint
+npm run check
 npm run build
 ```
+
+`npm run check` checks source formatting, source lint, types, and tests. Use
+`npm run format` to format source files without staging them. Individual commands
+are documented in the frontend README. From the repository root, use `make check`,
+`make lint`, `make typecheck`, `make test`, `make format-check`, `make format`, or
+`make build`.
 
 The production SPA is written to `frontend/dist/spa/`. See the
 [frontend README](frontend/README.md) for formatting and deployment details.

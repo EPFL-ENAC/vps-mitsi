@@ -72,7 +72,7 @@ import { useI18n } from 'vue-i18n';
 
 import { createSchemaColumn } from 'src/utils/tables';
 import { isSchemaRequired } from 'src/composables/useValidation';
-  
+
 const surveyData = useSurveyDataStore();
 
 interface BoundaryColumn extends QTableColumn<BoundaryItem> {
