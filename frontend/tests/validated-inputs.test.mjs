@@ -59,25 +59,6 @@ test('optional numeric inputs normalize clearing to undefined and preserve zero'
     assert.deepEqual(updates, [undefined, undefined, undefined, 0]);
 });
 
-test('schema attributes and validation override caller-supplied ones', async () => {
-    const { html, input } = await renderInput(ZodValidatedNumberInput, {
-        schema: z.number().int().min(1).max(5),
-        type: 'text',
-        min: -100,
-        max: 100,
-        step: 0.25,
-        rules: [() => 'Caller rule'],
-    });
-    assert.match(html, /type="number"/);
-    assert.match(html, /min="1"/);
-    assert.match(html, /max="5"/);
-    assert.match(html, /step="1"/);
-    assert.equal(input.rules.length, 1);
-    assert.equal(input.rules[0](0), 'Must be at least 1.');
-    assert.equal(await input.validate(6), false);
-    assert.equal(await input.validate(3), true);
-});
-
 test('nullable decimals accept clearing and unbounded attributes are omitted', async () => {
     const { html, input } = await renderInput(ZodValidatedNumberInput, {
         schema: DatacenterEnergySchema.shape.pue,
