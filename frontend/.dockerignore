@@ -1,0 +1,9 @@
+node_modules
+dist
+.quasar
+tests
+.git
+.vscode
+.editorconfig
+Dockerfile
+.dockerignore
