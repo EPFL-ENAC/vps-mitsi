@@ -1,7 +1,7 @@
 {
     "name": "vps-mitsi",
     "version": "0.0.1",
-    "description": "Web app for vps-mitsi exhibition around  data",
+    "description": "MITSI: LCA-based carbon assessment of an IT service",
     "productName": "vps-mitsi",
     "author": "Cyprien Lengagne <cyprien.lengagne@epfl.ch>",
     "type": "module",

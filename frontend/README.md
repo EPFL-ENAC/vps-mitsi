@@ -30,15 +30,12 @@ changes yourself when formatting needs fixing.
 ## Production builds
 
 ```sh
-# Root-hosted deployment (Kubernetes/nginx)
 npm run build
-
-# GitHub Pages deployment
-PUBLIC_PATH=/vps-mitsi/ npm run build
 ```
 
-Both commands write the SPA to `dist/spa/`. The configured public path also applies
-to the EPFL header logo.
+This writes the SPA to `dist/spa/`. GitHub Pages (custom domain) and the Docker image
+both serve it from the root. To serve it from a sub-path, set `PUBLIC_PATH` (e.g.
+`PUBLIC_PATH=/mitsi/ npm run build`); the public path also applies to the EPFL header logo.
 
 The Kubernetes workflow builds this directory using `Dockerfile` and `nginx.conf`
 (unprivileged nginx on port 8080, health check on `/healthz`). Only content-hashed
