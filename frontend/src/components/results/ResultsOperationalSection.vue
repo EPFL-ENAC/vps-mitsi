@@ -48,7 +48,7 @@
             </template>
         </q-table>
 
-        <!-- Pie chart po datacenter -->
+        <!-- Treemap chart by datacenter -->
         <div v-if="showChart" class="q-mt-md">
             <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
                 {{ $t('resultsChartTreemapByDatacenter') }}
@@ -69,7 +69,6 @@
                 :rows="surveyResults.datacenterOperationalResults.result ?? []"
                 :total="surveyResults.totalOperationalEmissionsKg.result"
                 metric="lifespan"
-                :color-blind="colorBlind"
             />
         </div>
     </div>
@@ -92,9 +91,8 @@ withDefaults(
     defineProps<{
         showChart?: boolean;
         disableTooltip?: boolean;
-        colorBlind?: boolean;
     }>(),
-    { showChart: false, colorBlind: false },
+    { showChart: false },
 );
 
 const { t } = useI18n();

@@ -55,13 +55,12 @@
             </tbody>
         </q-markup-table>
 
-        <!-- Split pie chart -->
+        <!-- Split treemap chart -->
         <div v-if="showChart" class="q-mt-md">
             <TotalSplitTreemapChart
                 :disable-tooltip="disableTooltip"
                 :embodied="surveyResults.totalEmbodiedEmissionsKg"
                 :operational="surveyResults.totalOperationalEmissionsKg"
-                :color-blind="colorBlind"
                 :labels="{
                     embodied: t('resultsRowEmbodied'),
                     operational: t('resultsRowOperational'),
@@ -86,9 +85,8 @@ withDefaults(
     defineProps<{
         showChart?: boolean;
         disableTooltip?: boolean;
-        colorBlind?: boolean;
     }>(),
-    { showChart: false, colorBlind: false },
+    { showChart: false },
 );
 
 const { t } = useI18n();

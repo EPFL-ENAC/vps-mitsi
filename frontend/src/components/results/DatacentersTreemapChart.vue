@@ -28,6 +28,7 @@ import {
 import { CanvasRenderer } from 'echarts/renderers';
 import { RED_SCALE } from 'src/utils/charts';
 import { formatDatacenterName, formatKg } from 'src/utils/format';
+import { useUserPreferencesStore } from 'src/stores/userPreferences';
 
 echarts.use([TreemapChart, TooltipComponent, AriaComponent, CanvasRenderer]);
 
@@ -40,12 +41,12 @@ const props = withDefaults(
         rows: DatacenterOperationalResult[];
         total: number | null;
         metric?: 'period' | 'lifespan';
-        colorBlind?: boolean;
     }>(),
-    { metric: 'lifespan', colorBlind: false },
+    { metric: 'lifespan' },
 );
 
 const { t } = useI18n();
+const userPrefs = useUserPreferencesStore();
 
 /**
  * Boldest red for the biggest emitter, fading as opacity down to a 0.20
@@ -79,8 +80,7 @@ const bands = computed(() =>
 
 /** Share of the operational total, as a one-decimal percentage label. */
 function shareOf(value: number): string {
-    const { total } = props;
-    const share = total !== null && total > 0 ? (value / total) * 100 : 0;
+    const share = props.total !== null && props.total > 0 ? (value / props.total) * 100 : 0;
     return `${share.toFixed(1)}${t('resultsColPercent')}`;
 }
 
@@ -88,7 +88,7 @@ function shareOf(value: number): string {
 const hasData = computed(() => props.total !== null && props.total > 0 && bands.value.length > 0);
 
 const chartOption = computed<ECOption>(() => ({
-    aria: { enabled: props.colorBlind, decal: { show: props.colorBlind } },
+    aria: { enabled: userPrefs.colorBlind, decal: { show: userPrefs.colorBlind } },
     tooltip: {
         trigger: 'item',
         formatter: (p) => {

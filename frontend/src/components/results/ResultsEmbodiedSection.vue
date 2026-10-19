@@ -154,7 +154,6 @@
                 <EmbodiedTreemapChart
                     :groups="surveyResults.embodiedEmissionsByCategory"
                     :grand-total="surveyResults.totalEmbodiedEmissionsKg.result"
-                    :color-blind="colorBlind"
                     variant="element"
                 />
             </div>
@@ -175,7 +174,6 @@
                 <EmbodiedTreemapChart
                     :groups="surveyResults.embodiedEmissionsByCategory"
                     :grand-total="surveyResults.totalEmbodiedEmissionsKg.result"
-                    :color-blind="colorBlind"
                     variant="category"
                 />
             </div>
@@ -204,13 +202,11 @@ withDefaults(
         interactive?: boolean;
         showChart?: boolean;
         disableTooltip?: boolean;
-        colorBlind?: boolean;
     }>(),
     {
         showToggle: false,
         interactive: false,
         showChart: false,
-        colorBlind: false,
     },
 );
 

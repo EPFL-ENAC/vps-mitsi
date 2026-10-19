@@ -13,7 +13,7 @@
 
         <!-- Accessibility: one switch patterns every chart below. -->
         <div class="row items-center justify-end q-mb-sm">
-            <q-toggle v-model="colorBlind" dense :label="$t('resultsColorBlindToggle')" />
+            <q-toggle v-model="userPrefs.colorBlind" dense :label="$t('resultsColorBlindToggle')" />
             <q-icon name="info_outline" class="q-ml-xs cursor-pointer">
                 <q-tooltip>{{ $t('resultsColorBlindTooltip') }}</q-tooltip>
             </q-icon>
@@ -26,12 +26,12 @@
 
         <!-- Embodied emissions -->
         <AssessmentSection :title="$t('resultsEmbodiedTitle')" default-opened>
-            <ResultsEmbodiedSection show-toggle interactive show-chart :color-blind="colorBlind" />
+            <ResultsEmbodiedSection show-toggle interactive show-chart />
         </AssessmentSection>
 
         <!-- Operational emissions -->
         <AssessmentSection :title="$t('resultsOperationalTitle')" default-opened>
-            <ResultsOperationalSection show-chart :color-blind="colorBlind" />
+            <ResultsOperationalSection show-chart />
         </AssessmentSection>
 
         <!-- v2 FEATURE (lead decision: excluded from v1; spec contradiction — Results
@@ -44,7 +44,7 @@
 
         <!-- Total emissions -->
         <AssessmentSection :title="$t('resultsTotalTitle')" default-opened>
-            <ResultsTotalSection show-chart :color-blind="colorBlind" />
+            <ResultsTotalSection show-chart />
         </AssessmentSection>
 
         <!-- Emissions related to the functional unit -->
@@ -57,7 +57,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
 import { useSurveyDataStore } from 'src/stores/surveyData';
 
 import GenerateReportButton from 'src/components/GenerateReportButton.vue';
@@ -67,9 +66,8 @@ import ResultsEmbodiedSection from 'src/components/results/ResultsEmbodiedSectio
 import ResultsOperationalSection from 'src/components/results/ResultsOperationalSection.vue';
 import ResultsTotalSection from 'src/components/results/ResultsTotalSection.vue';
 import ResultsFunctionalUnitSection from 'src/components/results/ResultsFunctionalUnitSection.vue';
+import { useUserPreferencesStore } from 'src/stores/userPreferences';
 
 const surveyData = useSurveyDataStore();
-
-/** Single colour-blind switch shared by every chart on the page. */
-const colorBlind = ref(false);
+const userPrefs = useUserPreferencesStore();
 </script>

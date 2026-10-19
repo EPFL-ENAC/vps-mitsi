@@ -33,6 +33,7 @@ import { BLUE_SCALE, RED_SCALE } from 'src/utils/charts';
 import { formatKg } from 'src/utils/format';
 import { ComputationResult } from 'src/utils/computation';
 import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
+import { useUserPreferencesStore } from 'src/stores/userPreferences';
 
 echarts.use([TreemapChart, TooltipComponent, AriaComponent, CanvasRenderer]);
 
@@ -46,12 +47,12 @@ const props = withDefaults(
         embodied: ComputationResult<number, unknown>;
         operational: ComputationResult<number, unknown>;
         labels: { embodied: string; operational: string };
-        colorBlind?: boolean;
     }>(),
-    { colorBlind: false },
+    {},
 );
 
 const { t } = useI18n();
+const userPrefs = useUserPreferencesStore();
 
 // The purpose of this strange line is to capture the "partiality" of the 2 computations.
 // We discard the actual result (with .map(() => undefined)) because we only care about the "success" | "partial" | "failure" status of the computations, as it is only used in the ComputationResultDisplay.
@@ -88,7 +89,7 @@ const hasData = computed(() => {
 const chartOption = computed<ECOption>(() => {
     const denom = data.value.reduce((total, slice) => total + slice.value, 0) || 1;
     return {
-        aria: { enabled: props.colorBlind, decal: { show: props.colorBlind } },
+        aria: { enabled: userPrefs.colorBlind, decal: { show: userPrefs.colorBlind } },
         tooltip: {
             trigger: 'item',
             formatter: (p) => {

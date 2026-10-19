@@ -30,6 +30,7 @@ import {
 import { CanvasRenderer } from 'echarts/renderers';
 import { BLUE_SCALE } from 'src/utils/charts';
 import { formatKg } from 'src/utils/format';
+import { useUserPreferencesStore } from 'src/stores/userPreferences';
 
 echarts.use([TreemapChart, TooltipComponent, AriaComponent, CanvasRenderer]);
 
@@ -42,12 +43,12 @@ const props = withDefaults(
         groups: EmbodiedGroup[];
         grandTotal: number | null;
         variant?: 'element' | 'category';
-        colorBlind?: boolean;
     }>(),
-    { variant: 'category', colorBlind: false },
+    { variant: 'category' },
 );
 
 const { t } = useI18n();
+const userPrefs = useUserPreferencesStore();
 
 function getCategoryColor(index: number): string {
     return BLUE_SCALE[index % BLUE_SCALE.length] ?? BLUE_SCALE[0];
@@ -110,18 +111,16 @@ function toCategoryTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeri
 
 /** Legend items matching categories and colors */
 const legend = computed(() =>
-    props.groups
-        .map((g, i) => ({
-            name: t('inventoryCategory_' + g.category),
-            color: getCategoryColor(i),
-            hasRows: g.rows.some(
-                (r) =>
-                    !r.excluded &&
-                    r.rowEmbodiedEmissionsKg.result !== null &&
-                    r.rowEmbodiedEmissionsKg.result > 0,
-            ),
-        }))
-        .filter((item) => item.hasRows),
+    props.groups.flatMap((g, i) =>
+        g.rows.some(
+            (r) =>
+                !r.excluded &&
+                r.rowEmbodiedEmissionsKg.result !== null &&
+                r.rowEmbodiedEmissionsKg.result > 0,
+        )
+            ? [{ name: t('inventoryCategory_' + g.category), color: getCategoryColor(i) }]
+            : [],
+    ),
 );
 
 /** Pre-computed data items for the treemap. */
@@ -138,7 +137,7 @@ const hasData = computed(
 
 /** Reactive ECharts option configuration. */
 const chartOption = computed<ECOption>(() => ({
-    aria: { enabled: props.colorBlind, decal: { show: props.colorBlind } },
+    aria: { enabled: userPrefs.colorBlind, decal: { show: userPrefs.colorBlind } },
     tooltip: {
         trigger: 'item',
         formatter: (p) => {
