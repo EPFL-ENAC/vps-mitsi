@@ -5,7 +5,7 @@ import { renderToString } from 'vue/server-renderer';
 import ResultsEmbodiedSection from '../src/components/results/ResultsEmbodiedSection.vue';
 import ResultsOperationalSection from '../src/components/results/ResultsOperationalSection.vue';
 import ResultsTotalSection from '../src/components/results/ResultsTotalSection.vue';
-import TotalSplitTreemapChart from '../src/components/results/TotalSplitTreemapChart.vue';
+import TotalSplitPieChart from '../src/components/results/TotalSplitPieChart.vue';
 import { DatacenterDraftSchema } from '../src/models/Datacenter/schema.ts';
 import { UnderlyingServiceDraftSchema } from '../src/models/UnderlyingService/schema.ts';
 import { ComputationResult } from '../src/utils/computation.ts';
@@ -299,10 +299,10 @@ for (const embodiedStatus of statuses) {
                 ];
                 assert.equal(option.series.length, 1);
                 assert.deepEqual(option.series[0].data, expectedData);
-                assert.equal(option.series[0].type, 'treemap');
-                assert.equal(option.series[0].roam, false);
-                assert.equal(option.series[0].nodeClick, false);
-                assert.deepEqual(option.series[0].breadcrumb, { show: false });
+                assert.equal(option.series[0].type, 'pie');
+                assert.deepEqual(option.series[0].radius, ['40%', '70%']);
+                assert.equal(option.series[0].label.formatter, '{b}');
+                assert.deepEqual(option.legend, { bottom: 0 });
                 if (embodiedStatus !== 'failure') {
                     assert.equal(
                         option.tooltip.formatter({ name: en.resultsRowEmbodied, value: 10 }),
@@ -356,7 +356,7 @@ test('split title ignores underlying-service diagnostics and successful zero val
 
 test('standalone split chart keeps a partial heading and fallback for a single available zero', async () => {
     for (const source of ['embodied', 'operational']) {
-        const result = await renderTables(TotalSplitTreemapChart, {
+        const result = await renderTables(TotalSplitPieChart, {
             props: {
                 embodied:
                     source === 'embodied'
@@ -381,7 +381,7 @@ test('standalone split chart keeps a partial heading and fallback for a single a
 
 test('standalone split chart preserves custom labels and colors for either available source', async () => {
     for (const source of ['embodied', 'operational']) {
-        const result = await renderTables(TotalSplitTreemapChart, {
+        const result = await renderTables(TotalSplitPieChart, {
             props: {
                 embodied:
                     source === 'embodied'
@@ -407,16 +407,13 @@ test('standalone split chart preserves custom labels and colors for either avail
             },
         ]);
         assert.equal(option.tooltip.formatter({ name, value: 10 }), `${name}<br/>10.00 (100.0%)`);
-        assert.equal(
-            option.series[0].label.formatter({ name, value: 10 }),
-            `${name}\n\n10.00 (100.0%)`,
-        );
+        assert.equal(option.series[0].label.formatter, '{b}');
     }
 });
 
 test('split chart preserves a successful zero beside a positive source and computes their shares', async () => {
     for (const zeroSource of ['embodied', 'operational']) {
-        const result = await renderTables(TotalSplitTreemapChart, {
+        const result = await renderTables(TotalSplitPieChart, {
             props: {
                 embodied: ComputationResult.success(zeroSource === 'embodied' ? 0 : 10),
                 operational: ComputationResult.success(zeroSource === 'operational' ? 0 : 10),
@@ -440,11 +437,8 @@ test('split chart preserves a successful zero beside a positive source and compu
                 option.tooltip.formatter(item),
                 `${item.name}<br/>${item.value.toFixed(2)} (${percentage}%)`,
             );
-            assert.equal(
-                option.series[0].label.formatter(item),
-                `${item.name}\n\n${item.value.toFixed(2)} (${percentage}%)`,
-            );
         }
+        assert.equal(option.series[0].label.formatter, '{b}');
     }
 });
 

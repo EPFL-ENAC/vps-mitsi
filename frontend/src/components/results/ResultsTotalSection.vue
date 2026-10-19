@@ -55,9 +55,9 @@
             </tbody>
         </q-markup-table>
 
-        <!-- Split treemap chart -->
+        <!-- Split pie chart -->
         <div v-if="showChart" class="q-mt-md">
-            <TotalSplitTreemapChart
+            <TotalSplitPieChart
                 :disable-tooltip="disableTooltip"
                 :embodied="surveyResults.totalEmbodiedEmissionsKg"
                 :operational="surveyResults.totalOperationalEmissionsKg"
@@ -76,7 +76,7 @@ import { useSurveyResultsStore } from 'src/stores/surveyResults';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { formatDatacenterName, formatKg, formatResult } from 'src/utils/format';
-import TotalSplitTreemapChart from 'src/components/results/TotalSplitTreemapChart.vue';
+import TotalSplitPieChart from 'src/components/results/TotalSplitPieChart.vue';
 import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
 
 const surveyResults = useSurveyResultsStore();
