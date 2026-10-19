@@ -60,5 +60,5 @@ export function useValidation() {
         };
     }
 
-    return { toValidationRule, formatIssue,  isSchemaRequired };
+    return { toValidationRule, formatIssue, isSchemaRequired };
 }
