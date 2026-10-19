@@ -5,11 +5,11 @@ import { renderToString } from 'vue/server-renderer';
 import ResultsEmbodiedSection from '../src/components/results/ResultsEmbodiedSection.vue';
 import ResultsOperationalSection from '../src/components/results/ResultsOperationalSection.vue';
 import ResultsTotalSection from '../src/components/results/ResultsTotalSection.vue';
-import TotalSplitPieChart from '../src/components/results/TotalSplitPieChart.vue';
+import TotalSplitTreemapChart from '../src/components/results/TotalSplitTreemapChart.vue';
 import { DatacenterDraftSchema } from '../src/models/Datacenter/schema.ts';
 import { UnderlyingServiceDraftSchema } from '../src/models/UnderlyingService/schema.ts';
 import { ComputationResult } from '../src/utils/computation.ts';
-import { OKABEITO } from '../src/utils/charts.ts';
+import { BLUE_SCALE, RED_SCALE } from '../src/utils/charts.ts';
 import { useSurveyResultsStore } from '../src/stores/surveyResults.ts';
 import en from '../src/i18n/en-GB/index.ts';
 import { renderTables } from './helpers/render-tables.mjs';
@@ -122,7 +122,7 @@ test('datacenter heading preserves status, named inputs, chart values and percen
             props: { showChart: true },
             setupStore: (store) => setupSources(store, 'success', status),
         });
-        const content = heading(result.html, en.resultsChartPieByDatacenter);
+        const content = heading(result.html, en.resultsChartTreemapByDatacenter);
         assert.equal(
             text(content),
             status === 'success' ? '' : status === 'partial' ? 'Partial' : 'Unavailable',
@@ -135,7 +135,11 @@ test('datacenter heading preserves status, named inputs, chart values and percen
         assert.equal(result.charts.length, status === 'failure' ? 0 : 1);
         if (result.charts.length) {
             const option = result.charts[0].option;
-            assert.deepEqual(option.series[0].data, [{ name: 'DC — Datacenter', value: 100 }]);
+            assert.equal(option.series.length, 1);
+            assert.equal(option.series[0].type, 'treemap');
+            assert.deepEqual(option.series[0].data, [
+                { name: 'DC — Datacenter', value: 100, itemStyle: { color: RED_SCALE[0] } },
+            ]);
             assert.equal(
                 option.tooltip.formatter({ name: 'DC — Datacenter', value: 100 }),
                 'DC — Datacenter<br/>100.00 (100.0%)',
@@ -147,7 +151,72 @@ test('datacenter heading preserves status, named inputs, chart values and percen
         setupStore: (store) => setupSources(store, 'success', 'success', 0),
     });
     assert.equal(zero.charts.length, 0);
-    assert.equal(text(heading(zero.html, en.resultsChartPieByDatacenter)), '');
+    assert.equal(text(heading(zero.html, en.resultsChartTreemapByDatacenter)), '');
+});
+
+test('datacenter treemap sorts emissions into equal-width bands with correct shares', async () => {
+    const result = await renderTables(ResultsOperationalSection, {
+        props: { showChart: true },
+        setupStore(store) {
+            setupSources(store);
+            store.datacenters = [
+                DatacenterDraftSchema.parse({
+                    id: 'smaller',
+                    generalInfo: { abbreviation: 'S', name: 'Smaller' },
+                    energy: { carbonIntensity: 1000, energyConsumption: 25 },
+                }),
+                DatacenterDraftSchema.parse({
+                    id: 'larger',
+                    generalInfo: { abbreviation: 'L', name: 'Larger' },
+                    energy: { carbonIntensity: 1000, energyConsumption: 75 },
+                }),
+            ];
+        },
+    });
+    assert.equal(result.results.totalOperationalEmissionsKg.result, 100);
+    assert.equal(result.charts.length, 1);
+    const option = result.charts[0].option;
+    assert.deepEqual(
+        option.series.map(({ type, left, width, data }) => ({ type, left, width, data })),
+        [
+            {
+                type: 'treemap',
+                left: '0%',
+                width: '50%',
+                data: [
+                    {
+                        name: 'L — Larger',
+                        value: 75,
+                        itemStyle: { color: 'rgba(210, 95, 95, 1.00)' },
+                    },
+                ],
+            },
+            {
+                type: 'treemap',
+                left: '50%',
+                width: '50%',
+                data: [
+                    {
+                        name: 'S — Smaller',
+                        value: 25,
+                        itemStyle: { color: 'rgba(210, 95, 95, 0.60)' },
+                    },
+                ],
+            },
+        ],
+    );
+    for (const series of option.series) {
+        const item = series.data[0];
+        assert.equal(series.label.formatter(item), `${item.value.toFixed(1)}%`);
+        assert.equal(
+            option.tooltip.formatter(item),
+            `${item.name}<br/>${item.value.toFixed(2)} (${item.value.toFixed(1)}%)`,
+        );
+    }
+    const captions = [...result.html.matchAll(/class="datacenter-captions__name">([^<]+)</g)].map(
+        (match) => match[1],
+    );
+    assert.deepEqual(captions, ['L — Larger', 'S — Smaller']);
 });
 
 for (const embodiedStatus of statuses) {
@@ -208,14 +277,14 @@ for (const embodiedStatus of statuses) {
             );
             if (result.charts.length) {
                 const option = result.charts[0].option;
-                const expectedSlices = [
+                const expectedData = [
                     ...(embodiedStatus === 'failure'
                         ? []
                         : [
                               {
                                   name: en.resultsRowEmbodied,
                                   value: 10,
-                                  itemStyle: { color: OKABEITO[0] },
+                                  itemStyle: { color: BLUE_SCALE[0] },
                               },
                           ]),
                     ...(operationalStatus === 'failure'
@@ -224,13 +293,16 @@ for (const embodiedStatus of statuses) {
                               {
                                   name: en.resultsRowOperational,
                                   value: 100,
-                                  itemStyle: { color: OKABEITO[1] },
+                                  itemStyle: { color: RED_SCALE[0] },
                               },
                           ]),
                 ];
-                assert.deepEqual(option.series[0].data, expectedSlices);
-                assert.deepEqual(option.series[0].radius, ['40%', '70%']);
-                assert.deepEqual(option.legend, { bottom: 0 });
+                assert.equal(option.series.length, 1);
+                assert.deepEqual(option.series[0].data, expectedData);
+                assert.equal(option.series[0].type, 'treemap');
+                assert.equal(option.series[0].roam, false);
+                assert.equal(option.series[0].nodeClick, false);
+                assert.deepEqual(option.series[0].breadcrumb, { show: false });
                 if (embodiedStatus !== 'failure') {
                     assert.equal(
                         option.tooltip.formatter({ name: en.resultsRowEmbodied, value: 10 }),
@@ -276,19 +348,15 @@ test('split title ignores underlying-service diagnostics and successful zero val
         heading(result.html, en.resultsChartSplitTitle),
         /Partial|Unavailable|<button/,
     );
-    assert.deepEqual(
-        result.charts[0].option.series[0].data.map((slice) => slice.value),
-        [0, 0],
-    );
-    assert.equal(
-        result.charts[0].option.tooltip.formatter({ name: en.resultsRowEmbodied, value: 0 }),
-        'Embodied emissions<br/>0.00 (0.0%)',
-    );
+    assert.equal(result.results.totalEmbodiedEmissionsKg.result, 0);
+    assert.equal(result.results.totalOperationalEmissionsKg.result, 0);
+    assert.equal(result.charts.length, 0);
+    assert.match(result.html, /class="text-grey-6 text-center q-py-md">—<\/div>/);
 });
 
-test('standalone split chart owns its title and preserves a single available zero in either source', async () => {
+test('standalone split chart keeps a partial heading and fallback for a single available zero', async () => {
     for (const source of ['embodied', 'operational']) {
-        const result = await renderTables(TotalSplitPieChart, {
+        const result = await renderTables(TotalSplitTreemapChart, {
             props: {
                 embodied:
                     source === 'embodied'
@@ -304,13 +372,79 @@ test('standalone split chart owns its title and preserves a single available zer
         assert.equal((result.html.match(/Emissions repartition/g) ?? []).length, 1);
         assert.equal(text(heading(result.html, en.resultsChartSplitTitle)), 'Partial');
         assert.match(await tooltipText(result.tooltips[0]), /No further details available/);
+        assert.equal(result.splitCharts[0][source].result, 0);
+        assert.equal(result.computations[0].computation.success, 'partial');
+        assert.equal(result.charts.length, 0);
+        assert.match(result.html, /class="text-grey-6 text-center q-py-md">—<\/div>/);
+    }
+});
+
+test('standalone split chart preserves custom labels and colors for either available source', async () => {
+    for (const source of ['embodied', 'operational']) {
+        const result = await renderTables(TotalSplitTreemapChart, {
+            props: {
+                embodied:
+                    source === 'embodied'
+                        ? ComputationResult.success(10)
+                        : ComputationResult.failure(),
+                operational:
+                    source === 'operational'
+                        ? ComputationResult.partial(10)
+                        : ComputationResult.failure(),
+                labels: { embodied: 'Hardware', operational: 'Energy' },
+            },
+        });
+        assert.equal((result.html.match(/Emissions repartition/g) ?? []).length, 1);
+        assert.equal(text(heading(result.html, en.resultsChartSplitTitle)), 'Partial');
         assert.equal(result.charts.length, 1);
         const option = result.charts[0].option;
         const name = source === 'embodied' ? 'Hardware' : 'Energy';
         assert.deepEqual(option.series[0].data, [
-            { name, value: 0, itemStyle: { color: OKABEITO[source === 'embodied' ? 0 : 1] } },
+            {
+                name,
+                value: 10,
+                itemStyle: { color: source === 'embodied' ? BLUE_SCALE[0] : RED_SCALE[0] },
+            },
         ]);
-        assert.equal(option.tooltip.formatter({ name, value: 0 }), `${name}<br/>0.00 (0.0%)`);
+        assert.equal(option.tooltip.formatter({ name, value: 10 }), `${name}<br/>10.00 (100.0%)`);
+        assert.equal(
+            option.series[0].label.formatter({ name, value: 10 }),
+            `${name}\n\n10.00 (100.0%)`,
+        );
+    }
+});
+
+test('split chart preserves a successful zero beside a positive source and computes their shares', async () => {
+    for (const zeroSource of ['embodied', 'operational']) {
+        const result = await renderTables(TotalSplitTreemapChart, {
+            props: {
+                embodied: ComputationResult.success(zeroSource === 'embodied' ? 0 : 10),
+                operational: ComputationResult.success(zeroSource === 'operational' ? 0 : 10),
+                labels: { embodied: 'Hardware', operational: 'Energy' },
+            },
+        });
+        assert.equal(result.computations[0].computation.success, 'success');
+        assert.equal(text(heading(result.html, en.resultsChartSplitTitle)), '');
+        assert.equal(result.charts.length, 1);
+        const option = result.charts[0].option;
+        assert.deepEqual(
+            option.series[0].data.map(({ name, value }) => ({ name, value })),
+            [
+                { name: 'Hardware', value: zeroSource === 'embodied' ? 0 : 10 },
+                { name: 'Energy', value: zeroSource === 'operational' ? 0 : 10 },
+            ],
+        );
+        for (const item of option.series[0].data) {
+            const percentage = item.value === 0 ? '0.0' : '100.0';
+            assert.equal(
+                option.tooltip.formatter(item),
+                `${item.name}<br/>${item.value.toFixed(2)} (${percentage}%)`,
+            );
+            assert.equal(
+                option.series[0].label.formatter(item),
+                `${item.name}\n\n${item.value.toFixed(2)} (${percentage}%)`,
+            );
+        }
     }
 });
 

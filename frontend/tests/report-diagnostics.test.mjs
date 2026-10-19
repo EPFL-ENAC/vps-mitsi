@@ -184,7 +184,7 @@ test('the whole report uses plain statuses without diagnostic controls or duplic
     for (const title of [
         en.resultsChartTreemapByElement,
         en.resultsChartTreemapByCategory,
-        en.resultsChartPieByDatacenter,
+        en.resultsChartTreemapByDatacenter,
         en.resultsChartSplitTitle,
     ]) {
         assert.ok(contents.includes(`${title} Partial result`));
@@ -234,7 +234,7 @@ test('plain report sections preserve units, coverage, precision, exclusions, zer
         else
             assert.ok(
                 contents.includes(
-                    `${component === ResultsEmbodiedSection ? en.resultsChartTreemapByElement : en.resultsChartPieByDatacenter} Failed computation`,
+                    `${component === ResultsEmbodiedSection ? en.resultsChartTreemapByElement : en.resultsChartTreemapByDatacenter} Failed computation`,
                 ),
             );
     }
