@@ -43,9 +43,9 @@ defineExpose({ input });
     <QInput
         ref="input"
         v-bind="$attrs"
+        v-model.number="model"
         :class="{ 'zod-required': isRequired }"
         :label="props.label"
-        v-model.number="model"
         type="number"
         :min="numberAttrs.min"
         :max="numberAttrs.max"

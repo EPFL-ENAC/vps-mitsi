@@ -15,7 +15,7 @@
         <!--
             Header row 1: group sub-headers. We don't bind props here since there itsn't one group per column
         -->
-        <template v-slot:header="props">
+        <template #header="props">
             <q-tr class="inventory-group-row">
                 <q-th
                     v-for="grp in groupRows"
@@ -48,7 +48,7 @@
             </q-tr>
         </template>
 
-        <template v-slot:body="props">
+        <template #body="props">
             <q-tr
                 :props="props"
                 :class="{

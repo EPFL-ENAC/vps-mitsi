@@ -32,9 +32,9 @@ defineExpose({ input });
     <QInput
         ref="input"
         v-bind="$attrs"
+        v-model="model"
         :class="{ 'zod-required': isRequired }"
         :label="props.label"
-        v-model="model"
         :rules="rules"
     >
         <template v-for="(_, name) in $slots" #[name]="slotProps">
