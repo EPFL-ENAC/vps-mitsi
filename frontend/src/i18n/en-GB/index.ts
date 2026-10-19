@@ -336,8 +336,11 @@ export default {
     resultsHostedIn: 'Hosted in: {dcs}',
     resultsChartTreemapByElement: 'Embodied emissions by element',
     resultsChartTreemapByCategory: 'Embodied emissions by category',
-    resultsChartPieByDatacenter: 'Operational emissions by datacenter',
+    resultsChartTreemapByDatacenter: 'Operational emissions by datacenter',
     resultsChartSplitTitle: 'Emissions repartition',
+    resultsColorBlindToggle: 'Colour-blind mode',
+    resultsColorBlindTooltip:
+        'Pattern every chart so colours can be told apart without relying on colour alone',
     resultsColPercent: '%',
     resultsGenerateReport: 'Generate report',
     reportWarningTitle: 'Incomplete computations',

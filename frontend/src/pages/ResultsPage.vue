@@ -11,6 +11,14 @@
             {{ $t('resultsNoScopeHint') }}
         </q-banner>
 
+        <!-- Accessibility: one switch patterns every chart below. -->
+        <div class="row items-center justify-end q-mb-sm">
+            <q-toggle v-model="userPrefs.colorBlind" dense :label="$t('resultsColorBlindToggle')" />
+            <q-icon name="info_outline" class="q-ml-xs cursor-pointer">
+                <q-tooltip>{{ $t('resultsColorBlindTooltip') }}</q-tooltip>
+            </q-icon>
+        </div>
+
         <!-- Summary -->
         <AssessmentSection :title="$t('resultsSummaryTitle')" default-opened>
             <ResultsSummarySection />
@@ -58,6 +66,8 @@ import ResultsEmbodiedSection from 'src/components/results/ResultsEmbodiedSectio
 import ResultsOperationalSection from 'src/components/results/ResultsOperationalSection.vue';
 import ResultsTotalSection from 'src/components/results/ResultsTotalSection.vue';
 import ResultsFunctionalUnitSection from 'src/components/results/ResultsFunctionalUnitSection.vue';
+import { useUserPreferencesStore } from 'src/stores/userPreferences';
 
 const surveyData = useSurveyDataStore();
+const userPrefs = useUserPreferencesStore();
 </script>

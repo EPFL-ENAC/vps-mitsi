@@ -1,22 +1,23 @@
 /**
- * Okabe–Ito colour palette, optimized for accessibility across all types of colour blindness.
- * Colours are never used in isolation: every tile and wedge is always paired with
- * a visible text label and an informative tooltip.
+ * Blue color scale used for category and element visualization.
+ * Ordered from darkest to lightest.
  */
-export const OKABEITO = [
-    '#0072B2',
-    '#D55E00',
-    '#009E73',
-    '#CC79A7',
-    '#E69F00',
-    '#56B4E9',
-    '#F0E442',
-    '#8B8B8B',
+export const BLUE_SCALE = [
+    '#5687C4', // Blue 500 (Storage)
+    '#7FA9DD', // Blue 400 (Spare part)
+    '#A9C8EC', // Blue 300 (Compute server)
+    '#CFE0F5', // Blue 200 (Server)
+    '#EAF2FB', // Blue 100 (Network switch)
 ] as const;
 
 /**
- * Safely resolves a palette colour using cyclic indexing
+ * Red color scale used for threshold and critical emission indicators.
+ * Ordered from darkest to lightest.
  */
-export function palette(index: number): string {
-    return OKABEITO[index % OKABEITO.length] ?? '#0072B2';
-}
+export const RED_SCALE = [
+    '#D25F5F', // Red 500
+    '#E68585', // Red 400
+    '#F1AEAE', // Red 300
+    '#F8D2D2', // Red 200
+    '#FCECEC', // Red 100
+] as const;
