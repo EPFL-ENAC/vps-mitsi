@@ -31,7 +31,7 @@ npm run build
 ```
 
 `npm run check` checks source formatting, source lint, types, and tests. Use
-`npm run format` to format source files without staging them. Individual commands
+`npm run format` to format source files. Individual commands
 are documented in the frontend README. From the repository root, use `make check`,
 `make lint`, `make typecheck`, `make test`, `make format-check`, `make format`, or
 `make build`.
@@ -42,10 +42,8 @@ The production SPA is written to `frontend/dist/spa/`. See the
 ## Deployment
 
 - **Kubernetes:** `.github/workflows/deploy.yml` uses the EPFL ENAC reusable
-  deployment workflow on pushes to `dev` and `stage` and version tags matching
-  `v*.*.*`. It builds the `frontend/` Docker context and serves the SPA with nginx.
-  The Dockerfile, nginx configuration, and executable entrypoint remain part of
-  this deployment. The entrypoint still generates a legacy `env.js`, which MITSI
-  does not load or require.
+  deployment workflow on pushes to `dev` and version tags matching `v*.*.*`. It
+  builds the `frontend/` Docker context (unprivileged nginx on port 8080, health
+  check on `/healthz`).
 - **GitHub Pages:** `.github/workflows/pages.yml` builds on pushes to `main` or
-  manual dispatch, with `PUBLIC_PATH=/vps-mitsi/`, and publishes `frontend/dist/spa/`.
+  manual dispatch, with `PUBLIC_PATH=/`, and publishes `frontend/dist/spa/`.
