@@ -3,3 +3,5 @@ dist
 node_modules
 package-lock.json
 quasar.config.*.temporary.compiled*
+# TODO: drop once quasar.config.ts is formatted (conflicts with #40)
+quasar.config.ts
