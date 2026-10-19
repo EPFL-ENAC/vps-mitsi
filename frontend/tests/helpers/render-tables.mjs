@@ -64,6 +64,8 @@ export async function renderTables(
     await router.isReady();
     const store = useSurveyDataStore(pinia);
     setupStore(store);
+    // Create computed results outside SSR setup so later reads share the rendered instances.
+    const results = useSurveyResultsStore(pinia);
     app.mixin({
         created() {
             instances.push(this);
@@ -125,15 +127,15 @@ export async function renderTables(
         html,
         store,
         router,
-        results: useSurveyResultsStore(pinia),
+        results,
         dialogs,
         modalDialogs: instances.filter((instance) => instance.$options.name === 'QDialog'),
         tables: instances.filter((instance) => instance.$options.name === 'QTable'),
         datacenterCharts: instances.filter(
-            (instance) => instance.$options.__name === 'DatacentersPieChart',
+            (instance) => instance.$options.__name === 'DatacentersTreemapChart',
         ),
         splitCharts: instances.filter(
-            (instance) => instance.$options.__name === 'TotalSplitPieChart',
+            (instance) => instance.$options.__name === 'TotalSplitTreemapChart',
         ),
         inputs: instances.filter((instance) => instance.$options.name === 'QInput'),
         selects: instances.filter((instance) => instance.$options.name === 'QSelect'),

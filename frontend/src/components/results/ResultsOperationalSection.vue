@@ -48,10 +48,10 @@
             </template>
         </q-table>
 
-        <!-- Pie chart po datacenter -->
+        <!-- Treemap chart by datacenter -->
         <div v-if="showChart" class="q-mt-md">
             <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
-                {{ $t('resultsChartPieByDatacenter') }}
+                {{ $t('resultsChartTreemapByDatacenter') }}
                 <ComputationResultDisplay
                     :disable-tooltip="disableTooltip"
                     class="q-ml-sm"
@@ -65,7 +65,7 @@
                     }}</template>
                 </ComputationResultDisplay>
             </div>
-            <DatacentersPieChart
+            <DatacentersTreemapChart
                 :rows="surveyResults.datacenterOperationalResults.result ?? []"
                 :total="surveyResults.totalOperationalEmissionsKg.result"
                 metric="lifespan"
@@ -82,7 +82,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { QTableColumn } from 'quasar';
 import { formatDatacenterName, formatKg, formatPueInclusion, formatResult } from 'src/utils/format';
-import DatacentersPieChart from 'src/components/results/DatacentersPieChart.vue';
+import DatacentersTreemapChart from 'src/components/results/DatacentersTreemapChart.vue';
 import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
 
 const surveyResults = useSurveyResultsStore();
