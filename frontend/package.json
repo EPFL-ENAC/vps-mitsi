@@ -2,7 +2,7 @@
     "name": "vps-mitsi",
     "version": "0.0.1",
     "description": "Web app for vps-mitsi exhibition around  data",
-    "productName": "vps-mitsi ",
+    "productName": "vps-mitsi",
     "author": "Cyprien Lengagne <cyprien.lengagne@epfl.ch>",
     "type": "module",
     "private": true,
@@ -46,9 +46,7 @@
         "vue-tsc": "^3.0.7"
     },
     "engines": {
-        "node": "^28 || ^26 || ^24 || ^22 || ^20",
-        "npm": ">= 6.13.4",
-        "yarn": ">= 1.21.1",
-        "pnpm": ">= 10.0.0"
+        "node": "^24",
+        "npm": ">= 6.13.4"
     }
 }
