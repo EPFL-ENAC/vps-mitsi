@@ -1,19 +1,31 @@
 /**
  * MITSI — Quasar form validation via Zod (silent adapter).
  *
- * Adapts canonical entity fields from src/models/schema.ts to Quasar rules.
+ * Adapts canonical entity fields from src/models/<Entity>/schema.ts to Quasar rules.
  * Components pass field schemas directly; this adapter supplies translated
  * validation messages and normalizes empty inputs.
  */
 import type { ValidationRule } from 'quasar';
-import type * as z from 'zod';
+import type { z } from 'zod';
 import { useI18n } from 'vue-i18n';
 
+/**
+ * Checks whether the field is required.
+ * If the schema does not allow undefined, null, or an empty string, the field is required.
+ */
+export function isSchemaRequired(schema?: z.ZodType): boolean {
+    if (!schema) return false;
+    const allowsUndefined = schema.safeParse(undefined).success;
+    const allowsNull = schema.safeParse(null).success;
+    return !allowsUndefined && !allowsNull;
+}
+
 export function useValidation() {
-    const { t } = useI18n();
+    const i18n = useI18n();
+    const { t } = i18n;
 
     /** Map a Zod issue to a validation.* key (origin = number/string/int/…). */
-    function toKey(issue: z.core.$ZodIssue): string {
+    function zodIssueToTranslationKey(issue: z.core.$ZodIssue): string {
         if (issue.code === 'too_small')
             return `validation.too_small.${issue.origin}.${
                 issue.inclusive ? 'inclusive' : 'exclusive'
@@ -24,6 +36,12 @@ export function useValidation() {
         // selections; category is mandatory so treat it as required-string.
         if (issue.code === 'invalid_value') return 'validation.invalid_type.string';
         return `validation.${issue.code}`;
+    }
+
+    /** Share translated validation messages, preserving unsupported/custom Zod messages. */
+    function formatIssue(issue: z.core.$ZodIssue): string {
+        const key = zodIssueToTranslationKey(issue);
+        return i18n.te(key) ? t(key, { ...issue }) : issue.message;
     }
 
     /**
@@ -38,11 +56,9 @@ export function useValidation() {
         return (value: unknown) => {
             const v = value === '' || value === null ? undefined : value;
             const r = schema.safeParse(v);
-            return r.success
-                ? true
-                : r.error.issues.map((is) => t(toKey(is), { ...is })).join(', ');
+            return r.success ? true : r.error.issues.map(formatIssue).join(', ');
         };
     }
 
-    return { toValidationRule };
+    return { toValidationRule, formatIssue, isSchemaRequired };
 }

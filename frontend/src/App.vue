@@ -3,8 +3,9 @@
 </template>
 
 <script setup lang="ts">
-import { useMitsiStore } from 'src/stores/mitsi';
+import { useSurveyDataStore } from 'src/stores/surveyData';
 
-const mitsi = useMitsiStore();
-mitsi.loadFromStorage();
+const surveyData = useSurveyDataStore();
+
+surveyData.loadFromStorage();
 </script>

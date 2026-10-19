@@ -4,6 +4,8 @@
 </template>
 
 <script setup lang="ts">
+import type { EmbodiedGroup } from 'src/stores/surveyResults';
+
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import VChart from 'vue-echarts';
@@ -12,7 +14,6 @@ import { TreemapChart, type TreemapSeriesOption } from 'echarts/charts';
 import { TooltipComponent, type TooltipComponentOption } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { palette } from 'src/utils/charts';
-import type { EmbodiedGroup } from 'src/stores/mitsi';
 import { formatKg } from 'src/utils/format';
 
 echarts.use([TreemapChart, TooltipComponent, CanvasRenderer]);
@@ -22,7 +23,7 @@ type ECOption = echarts.ComposeOption<TreemapSeriesOption | TooltipComponentOpti
 const props = withDefaults(
     defineProps<{
         groups: EmbodiedGroup[];
-        grandTotal: number;
+        grandTotal: number | null;
         variant?: 'element' | 'category';
     }>(),
     { variant: 'category' },
@@ -36,13 +37,12 @@ const { t } = useI18n();
 function toElementTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeriesOption['data']> {
     return groups.flatMap((g, categoryIdx) => {
         const categoryColor = palette(categoryIdx);
-        return g.rows
-            .filter((r) => !r.excluded && r.co2RowTotal > 0)
-            .map((r) => ({
-                name: r.name,
-                value: r.co2RowTotal,
-                itemStyle: { color: categoryColor },
-            }));
+        return g.rows.flatMap((row) => {
+            const value = row.rowEmbodiedEmissionsKg.result;
+            return row.excluded || value === null || !(value > 0)
+                ? []
+                : [{ name: row.name, value, itemStyle: { color: categoryColor } }];
+        });
     });
 }
 
@@ -50,20 +50,23 @@ function toElementTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSerie
  *  Categories with no accounted children are omitted. */
 function toCategoryTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeriesOption['data']> {
     return groups
-        .map((g, i) => {
+        .flatMap((g, i) => {
+            const total = g.totalEmbodiedEmissionsKg.result;
+            if (total === null) return [];
             const categoryColor = palette(i);
-            return {
-                name: g.category,
-                value: g.categoryTotal,
-                itemStyle: { color: categoryColor },
-                children: g.rows
-                    .filter((r) => !r.excluded && r.co2RowTotal > 0)
-                    .map((r) => ({
-                        name: r.name,
-                        value: r.co2RowTotal,
-                        itemStyle: { color: categoryColor },
-                    })),
-            };
+            return [
+                {
+                    name: g.category,
+                    value: total,
+                    itemStyle: { color: categoryColor },
+                    children: g.rows.flatMap((row) => {
+                        const value = row.rowEmbodiedEmissionsKg.result;
+                        return row.excluded || value === null || !(value > 0)
+                            ? []
+                            : [{ name: row.name, value, itemStyle: { color: categoryColor } }];
+                    }),
+                },
+            ];
         })
         .filter((g) => (g.children?.length ?? 0) > 0);
 }
@@ -76,7 +79,9 @@ const chartData = computed(() =>
 );
 
 /** Determines whether the chart should render or show an empty fallback. */
-const hasData = computed(() => props.grandTotal > 0 && chartData.value.length > 0);
+const hasData = computed(
+    () => props.grandTotal !== null && props.grandTotal > 0 && chartData.value.length > 0,
+);
 
 /** Reactive ECharts option configuration. */
 const chartOption = computed<ECOption>(() => ({
@@ -86,7 +91,10 @@ const chartOption = computed<ECOption>(() => ({
             const item = Array.isArray(p) ? p[0] : p;
             if (!item) return '';
             const value = Number(item.value);
-            const pct = props.grandTotal > 0 ? (value / props.grandTotal) * 100 : 0;
+            const pct =
+                props.grandTotal !== null && props.grandTotal > 0
+                    ? (value / props.grandTotal) * 100
+                    : 0;
             return `${item.name}<br/>${formatKg(value)} (${pct.toFixed(1)}${t('resultsColPercent')})`;
         },
     },

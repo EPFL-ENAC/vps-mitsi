@@ -7,10 +7,12 @@
     "type": "module",
     "private": true,
     "scripts": {
-        "typecheck": "npx lefthook run pre-commit --command frontend-typecheck --all-files",
-        "lint": "npx lefthook run pre-commit --command frontend-lint --all-files",
-        "format": "npx lefthook run pre-commit --command frontend-format --all-files",
+        "typecheck": "vue-tsc --noEmit -p tsconfig.typecheck.json",
+        "lint": "eslint \"src/**/*.{ts,js,cjs,mjs,vue}\" --max-warnings=0",
+        "format": "prettier --write \"src/**/*.{js,ts,vue,scss,html,md,json}\" --ignore-path .gitignore",
+        "format:check": "prettier --check \"src/**/*.{js,ts,vue,scss,html,md,json}\" --ignore-path .gitignore",
         "test": "node --import ./tests/register.mjs --test tests/*.test.mjs",
+        "check": "npm run format:check && npm run lint && npm run typecheck && npm test",
         "dev": "quasar dev",
         "build": "quasar build",
         "postinstall": "quasar prepare"

@@ -1,6 +1,7 @@
 import { createSSRApp, h } from 'vue';
 import { renderToString } from 'vue/server-renderer';
 import { createPinia } from 'pinia';
+import { createMemoryHistory, createRouter } from 'vue-router';
 import { createI18n } from 'vue-i18n';
 import {
     Quasar,
@@ -15,15 +16,32 @@ import {
     QMarkupTable,
     QCard,
     QCardSection,
+    QCardActions,
+    QDialog,
     QExpansionItem,
     QItemSection,
     QItemLabel,
     QSeparator,
     QBanner,
     QTooltip,
+    QToolbar,
+    QToolbarTitle,
+    QSpace,
+    QLayout,
+    QHeader,
+    QFooter,
+    QDrawer,
+    QPageContainer,
+    QList,
+    QItem,
+    QIcon,
+    QFile,
+    QBtnToggle,
+    Ripple,
 } from 'quasar';
 import HardwareInventoryTable from '../../src/components/inventory/HardwareInventoryTable.vue';
-import { useMitsiStore } from '../../src/stores/mitsi.ts';
+import { useSurveyDataStore } from '../../src/stores/surveyData.ts';
+import { useSurveyResultsStore } from '../../src/stores/surveyResults.ts';
 import en from '../../src/i18n/en-GB/index.ts';
 
 /** Exercise real Quasar controls and inspect their public props/events in SSR. */
@@ -37,7 +55,14 @@ export async function renderTables(
     const context = { req: { headers: {} } };
     const pinia = createPinia();
     app.use(pinia);
-    const store = useMitsiStore(pinia);
+    const router = createRouter({
+        history: createMemoryHistory(),
+        routes: [{ path: '/:pathMatch(.*)*', component: { render: () => null } }],
+    });
+    app.use(router);
+    await router.push('/');
+    await router.isReady();
+    const store = useSurveyDataStore(pinia);
     setupStore(store);
     app.mixin({
         created() {
@@ -59,13 +84,29 @@ export async function renderTables(
                 QMarkupTable,
                 QCard,
                 QCardSection,
+                QCardActions,
+                QDialog,
                 QExpansionItem,
                 QItemSection,
                 QItemLabel,
                 QSeparator,
                 QBanner,
                 QTooltip,
+                QToolbar,
+                QToolbarTitle,
+                QSpace,
+                QLayout,
+                QHeader,
+                QFooter,
+                QDrawer,
+                QPageContainer,
+                QList,
+                QItem,
+                QIcon,
+                QFile,
+                QBtnToggle,
             },
+            directives: { Ripple },
         },
         context,
     );
@@ -83,12 +124,36 @@ export async function renderTables(
     return {
         html,
         store,
+        router,
+        results: useSurveyResultsStore(pinia),
         dialogs,
+        modalDialogs: instances.filter((instance) => instance.$options.name === 'QDialog'),
         tables: instances.filter((instance) => instance.$options.name === 'QTable'),
+        datacenterCharts: instances.filter(
+            (instance) => instance.$options.__name === 'DatacentersPieChart',
+        ),
+        splitCharts: instances.filter(
+            (instance) => instance.$options.__name === 'TotalSplitPieChart',
+        ),
         inputs: instances.filter((instance) => instance.$options.name === 'QInput'),
         selects: instances.filter((instance) => instance.$options.name === 'QSelect'),
         toggles: instances.filter((instance) => instance.$options.name === 'QToggle'),
         buttons: instances.filter((instance) => instance.$options.name === 'QBtn'),
+        computations: instances.filter(
+            (instance) => instance.$options.__name === 'ComputationResultDisplay',
+        ),
+        tooltips: instances.filter((instance) => instance.$options.name === 'QTooltip'),
+        charts: instances.filter((instance) => instance.$props.option !== undefined),
+        renderAgain: async () =>
+            (
+                await renderTables(component, {
+                    props,
+                    messages,
+                    setupStore(nextStore) {
+                        nextStore.$patch(store.$state);
+                    },
+                })
+            ).html,
     };
 }
 

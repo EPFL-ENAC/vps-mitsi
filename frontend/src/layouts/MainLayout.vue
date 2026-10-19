@@ -86,31 +86,91 @@
                 <span v-if="exportedText" class="text-caption text-grey-6 q-ml-sm">
                     · {{ exportedText }}
                 </span>
-                <span class="text-caption text-grey-8">
-                    {{ $t('mainFooterEmbodied', { value: embodiedText }) }}
-                </span>
-                <span class="text-caption text-grey-8">
-                    {{ $t('mainFooterOperational', { value: operationalText }) }}
-                </span>
-                <span class="text-caption text-grey-8">
-                    {{ $t('mainFooterTotal', { value: totalLifespanText }) }}
-                </span>
-                <span class="text-caption text-grey-7">
-                    {{ $t('mainFooterPerFu', { value: perFunctionalUnitText }) }}
-                </span>
+                <i18n-t
+                    keypath="mainFooterEmbodied"
+                    tag="span"
+                    scope="global"
+                    class="text-caption text-grey-8"
+                >
+                    <template #value>
+                        <ComputationResultDisplay
+                            v-if="surveyData.isScopeValid"
+                            :computation="surveyResults.totalEmbodiedEmissionsKg"
+                            :format-value="formatEmbodiedTonnes"
+                        >
+                            <template #ignored-input="{ input }">{{
+                                input.name || input.id
+                            }}</template>
+                        </ComputationResultDisplay>
+                        <template v-else>{{ t('mainNotApplicable') }}</template>
+                    </template>
+                </i18n-t>
+                <i18n-t
+                    keypath="mainFooterOperational"
+                    tag="span"
+                    scope="global"
+                    class="text-caption text-grey-8"
+                >
+                    <template #value>
+                        <ComputationResultDisplay
+                            v-if="surveyData.isScopeValid"
+                            :computation="surveyResults.totalOperationalEmissionsKg"
+                            :format-value="formatOperationalTonnes"
+                        >
+                            <template #ignored-input="{ input }">{{
+                                formatDatacenterName(input)
+                            }}</template>
+                        </ComputationResultDisplay>
+                        <template v-else>{{ t('mainNotApplicable') }}</template>
+                    </template>
+                </i18n-t>
+                <i18n-t
+                    keypath="mainFooterTotal"
+                    tag="span"
+                    scope="global"
+                    class="text-caption text-grey-8"
+                >
+                    <template #value>
+                        <ComputationResultDisplay
+                            v-if="surveyData.isScopeValid"
+                            :computation="surveyResults.totalLifespanEmissionsKg"
+                            :format-value="formatTotalTonnes"
+                        />
+                        <template v-else>{{ t('mainNotApplicable') }}</template>
+                    </template>
+                </i18n-t>
+                <i18n-t
+                    keypath="mainFooterPerFu"
+                    tag="span"
+                    scope="global"
+                    class="text-caption text-grey-7"
+                >
+                    <template #value>
+                        <ComputationResultDisplay
+                            :computation="surveyResults.emissionsPerFunctionalUnitKg"
+                            :format-value="formatFunctionalUnitGrams"
+                        />
+                    </template>
+                </i18n-t>
             </q-toolbar>
         </q-footer>
     </q-layout>
 </template>
 
 <script setup lang="ts">
+import { useSurveyDataStore } from 'src/stores/surveyData';
+import { useSurveyResultsStore } from 'src/stores/surveyResults';
+
 import { computed, ref } from 'vue';
 import { useQuasar, date, exportFile } from 'quasar';
 import { useI18n } from 'vue-i18n';
 
-import type { BlockKey, BlockStatus } from 'src/models/mitsi';
-import { useMitsiStore } from 'src/stores/mitsi';
-import { useResultFormatting } from 'src/composables/useResultFormatting';
+import type { BlockKey, BlockStatus } from 'src/types/ui';
+import { formatDatacenterName, formatResult } from 'src/utils/format';
+import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
+
+const surveyData = useSurveyDataStore();
+const surveyResults = useSurveyResultsStore();
 
 interface BlockDef {
     labelKey: string;
@@ -119,16 +179,28 @@ interface BlockDef {
     status: BlockStatus;
 }
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const epflLogoUrl = `${import.meta.env.BASE_URL}epfl.svg`;
 
 const leftDrawerOpen = ref(false);
-const mitsi = useMitsiStore();
-const { formatOperationalResult, formatCombinedResult } = useResultFormatting();
+const operationalResultOptions = computed(() => ({
+    missingLabel: t('mainNotApplicable'),
+    partialLabel: surveyResults.operationalCalculationCoverage.isComplete
+        ? ''
+        : t('resultsEnergyCoverage', {
+              complete: surveyResults.operationalCalculationCoverage.validDatacenterCount,
+              total: surveyResults.operationalCalculationCoverage.totalDatacenterCount,
+          }),
+}));
+const combinedResultOptions = computed(() => ({
+    missingLabel: t('mainNotApplicable'),
+    partialLabel:
+        surveyResults.totalLifespanEmissionsKg.success === 'partial' ? t('resultsPartial') : '',
+}));
 const $q = useQuasar();
 
 function saveAssessment(): void {
-    if (!mitsi.saveToStorage()) {
+    if (!surveyData.saveToStorage()) {
         $q.notify({ type: 'negative', message: t('mainSaveFailed') });
     }
 }
@@ -137,7 +209,7 @@ function saveAssessment(): void {
 function onFilePicked(file: File | null): void {
     if (!file) return;
 
-    if (mitsi.isStoreEmpty) {
+    if (surveyData.isStoreEmpty) {
         readAndImport(file);
         return;
     }
@@ -158,7 +230,7 @@ function readAndImport(file: File): void {
     reader.onload = () => {
         const result = reader.result;
         if (typeof result !== 'string') return;
-        if (mitsi.importJson(result)) {
+        if (surveyData.importJson(result)) {
             $q.notify({ type: 'positive', message: t('mainImportSuccess') });
         } else {
             $q.notify({ type: 'negative', message: t('mainImportFailed') });
@@ -174,7 +246,7 @@ function readAndImport(file: File): void {
 function exportAssessment(): void {
     const status = exportFile(
         `mitsi-assessment-${date.formatDate(new Date(), 'YYYY-MM-DD_HH-mm-ss')}.json`,
-        mitsi.exportJson(),
+        surveyData.exportJson(),
         { mimeType: 'application/json' },
     );
     if (status === true) {
@@ -185,31 +257,30 @@ function exportAssessment(): void {
 }
 
 const assessmentBlocks = computed<Record<BlockKey, BlockDef>>(() => {
-    const status = mitsi.blockStatus;
     return {
         scope: {
             labelKey: 'mainNavScope',
             to: '/scope',
             icon: 'scope',
-            status: status.scope,
+            status: surveyData.scopeStatus,
         },
         inventory: {
             labelKey: 'mainNavInventory',
             to: '/inventory',
             icon: 'dns',
-            status: status.inventory,
+            status: surveyData.hardwareInventoryStatus,
         },
         energy: {
             labelKey: 'mainNavEnergy',
             to: '/energy',
             icon: 'bolt',
-            status: status.energy,
+            status: surveyData.energyConsumptionStatus,
         },
         results: {
             labelKey: 'mainNavResults',
             to: '/results',
             icon: 'insights',
-            status: status.results,
+            status: surveyData.resultsStatus,
         },
     };
 });
@@ -225,49 +296,48 @@ function completionLabelKey(status: BlockStatus): string {
     }
 }
 
-/** Embodied emissions in tonnes, or a dash until the scope is valid. */
-const embodiedText = computed<string>(() =>
-    mitsi.isScopeValid
-        ? `${(mitsi.totalEmbodied / 1000).toFixed(1)} ${t('mainUnitTonnes')}`
-        : t('mainNotApplicable'),
-);
+function formatEmbodiedTonnes(value: number): string {
+    return `${(value / 1000).toFixed(1)} ${t('mainUnitTonnes')}`;
+}
 
-/** Operational emissions in tonnes, or a dash until the scope is valid. */
-const operationalText = computed<string>(() =>
-    mitsi.isScopeValid
-        ? formatOperationalResult(
-              mitsi.totalOperational,
-              (value) => `${(value / 1000).toFixed(1)} ${t('mainUnitTonnes')}`,
-          )
-        : t('mainNotApplicable'),
-);
+function formatOperationalTonnes(value: number): string {
+    return formatResult(value, {
+        ...operationalResultOptions.value,
+        formatValue: formatEmbodiedTonnes,
+    });
+}
 
-/** Total over the lifespan in tonnes of CO2-eq, or a dash until the scope is valid. */
-const totalLifespanText = computed<string>(() =>
-    mitsi.isScopeValid
-        ? formatCombinedResult(
-              mitsi.totalLifespan,
-              (value) => `${(value / 1000).toFixed(1)} ${t('mainUnitTonnesCo2e')}`,
-          )
-        : t('mainNotApplicable'),
-);
+function formatTotalTonnes(value: number): string {
+    return formatResult(value, {
+        ...combinedResultOptions.value,
+        formatValue: (result) => `${(result / 1000).toFixed(1)} ${t('mainUnitTonnesCo2e')}`,
+    });
+}
 
-/** Per-functional-unit emissions in grams of CO2-eq, or a dash when not computable. */
-const perFunctionalUnitText = computed<string>(() =>
-    formatCombinedResult(
-        mitsi.perFunctionalUnit,
-        (value) => `${(value * 1000).toFixed(2)} ${t('mainUnitGramsCo2e')}`,
-    ),
-);
+function formatFunctionalUnitGrams(value: number): string {
+    return formatResult(value, {
+        missingLabel: t('mainNotApplicable'),
+        partialLabel:
+            surveyResults.emissionsPerFunctionalUnitKg.success === 'partial'
+                ? t('resultsPartial')
+                : '',
+        formatValue: (result) => `${(result * 1000).toFixed(2)} ${t('mainUnitGramsCo2e')}`,
+    });
+}
 
 const savedText = computed<string>(() =>
-    mitsi.savedAt
-        ? t('mainFooterSavedAt', { timeAgo: formatTimeAgo(mitsi.savedAt) })
-        : t('mainFooterDraftSaved'),
+    surveyData.savedAt === null
+        ? t('mainFooterNeverSaved')
+        : t('mainFooterSavedAt', {
+              dateTime: new Intl.DateTimeFormat(locale.value, {
+                  dateStyle: 'medium',
+                  timeStyle: 'medium',
+              }).format(surveyData.savedAt),
+          }),
 );
 const exportedText = computed<string | null>(() =>
-    mitsi.exportedAt
-        ? t('mainFooterExportedAt', { timeAgo: formatTimeAgo(mitsi.exportedAt) })
+    surveyData.exportedAt
+        ? t('mainFooterExportedAt', { timeAgo: formatTimeAgo(surveyData.exportedAt) })
         : null,
 );
 
