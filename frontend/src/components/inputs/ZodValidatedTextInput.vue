@@ -11,11 +11,11 @@ defineOptions({ inheritAttrs: false });
 const props = withDefaults(
     defineProps<{
         schema: z.ZodType;
-        label?: string;
-        rules?: ValidationRule[];
+        label?: string | undefined;
+        rules?: ValidationRule[] | undefined;
         required?: boolean | undefined;
     }>(),
-    { required: undefined },
+    { label: undefined, rules: undefined, required: undefined },
 );
 
 const model = defineModel<string | number | null | undefined>({ required: true });

@@ -13,12 +13,12 @@
         hide-bottom
         class="scope-boundary-table"
     >
-        <template #header="props">
-            <q-tr :props="props">
+        <template #header="slotProps">
+            <q-tr :props="slotProps">
                 <q-th
-                    v-for="col in props.cols"
+                    v-for="col in slotProps.cols"
                     :key="col.name"
-                    :props="props"
+                    :props="slotProps"
                     :data-kind="col.kind"
                 >
                     <span :class="{ 'zod-required-label': isSchemaRequired(col.zod) }">
@@ -29,16 +29,16 @@
             </q-tr>
         </template>
 
-        <template #body="props">
-            <q-tr :props="props">
+        <template #body="slotProps">
+            <q-tr :props="slotProps">
                 <q-td
-                    v-for="col in props.cols"
+                    v-for="col in slotProps.cols"
                     :key="col.name"
-                    :props="props"
+                    :props="slotProps"
                     :data-kind="col.kind"
                 >
                     <ZodValidatedTextInput
-                        v-model="props.row[col.field]"
+                        v-model="slotProps.row[col.field]"
                         :schema="col.zod"
                         :aria-label="col.label"
                         dense
@@ -52,7 +52,7 @@
                         dense
                         icon="delete"
                         :aria-label="t('scopeBndDelete')"
-                        @click="removeItem(props.row.id)"
+                        @click="removeItem(slotProps.row.id)"
                     />
                 </q-td>
             </q-tr>
