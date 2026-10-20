@@ -11,7 +11,7 @@
                 :partial-flag-label="t('resultsPartial')"
             />
         </div>
-        <v-chart v-if="hasData" class="split-treemap" :option="chartOption" autoresize />
+        <v-chart v-if="hasData" class="split-pie" :option="chartOption" autoresize />
         <div v-else class="text-grey-6 text-center q-py-md">{{ t('mainNotApplicable') }}</div>
     </div>
 </template>
@@ -21,12 +21,14 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import VChart from 'vue-echarts';
 import * as echarts from 'echarts/core';
-import { TreemapChart, type TreemapSeriesOption } from 'echarts/charts';
+import { PieChart, type PieSeriesOption } from 'echarts/charts';
 import {
-    AriaComponent,
     TooltipComponent,
-    type AriaComponentOption,
+    LegendComponent,
+    AriaComponent,
     type TooltipComponentOption,
+    type LegendComponentOption,
+    type AriaComponentOption,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { BLUE_SCALE, RED_SCALE } from 'src/utils/charts';
@@ -35,10 +37,10 @@ import { ComputationResult } from 'src/utils/computation';
 import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 
-echarts.use([TreemapChart, TooltipComponent, AriaComponent, CanvasRenderer]);
+echarts.use([PieChart, TooltipComponent, LegendComponent, AriaComponent, CanvasRenderer]);
 
 type ECOption = echarts.ComposeOption<
-    TreemapSeriesOption | TooltipComponentOption | AriaComponentOption
+    PieSeriesOption | TooltipComponentOption | LegendComponentOption | AriaComponentOption
 >;
 
 const props = withDefaults(
@@ -99,31 +101,13 @@ const chartOption = computed<ECOption>(() => {
                 return `${item.name}<br/>${formatKg(value)} (${((value / denom) * 100).toFixed(1)}${t('resultsColPercent')})`;
             },
         },
+        legend: { bottom: 0 },
         series: [
             {
-                type: 'treemap',
+                type: 'pie',
                 data: data.value,
-                roam: false,
-                nodeClick: false,
-                breadcrumb: { show: false },
-                upperLabel: { show: false },
-                label: {
-                    show: true,
-                    position: 'insideTopLeft',
-                    color: '#141920',
-                    fontSize: 16,
-                    fontWeight: 'bold',
-                    lineHeight: 22,
-                    overflow: 'truncate',
-                    // Name, blank line, then the value and its share.
-                    formatter: (p) =>
-                        `${p.name}\n\n${formatKg(Number(p.value))} (${((Number(p.value) / denom) * 100).toFixed(1)}${t('resultsColPercent')})`,
-                },
-                itemStyle: {
-                    borderColor: '#fff',
-                    borderWidth: 2,
-                    gapWidth: 2,
-                },
+                radius: ['40%', '70%'],
+                label: { formatter: '{b}' },
             },
         ],
     };
@@ -131,7 +115,7 @@ const chartOption = computed<ECOption>(() => {
 </script>
 
 <style scoped>
-.split-treemap {
+.split-pie {
     width: 100%;
     height: 300px;
 }
