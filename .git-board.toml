@@ -4,7 +4,9 @@
 # multiple values, sprint dates and saved views.
 #
 # Conventions
-# - Labels are fields: `status:ready`, `prio:p1`, `kind:bug`, `est:2`.
+# - Labels are fields: `status:ready`, `prio:p1`, `est:2`. The kind is one of
+#   EPFL-ENAC's own labels (bug, feat, docs, refactor, perf, polish, style,
+#   test), one per issue. On hold is the `hold` field, beside the status.
 # - Titles: "area: what goes wrong" for a bug, "area: what to do" otherwise.
 #   The area is the part of the project the issue is about, one short word
 #   the team agrees on: a domain (billing, auth, search), a layer (api, web,
@@ -35,13 +37,6 @@ options = ["backlog", "ready", "in-progress", "in-review", "ready-for-validation
 single = true
 options = ["p0", "p1", "p2", "p3"]
 
-# What the issue is; it also names its branch (see [branches]). Rather plain
-# labels, GitHub's way (`bug`, `feat`)? Delete this table: [branches] kinds
-# reads those too.
-[fields.kind]
-single = true
-options = ["feat", "bug", "perf", "refactor", "docs", "chore"]
-
 # The estimate, in hours.
 [fields.est]
 single = true
@@ -50,6 +45,11 @@ options = ["0.5", "1", "2", "4", "8", "16"]
 
 [fields.assignee]
 single = false
+
+# Paused without leaving its status: the issue keeps its place in the cycle.
+[fields.hold]
+single = true
+options = ["blocked", "paused"]
 
 # The project's people by role: who sets the risk, approves the plan,
 # reviews, signs off (docs/configuration.md, Roles and Cycle).
@@ -65,7 +65,7 @@ start_weekday = "monday"
 # An issue's branch: its kind, number and title, e.g. fix/12-login-fails.
 [branches]
 name = "{kind}/{number}-{slug}"
-kinds = { feat = "feat", bug = "fix", perf = "perf", refactor = "refactor", docs = "docs", chore = "chore" }
+kinds = { bug = "fix", feat = "feat", docs = "docs", refactor = "refactor", perf = "perf", polish = "polish", style = "style", test = "test" }
 
 # Views are sorted by name: `all`, every open issue in a table, as a
 # forge's issues page, is the one git-board opens on.

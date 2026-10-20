@@ -1,10 +1,9 @@
 ---
 name: ✨ Feature request
 about: Suggest a new feature or enhancement
-title: ''
-description: What is your feature request?
 title: ""
 labels: [feat]
+type: Feature
 assignees: ""
 ---
 
