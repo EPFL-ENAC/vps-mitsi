@@ -57,8 +57,8 @@
             <div class="row q-col-gutter-md">
                 <div class="col-12">
                     <ZodValidatedTextInput
-                        type="textarea"
                         v-model="surveyData.scope.function"
+                        type="textarea"
                         :label="$t('scopeFunctionLabel')"
                         :schema="ScopeSchema.shape.function"
                         outlined
@@ -76,8 +76,8 @@
                     <div class="scope-fu row items-center q-gutter-sm flex-nowrap">
                         <span>{{ $t('scopeFuBefore') }}</span>
                         <ZodValidatedNumberInput
-                            class="scope-fu-input"
                             v-model="surveyData.scope.functionalUnit.usageDuration"
+                            class="scope-fu-input"
                             :schema="FunctionalUnitSchema.shape.usageDuration"
                             dense
                             outlined
@@ -86,8 +86,8 @@
                             <q-tooltip>{{ $t('scopeFuDurationTooltip') }}</q-tooltip>
                         </ZodValidatedNumberInput>
                         <ZodValidatedSelect
-                            class="scope-fu-select"
                             v-model="surveyData.scope.functionalUnit.timeUnit"
+                            class="scope-fu-select"
                             :options="timeUnitOptions"
                             :schema="FunctionalUnitSchema.shape.timeUnit"
                             emit-value
@@ -102,8 +102,8 @@
                         </ZodValidatedSelect>
                         <span>{{ $t('scopeFuMiddle') }}</span>
                         <ZodValidatedNumberInput
-                            class="scope-fu-input"
                             v-model="surveyData.scope.functionalUnit.resourceCount"
+                            class="scope-fu-input"
                             :schema="FunctionalUnitSchema.shape.resourceCount"
                             dense
                             outlined
@@ -112,8 +112,8 @@
                             <q-tooltip>{{ $t('scopeFuResourceCountTooltip') }}</q-tooltip>
                         </ZodValidatedNumberInput>
                         <ZodValidatedSelect
-                            class="scope-fu-select scope-fu-select--grow"
                             v-model="surveyData.scope.functionalUnit.resourceType"
+                            class="scope-fu-select scope-fu-select--grow"
                             :options="resourceTypeOptions"
                             :schema="FunctionalUnitSchema.shape.resourceType"
                             emit-value
@@ -159,8 +159,8 @@
         <!-- Lifespan -->
         <AssessmentSection :title="$t('scopeLifespanTitle')" purpose="calculation" default-opened>
             <ZodValidatedNumberInput
-                class="scope-lifespan"
                 v-model="surveyData.scope.lifespanYears"
+                class="scope-lifespan"
                 :label="$t('scopeLifespanLabel')"
                 :suffix="$t('scopeLifespanYears')"
                 :schema="ScopeSchema.shape.lifespanYears"

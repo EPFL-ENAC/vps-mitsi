@@ -30,6 +30,7 @@ async function renderInput(component, props, slots = {}) {
     });
     app.mixin({
         created() {
+            // eslint-disable-next-line @typescript-eslint/no-this-alias -- capture the rendered instance
             if (this.$options.name === 'QInput') input = this;
         },
     });

@@ -2,8 +2,8 @@
     <div class="row items-start q-col-gutter-sm q-py-xs">
         <div class="col-2">
             <ZodValidatedSelect
-                class="full-width"
                 v-model="surveyData.monitoringPeriod.unit"
+                class="full-width"
                 :label="$t('energyMonitorUnitLabel')"
                 :schema="MonitoringPeriodSchema.shape.unit"
                 :options="monitoringUnitOptions"
@@ -16,8 +16,8 @@
         </div>
         <div class="col-2">
             <ZodValidatedNumberInput
-                class="full-width"
                 v-model="surveyData.monitoringPeriod.value"
+                class="full-width"
                 :label="$t('energyMonitorValueLabel')"
                 :schema="MonitoringPeriodSchema.shape.value"
                 dense
@@ -27,8 +27,8 @@
         </div>
         <div class="col-8">
             <ZodValidatedTextInput
-                class="full-width"
                 v-model="surveyData.monitoringPeriod.comment"
+                class="full-width"
                 :label="$t('energyMonitorCommentLabel')"
                 :schema="MonitoringPeriodSchema.shape.comment"
                 dense

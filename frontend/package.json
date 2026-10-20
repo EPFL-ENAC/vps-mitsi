@@ -1,16 +1,16 @@
 {
     "name": "vps-mitsi",
     "version": "0.0.1",
-    "description": "Web app for vps-mitsi exhibition around  data",
-    "productName": "vps-mitsi ",
+    "description": "MITSI: LCA-based carbon assessment of an IT service",
+    "productName": "vps-mitsi",
     "author": "Cyprien Lengagne <cyprien.lengagne@epfl.ch>",
     "type": "module",
     "private": true,
     "scripts": {
         "typecheck": "vue-tsc --noEmit -p tsconfig.typecheck.json",
-        "lint": "eslint \"src/**/*.{ts,js,cjs,mjs,vue}\" --max-warnings=0",
-        "format": "prettier --write \"src/**/*.{js,ts,vue,scss,html,md,json}\" --ignore-path .gitignore",
-        "format:check": "prettier --check \"src/**/*.{js,ts,vue,scss,html,md,json}\" --ignore-path .gitignore",
+        "lint": "eslint . --max-warnings=0",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
         "test": "node --import ./tests/register.mjs --test tests/*.test.mjs",
         "check": "npm run format:check && npm run lint && npm run typecheck && npm test",
         "dev": "quasar dev",
@@ -33,10 +33,10 @@
         "@intlify/unplugin-vue-i18n": "^4.0.0",
         "@quasar/app-vite": "^2.1.0",
         "@types/node": "^20.5.9",
-        "@vue/eslint-config-prettier": "^10.1.0",
         "@vue/eslint-config-typescript": "^14.4.0",
         "autoprefixer": "^10.4.2",
         "eslint": "^9.14.0",
+        "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-vue": "^10.4.0",
         "globals": "^16.4.0",
         "prettier": "^3.3.3",
@@ -46,9 +46,7 @@
         "vue-tsc": "^3.0.7"
     },
     "engines": {
-        "node": "^28 || ^26 || ^24 || ^22 || ^20",
-        "npm": ">= 6.13.4",
-        "yarn": ">= 1.21.1",
-        "pnpm": ">= 10.0.0"
+        "node": "^24",
+        "npm": ">= 6.13.4"
     }
 }

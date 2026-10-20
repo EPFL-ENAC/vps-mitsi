@@ -22,6 +22,7 @@ async function renderResult(computation, { props = {}, slots = {}, messages = en
     });
     app.mixin({
         created() {
+            // eslint-disable-next-line @typescript-eslint/no-this-alias -- capture the rendered instance
             if (this.$options.name === 'QTooltip') tooltip = this;
         },
     });

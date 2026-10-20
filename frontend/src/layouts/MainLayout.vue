@@ -40,7 +40,7 @@
 
         <q-drawer v-model="leftDrawerOpen" show-if-above :width="280" bordered>
             <q-list padding>
-                <q-item clickable v-ripple to="/" exact>
+                <q-item v-ripple clickable to="/" exact>
                     <q-item-section avatar>
                         <q-icon name="home" />
                     </q-item-section>
@@ -52,8 +52,8 @@
                 <q-item
                     v-for="(block, key) in assessmentBlocks"
                     :key="key"
-                    clickable
                     v-ripple
+                    clickable
                     :to="block.to"
                 >
                     <q-item-section avatar>
@@ -69,7 +69,7 @@
                     </q-item-section>
                 </q-item>
                 <q-separator spaced />
-                <q-item clickable v-ripple to="/report">
+                <q-item v-ripple clickable to="/report">
                     <q-item-section avatar><q-icon name="print" /></q-item-section>
                     <q-item-section>{{ $t('mainNavReport') }}</q-item-section>
                 </q-item>

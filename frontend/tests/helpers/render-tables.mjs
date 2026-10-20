@@ -135,7 +135,7 @@ export async function renderTables(
             (instance) => instance.$options.__name === 'DatacentersTreemapChart',
         ),
         splitCharts: instances.filter(
-            (instance) => instance.$options.__name === 'TotalSplitTreemapChart',
+            (instance) => instance.$options.__name === 'TotalSplitPieChart',
         ),
         inputs: instances.filter((instance) => instance.$options.name === 'QInput'),
         selects: instances.filter((instance) => instance.$options.name === 'QSelect'),

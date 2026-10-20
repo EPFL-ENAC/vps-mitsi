@@ -1,7 +1,7 @@
 .PHONY: install check lint typecheck test format format-check build run-frontend
 
 install:
-	cd frontend && npm install
+	cd frontend && npm ci
 
 check:
 	cd frontend && npm run check
