@@ -15,7 +15,7 @@
         <!--
             Header row 1: group sub-headers. We don't bind props here since there itsn't one group per column
         -->
-        <template v-slot:header="props">
+        <template #header="slotProps">
             <q-tr class="inventory-group-row">
                 <q-th
                     v-for="grp in groupRows"
@@ -28,12 +28,12 @@
                 <q-th auto-width class="inventory-group-th" />
             </q-tr>
 
-            <!-- Header row 2: per-column headers (props.cols exists here). -->
-            <q-tr :props="props">
+            <!-- Header row 2: per-column headers (slotProps.cols exists here). -->
+            <q-tr :props="slotProps">
                 <q-th
-                    v-for="col in props.cols"
+                    v-for="col in slotProps.cols"
                     :key="col.name"
-                    :props="props"
+                    :props="slotProps"
                     :data-kind="col.kind"
                 >
                     <span
@@ -48,25 +48,25 @@
             </q-tr>
         </template>
 
-        <template v-slot:body="props">
+        <template #body="slotProps">
             <q-tr
-                :props="props"
+                :props="slotProps"
                 :class="{
-                    'inventory-row--excluded': surveyResults.isSecondHandExcluded(props.row),
+                    'inventory-row--excluded': surveyResults.isSecondHandExcluded(slotProps.row),
                 }"
             >
                 <q-td
-                    v-for="col in props.cols"
+                    v-for="col in slotProps.cols"
                     :key="col.name"
-                    :props="props"
+                    :props="slotProps"
                     :data-kind="col.kind"
                 >
                     <!-- Second-hand not-counted impact -->
                     <template v-if="col.name === 'impactManufacturingDistributionEol'">
-                        <template v-if="surveyResults.isSecondHandExcluded(props.row)">
+                        <template v-if="surveyResults.isSecondHandExcluded(slotProps.row)">
                             <ComputationResultDisplay
                                 :computation="
-                                    surveyResults.hardwareUnitEmbodiedEmissionsKg(props.row)
+                                    surveyResults.hardwareUnitEmbodiedEmissionsKg(slotProps.row)
                                 "
                             >
                                 <template #default="{ result }">
@@ -82,7 +82,7 @@
                         </template>
                         <ZodValidatedNumberInput
                             v-else-if="col.zod"
-                            v-model="props.row.impactManufacturingDistributionEol"
+                            v-model="slotProps.row.impactManufacturingDistributionEol"
                             :schema="col.zod"
                             dense
                             outlined
@@ -92,12 +92,12 @@
 
                     <!-- Subtotal -->
                     <template v-else-if="col.name === 'subtotal'">
-                        <template v-if="surveyResults.isSecondHandExcluded(props.row)">
+                        <template v-if="surveyResults.isSecondHandExcluded(slotProps.row)">
                             <span class="inventory-dim">{{ $t('inventoryNotCounted') }}</span>
                         </template>
                         <ComputationResultDisplay
                             v-else-if="col.derived"
-                            :computation="col.derived(props.row)"
+                            :computation="col.derived(slotProps.row)"
                             :format-value="formatKg"
                         />
                     </template>
@@ -105,7 +105,7 @@
                     <!-- Datacenter select (store-driven options, value = id) -->
                     <template v-else-if="col.kind === 'datacenter'">
                         <ZodValidatedSelect
-                            v-model="props.row.datacenterId"
+                            v-model="slotProps.row.datacenterId"
                             :schema="col.zod"
                             :options="col.options"
                             emit-value
@@ -119,7 +119,7 @@
                     <!-- Schema enum select (translated options) -->
                     <template v-else-if="col.kind === 'enum'">
                         <ZodValidatedSelect
-                            v-model="props.row[col.field]"
+                            v-model="slotProps.row[col.field]"
                             :schema="col.zod"
                             :options="col.options"
                             emit-value
@@ -132,13 +132,13 @@
 
                     <!-- Toggle (2nd hand) — a real switch, not an input -->
                     <template v-else-if="col.kind === 'toggle'">
-                        <q-toggle v-model="props.row[col.field]" />
+                        <q-toggle v-model="slotProps.row[col.field]" />
                     </template>
 
                     <!-- Number -->
                     <template v-else-if="col.kind === 'number' && col.zod">
                         <ZodValidatedNumberInput
-                            v-model="props.row[col.field]"
+                            v-model="slotProps.row[col.field]"
                             :schema="col.zod"
                             dense
                             outlined
@@ -149,7 +149,7 @@
                     <!-- Free text -->
                     <template v-else-if="col.kind === 'text' && col.zod">
                         <ZodValidatedTextInput
-                            v-model="props.row[col.field]"
+                            v-model="slotProps.row[col.field]"
                             :schema="col.zod"
                             dense
                             outlined
@@ -161,7 +161,7 @@
                     <template v-else-if="col.kind === 'derived'">
                         <ComputationResultDisplay
                             v-if="col.derived"
-                            :computation="col.derived(props.row)"
+                            :computation="col.derived(slotProps.row)"
                             :format-value="formatKg"
                         />
                     </template>
@@ -172,7 +172,7 @@
                         dense
                         icon="delete"
                         :aria-label="$t('inventoryDeleteRow')"
-                        @click="confirmDeleteRow(props.row)"
+                        @click="confirmDeleteRow(slotProps.row)"
                     />
                 </q-td>
             </q-tr>

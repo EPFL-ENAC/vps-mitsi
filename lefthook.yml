@@ -11,12 +11,16 @@ pre-commit:
       run: npm run typecheck
     frontend-lint:
       root: frontend
-      glob: "frontend/src/**/*.{ts,js,cjs,mjs,vue}"
+      glob:
+        - "frontend/{src,tests}/**/*.{ts,js,cjs,mjs,vue}"
+        - "frontend/*.{ts,js,cjs,mjs}"
       exclude: "frontend/third-party/**"
       run: npm run lint
     frontend-format:
       root: frontend
-      glob: "frontend/src/**/*.{js,ts,vue,scss,html,md,json}"
+      glob:
+        - "frontend/{src,tests}/**/*.{js,ts,vue,scss,html,md,json}"
+        - "frontend/*.{js,ts,cjs,mjs,json}"
       exclude: "frontend/third-party/**"
       run: npm run format:check
 

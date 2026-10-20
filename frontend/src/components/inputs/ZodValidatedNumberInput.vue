@@ -12,11 +12,11 @@ defineOptions({ inheritAttrs: false });
 const props = withDefaults(
     defineProps<{
         schema: z.ZodType;
-        label?: string;
-        rules?: ValidationRule[];
+        label?: string | undefined;
+        rules?: ValidationRule[] | undefined;
         required?: boolean | undefined;
     }>(),
-    { required: undefined },
+    { label: undefined, rules: undefined, required: undefined },
 );
 
 const model = defineModel<string | number | null | undefined>({
@@ -43,9 +43,9 @@ defineExpose({ input });
     <QInput
         ref="input"
         v-bind="$attrs"
+        v-model.number="model"
         :class="{ 'zod-required': isRequired }"
         :label="props.label"
-        v-model.number="model"
         type="number"
         :min="numberAttrs.min"
         :max="numberAttrs.max"
