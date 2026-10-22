@@ -41,6 +41,7 @@ export default {
     mainImportWarning:
         'Your current assessment will be deleted. Use Export first if you want to keep it.',
     mainImportSuccess: 'Assessment imported successfully.',
+    mainImportEmpty: 'Assessment imported, but the file contains no survey data.',
     mainImportFailed: 'Import failed: the file is not a valid assessment file.',
     mainNavWelcome: 'Welcome',
     mainNavScope: 'Scope of the assessment',

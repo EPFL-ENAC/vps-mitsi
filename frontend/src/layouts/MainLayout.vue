@@ -235,9 +235,18 @@ function readAndImport(file: File): void {
     const reader = new FileReader();
     reader.onload = () => {
         const result = reader.result;
-        if (typeof result !== 'string') return;
+        if (typeof result !== 'string') {
+            $q.notify({ type: 'negative', message: t('mainImportFailed') });
+            return;
+        }
+
         if (surveyData.importJson(result)) {
-            $q.notify({ type: 'positive', message: t('mainImportSuccess') });
+            // If the import was successful but the store is still empty, show a warning!
+            if (surveyData.isStoreEmpty) {
+                $q.notify({ type: 'warning', message: t('mainImportEmpty') });
+            } else {
+                $q.notify({ type: 'positive', message: t('mainImportSuccess') });
+            }
         } else {
             $q.notify({ type: 'negative', message: t('mainImportFailed') });
         }
