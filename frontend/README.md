@@ -9,6 +9,13 @@ JSON import/export through the assessment store; no backend or `.env` is require
 Use Node.js 24 and npm. Run `make install` and `make run-frontend` from the repository root.
 Quasar prints the development URL, normally <http://localhost:9000>.
 
+Dependency installation runs `quasar prepare` through the project's `postinstall`
+script to generate `.quasar/` configuration and types for the IDE, linting, and
+typechecking. Lefthook is a development dependency whose install script sets up
+the repository's Git hooks. Platform-specific dependencies can also run install
+scripts to prepare native binaries. Keep these scripts enabled for local installs;
+`npm run dev` starts Quasar without reinstalling dependencies.
+
 ## Validation
 
 Run these commands from `frontend/`:
