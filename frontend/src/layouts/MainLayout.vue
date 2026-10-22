@@ -38,6 +38,8 @@
             </q-toolbar>
         </q-header>
 
+        <ExportAssessmentDialog v-model:open="exportDialogOpen" @confirm="onExportConfirmed" />
+
         <q-drawer v-model="leftDrawerOpen" show-if-above :width="280" bordered>
             <q-list padding>
                 <q-item v-ripple clickable to="/" exact>
@@ -166,8 +168,10 @@ import { useQuasar, date, exportFile } from 'quasar';
 import { useI18n } from 'vue-i18n';
 
 import type { BlockKey, BlockStatus } from 'src/types/ui';
+import type { ExportMetadataInput } from 'src/models/ExportMetadata/schema';
 import { formatDatacenterName, formatResult } from 'src/utils/format';
 import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
+import ExportAssessmentDialog from 'src/components/ExportAssessmentDialog.vue';
 
 const surveyData = useSurveyDataStore();
 const surveyResults = useSurveyResultsStore();
@@ -183,6 +187,8 @@ const { t, locale } = useI18n();
 const epflLogoUrl = `${import.meta.env.BASE_URL}epfl.svg`;
 
 const leftDrawerOpen = ref(false);
+/** Controls the modal that collects export metadata before downloading. */
+const exportDialogOpen = ref(false);
 const operationalResultOptions = computed(() => ({
     missingLabel: t('mainNotApplicable'),
     partialLabel: surveyResults.operationalCalculationCoverage.isComplete
@@ -244,9 +250,14 @@ function readAndImport(file: File): void {
 
 /** Downloads whole assessment as a JSON file, named with the current date-time. */
 function exportAssessment(): void {
+    exportDialogOpen.value = true;
+}
+
+/** Runs once the export dialog collected and validated its metadata. */
+function onExportConfirmed(metadata: ExportMetadataInput): void {
     const status = exportFile(
         `mitsi-assessment-${date.formatDate(new Date(), 'YYYY-MM-DD_HH-mm-ss')}.json`,
-        surveyData.exportJson(),
+        surveyData.exportJson(metadata),
         { mimeType: 'application/json' },
     );
     if (status === true) {

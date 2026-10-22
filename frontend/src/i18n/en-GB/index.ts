@@ -26,6 +26,16 @@ export default {
     mainExport: 'Export',
     mainExportSuccess: 'File successfully downloaded.',
     mainExportFailed: 'Browser blocked the download.',
+    // --- Export metadata dialog (see src/components/ExportAssessmentDialog.vue) ---
+    exportDialogTitle: 'Export assessment',
+    exportDialogHint:
+        'These details are stored in the exported JSON file to document who produced it and when.',
+    exportDialogExportedByLabel: 'Assessor name',
+    exportDialogExportedByPlaceholder: 'Name of the person exporting this assessment',
+    exportDialogCommentLabel: 'Comment (optional)',
+    exportDialogCommentPlaceholder: 'Anything worth noting about this export',
+    exportDialogCancel: 'Cancel',
+    exportDialogConfirm: 'Export',
     mainImport: 'Import',
     mainImportWarningTitle: 'Import will replace the draft',
     mainImportWarning:

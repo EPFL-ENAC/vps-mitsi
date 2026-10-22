@@ -34,6 +34,7 @@ import {
     type UnderlyingService,
     UnderlyingServiceSchema,
 } from 'src/models/UnderlyingService/schema';
+import type { ExportMetadataInput } from 'src/models/ExportMetadata/schema';
 
 /** Storage key used for browser persistence. */
 export const MITSI_STORAGE_KEY = 'mitsi-assessment';
@@ -221,8 +222,14 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
     }
 
     // ── Import / export (versioned JSON) ─────────────────────────────────────
-    function exportJson(): string {
-        const state = MitsiStateDraftSchema.parse(buildState());
+    function exportJson(metadata: ExportMetadataInput): string {
+        const state = MitsiStateDraftSchema.parse({
+            metadata: {
+                ...metadata,
+                exportedAt: new Date().toISOString(),
+            },
+            ...buildState(),
+        });
         const json = JSON.stringify(state, null, 2);
         exportedAt.value = Date.now();
         return json;
