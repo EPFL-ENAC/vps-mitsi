@@ -369,7 +369,12 @@ test('unfinished descriptive scope fields do not mark complete emission values a
 });
 
 test('resource select derives translated options from the enum and requires a supported selection', async () => {
-    const labels = { CPU: 'Processors', GPU: 'Graphics processors' };
+    const labels = {
+        CPU: 'Processors',
+        GPU: 'Graphics processors',
+        Disk: 'Storage devices',
+        RAM: 'Memory modules',
+    };
     const result = await renderTables(ScopePage, {
         messages: { ...en, scopeResourceType: labels },
         setupStore: setupScope,
@@ -379,10 +384,10 @@ test('resource select derives translated options from the enum and requires a su
         resourceSelect.options,
         ResourceTypeSchema.options.map((value) => ({ value, label: labels[value] })),
     );
-    for (const invalid of ['', null, undefined, 'cpu', 'other']) {
+    for (const invalid of ['', null, undefined, 'cpu', 'other', 'disk', 'ram']) {
         assert.equal(typeof resourceSelect.rules[0](invalid), 'string');
     }
-    for (const resourceType of ['CPU', 'GPU']) {
+    for (const resourceType of ['CPU', 'GPU', 'Disk', 'RAM']) {
         assert.equal(resourceSelect.rules[0](resourceType), true);
         resourceSelect.$emit('update:modelValue', resourceType);
         assert.equal(result.store.scope.functionalUnit.resourceType, resourceType);

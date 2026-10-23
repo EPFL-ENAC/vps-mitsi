@@ -254,11 +254,11 @@ test('nullable numbers preserve bounds and distinguish missing values from zero'
 });
 
 test('resource selection uses exact enum values while drafts retain an unanswered selection', () => {
-    assert.deepEqual(ResourceTypeSchema.options, ['CPU', 'GPU']);
+    assert.deepEqual(ResourceTypeSchema.options, ['CPU', 'GPU', 'Disk', 'RAM']);
     const input = { timeUnit: 'hour', usageDuration: 1, resourceCount: 1 };
     assert.equal(FunctionalUnitDraftSchema.parse(input).resourceType, '');
     assert.equal(FunctionalUnitSchema.safeParse(input).success, false);
-    for (const resourceType of ['CPU', 'GPU']) {
+    for (const resourceType of ['CPU', 'GPU', 'Disk', 'RAM']) {
         assert.equal(
             FunctionalUnitSchema.parse({ ...input, resourceType }).resourceType,
             resourceType,
@@ -268,7 +268,19 @@ test('resource selection uses exact enum values while drafts retain an unanswere
             resourceType,
         );
     }
-    for (const resourceType of ['', undefined, null, ' ', 'cpu', 'gpu', ' CPU ', 'other']) {
+    for (const resourceType of [
+        '',
+        undefined,
+        null,
+        ' ',
+        'cpu',
+        'gpu',
+        ' CPU ',
+        'other',
+        'disk',
+        'ram',
+        'DISK',
+    ]) {
         const parsed = FunctionalUnitSchema.safeParse({ ...input, resourceType });
         assert.equal(parsed.success, false);
         assert.deepEqual(parsed.error.issues[0].path, ['resourceType']);

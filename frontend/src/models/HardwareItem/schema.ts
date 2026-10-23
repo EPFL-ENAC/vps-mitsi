@@ -114,11 +114,23 @@ export const HardwareGpuFleetMeasurementsSchema = HardwareItemSchema.pick({
     gpuQuantity: true,
 });
 
+export const HardwareDiskFleetMeasurementsSchema = HardwareItemSchema.pick({
+    quantity: true,
+    storageQuantity: true,
+});
+
+export const HardwareRamFleetMeasurementsSchema = HardwareItemSchema.pick({
+    quantity: true,
+    memoryQuantity: true,
+});
+
 export type HardwareImpactMeasurements = z.infer<typeof HardwareImpactMeasurementsSchema>;
 export type HardwareMemoryMeasurements = z.infer<typeof HardwareMemoryMeasurementsSchema>;
 export type HardwareStorageMeasurements = z.infer<typeof HardwareStorageMeasurementsSchema>;
 export type HardwareCpuFleetMeasurements = z.infer<typeof HardwareCpuFleetMeasurementsSchema>;
 export type HardwareGpuFleetMeasurements = z.infer<typeof HardwareGpuFleetMeasurementsSchema>;
+export type HardwareDiskFleetMeasurements = z.infer<typeof HardwareDiskFleetMeasurementsSchema>;
+export type HardwareRamFleetMeasurements = z.infer<typeof HardwareRamFleetMeasurementsSchema>;
 
 export type HardwareCategory = z.infer<typeof HardwareCategorySchema>;
 

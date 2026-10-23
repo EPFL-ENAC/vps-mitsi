@@ -912,17 +912,26 @@ test('category totals distinguish partial, failed, and excluded groups using ori
     assert.deepEqual(results.embodiedEmissionsByCategory, []);
 });
 
-test('resource sums report selected CPU or GPU measurements and preserve exclusions', () => {
+test('resource sums report selected CPU, GPU, Disk or RAM measurements and preserve exclusions', () => {
     const data = useSurveyDataStore();
     const results = useSurveyResultsStore();
     for (const [resourceType, field, otherField, expected] of [
         ['CPU', 'cpuQuantity', 'gpuQuantity', 6],
         ['GPU', 'gpuQuantity', 'cpuQuantity', 8],
+        ['Disk', 'storageQuantity', 'cpuQuantity', 10],
+        ['RAM', 'memoryQuantity', 'cpuQuantity', 12],
     ]) {
         data.scope.functionalUnit.resourceType = resourceType;
         data.includeSecondHandEmbodied = false;
         data.hardware = [
-            { ...validHardware(), quantity: 2, cpuQuantity: 3, gpuQuantity: 4 },
+            {
+                ...validHardware(),
+                quantity: 2,
+                cpuQuantity: 3,
+                gpuQuantity: 4,
+                storageQuantity: 5,
+                memoryQuantity: 6,
+            },
             { ...validHardware(), id: 'editing', [field]: null },
             { ...validHardware(), id: 'excluded', isSecondHand: true, quantity: null },
         ];
@@ -1737,11 +1746,27 @@ test('invalid resource selections fail before hardware validation and propagate 
         carbonIntensity: 1000,
         energyConsumption: 100,
     });
-    const invalidSelections = ['', undefined, null, ' ', 'cpu', 'gpu', ' CPU ', 'GPU ', 'other'];
+    const invalidSelections = [
+        '',
+        undefined,
+        null,
+        ' ',
+        'cpu',
+        'gpu',
+        ' CPU ',
+        'GPU ',
+        'other',
+        'disk',
+        'ram',
+        'DISK',
+        'RAM ',
+    ];
     const ready = {
         ...validHardware(),
         cpuQuantity: 3,
         gpuQuantity: 4,
+        storageQuantity: 5,
+        memoryQuantity: 6,
         impactManufacturingDistributionEol: 10,
     };
     for (const hardware of [
@@ -1764,7 +1789,7 @@ test('invalid resource selections fail before hardware validation and propagate 
                 'resourceType',
             ]);
             assert.equal(fleet.inputErrors[0].issues[0].code, 'invalid_value');
-            assert.deepEqual(fleet.inputErrors[0].issues[0].values, ['CPU', 'GPU']);
+            assert.deepEqual(fleet.inputErrors[0].issues[0].values, ['CPU', 'GPU', 'Disk', 'RAM']);
             for (const ratio of [
                 results.emissionsPerFunctionalUnitKg,
                 results.lifespanEmissionsPerResourceKg,
@@ -1785,6 +1810,8 @@ test('invalid resource selections fail before hardware validation and propagate 
     for (const [resourceType, expectedFleet] of [
         ['CPU', 3],
         ['GPU', 4],
+        ['Disk', 5],
+        ['RAM', 6],
     ]) {
         data.scope.functionalUnit.resourceType = resourceType;
         assert.equal(results.selectedResourceFleetCount.success, 'success');

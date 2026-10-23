@@ -97,6 +97,8 @@ export default {
     scopeResourceType: {
         CPU: 'CPU',
         GPU: 'GPU',
+        Disk: 'Disk',
+        RAM: 'RAM',
     },
     scopeFuTimeUnitTooltip: "e.g. hours — 'for 2 hours with 2 CPUs'",
     scopeFuDurationTooltip: "e.g. 2 — 'for 2 hours with 2 CPUs'",

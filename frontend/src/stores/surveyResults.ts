@@ -12,6 +12,8 @@ import {
     HardwareStorageMeasurementsSchema,
     HardwareCpuFleetMeasurementsSchema,
     HardwareGpuFleetMeasurementsSchema,
+    HardwareDiskFleetMeasurementsSchema,
+    HardwareRamFleetMeasurementsSchema,
     type HardwareCategory,
 } from 'src/models/HardwareItem/schema';
 import {
@@ -31,6 +33,8 @@ import {
     storageTotal as calculateStorageTotal,
     cpuFleetTotal,
     gpuFleetTotal,
+    diskFleetTotal,
+    ramFleetTotal,
 } from 'src/models/HardwareItem/computations';
 import { timeUnitsPerYear } from 'src/models/TimeUnit/utils';
 import { sum } from 'src/utils/math';
@@ -219,25 +223,44 @@ export const useSurveyResultsStore = defineStore('surveyResults', () => {
         return ComputationResult.sum(contributions, { empty: 'failure' });
     });
 
-    /** Selected CPU/GPU fleet count, applying the same second-hand exclusion as embodied emissions. */
+    /** Selected resource fleet count, applying the same second-hand exclusion as embodied emissions. */
     const selectedResourceFleetCount = computed<ComputationResult<number, HardwareItem>>(() => {
         const selection = ResourceSelectionContextSchema.safeParse({ scope: data.scope });
         if (!selection.success) return ComputationResult.failure([selection.error]);
         const { resourceType } = selection.data.scope.functionalUnit;
         const excludedIfNeeded = data.hardware.filter((row) => !isSecondHandExcluded(row));
 
-        if (resourceType === ResourceTypeSchema.enum.CPU) {
-            return ComputationResult.bulkValidateAndMap(
-                excludedIfNeeded,
-                HardwareCpuFleetMeasurementsSchema,
-                cpuFleetTotal,
-            ).map(sum);
-        }
-        return ComputationResult.bulkValidateAndMap(
-            excludedIfNeeded,
-            HardwareGpuFleetMeasurementsSchema,
-            gpuFleetTotal,
-        ).map(sum);
+        // Fleet in service = Σ (element quantity × quantity of that same resource).
+        const fleetTotal = (): ComputationResult<number, HardwareItem> => {
+            switch (resourceType) {
+                case ResourceTypeSchema.enum.CPU:
+                    return ComputationResult.bulkValidateAndMap(
+                        excludedIfNeeded,
+                        HardwareCpuFleetMeasurementsSchema,
+                        cpuFleetTotal,
+                    ).map(sum);
+                case ResourceTypeSchema.enum.GPU:
+                    return ComputationResult.bulkValidateAndMap(
+                        excludedIfNeeded,
+                        HardwareGpuFleetMeasurementsSchema,
+                        gpuFleetTotal,
+                    ).map(sum);
+                case ResourceTypeSchema.enum.Disk:
+                    return ComputationResult.bulkValidateAndMap(
+                        excludedIfNeeded,
+                        HardwareDiskFleetMeasurementsSchema,
+                        diskFleetTotal,
+                    ).map(sum);
+                case ResourceTypeSchema.enum.RAM:
+                    return ComputationResult.bulkValidateAndMap(
+                        excludedIfNeeded,
+                        HardwareRamFleetMeasurementsSchema,
+                        ramFleetTotal,
+                    ).map(sum);
+            }
+        };
+
+        return fleetTotal();
     });
 
     const emissionsPerFunctionalUnitKg = computed<ComputationResult<number, EmissionInput>>(() => {

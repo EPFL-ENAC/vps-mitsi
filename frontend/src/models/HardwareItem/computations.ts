@@ -4,6 +4,8 @@ import type {
     HardwareStorageMeasurements,
     HardwareCpuFleetMeasurements,
     HardwareGpuFleetMeasurements,
+    HardwareDiskFleetMeasurements,
+    HardwareRamFleetMeasurements,
 } from 'src/models/HardwareItem/schema';
 
 /** Embodied emissions (kg CO₂-eq): number of items × impact of one item. */
@@ -25,4 +27,12 @@ export function cpuFleetTotal(row: HardwareCpuFleetMeasurements): number {
 
 export function gpuFleetTotal(row: HardwareGpuFleetMeasurements): number {
     return row.quantity * row.gpuQuantity;
+}
+
+export function diskFleetTotal(row: HardwareDiskFleetMeasurements): number {
+    return row.quantity * row.storageQuantity;
+}
+
+export function ramFleetTotal(row: HardwareRamFleetMeasurements): number {
+    return row.quantity * row.memoryQuantity;
 }

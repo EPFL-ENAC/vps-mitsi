@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { TimeUnitSchema } from 'src/models/TimeUnit/schema';
 import { draftField, draftNumber } from 'src/models/shared/schema';
 
-export const ResourceTypeSchema = z.enum(['CPU', 'GPU']);
+export const ResourceTypeSchema = z.enum(['CPU', 'GPU', 'Disk', 'RAM']);
 export type ResourceType = z.infer<typeof ResourceTypeSchema>;
 
 /** The functional unit is built as a fill-in-the-blank sentence. */
