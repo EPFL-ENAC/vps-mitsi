@@ -374,6 +374,7 @@ test('resource select derives translated options from the enum and requires a su
         GPU: 'Graphics processors',
         Disk: 'Storage devices',
         RAM: 'Memory modules',
+        Other: 'Custom resources',
     };
     const result = await renderTables(ScopePage, {
         messages: { ...en, scopeResourceType: labels },
@@ -393,6 +394,18 @@ test('resource select derives translated options from the enum and requires a su
         assert.equal(result.store.scope.functionalUnit.resourceType, resourceType);
         assert.equal(result.store.isScopeValid, true);
     }
+    // A custom resource is a supported selection on its own; its extra fields are optional.
+    assert.equal(resourceSelect.rules[0]('Other'), true);
+    resourceSelect.$emit('update:modelValue', 'Other');
+    assert.equal(result.store.scope.functionalUnit.resourceType, 'Other');
+    assert.equal(result.store.isScopeValid, true);
+    result.store.scope.functionalUnit.resourceTypeOther = 'sessions';
+    result.store.scope.functionalUnit.manualFleetCount = 5;
+    assert.equal(result.store.isScopeValid, true);
+    // An unusable total still invalidates the scope through the field's own rule.
+    result.store.scope.functionalUnit.manualFleetCount = 0;
+    assert.equal(result.store.isScopeValid, false);
+    result.store.scope.functionalUnit.manualFleetCount = 5;
     resourceSelect.$emit('update:modelValue', '');
     assert.equal(result.store.scope.functionalUnit.resourceType, '');
     assert.equal(result.store.isScopeValid, false);

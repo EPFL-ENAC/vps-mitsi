@@ -126,6 +126,32 @@
                                 $t('scopeFuResourceTypeTooltip')
                             }}</q-tooltip>
                         </ZodValidatedSelect>
+                        <ZodValidatedTextInput
+                            v-if="isCustomResource"
+                            v-model="surveyData.scope.functionalUnit.resourceTypeOther"
+                            class="scope-fu-text"
+                            :schema="FunctionalUnitSchema.shape.resourceTypeOther"
+                            :label="$t('scopeFuResourceTypeOtherLabel')"
+                            :placeholder="$t('scopeFuResourceTypeOtherPlaceholder')"
+                            dense
+                            outlined
+                            hide-bottom-space
+                        >
+                            <q-tooltip anchor="center right" self="center left">{{
+                                $t('scopeFuResourceTypeOtherTooltip')
+                            }}</q-tooltip>
+                        </ZodValidatedTextInput>
+                        <ZodValidatedNumberInput
+                            v-if="isCustomResource"
+                            v-model="surveyData.scope.functionalUnit.manualFleetCount"
+                            class="scope-fu-input"
+                            :schema="FunctionalUnitSchema.shape.manualFleetCount"
+                            dense
+                            outlined
+                            hide-bottom-space
+                        >
+                            <q-tooltip>{{ $t('scopeFuManualFleetCountTooltip') }}</q-tooltip>
+                        </ZodValidatedNumberInput>
                     </div>
                 </div>
             </div>
@@ -207,6 +233,11 @@ const resourceTypeOptions = computed(() =>
         label: t(`scopeResourceType.${value}`),
     })),
 );
+
+/** Custom resources need a name and a hand-stated total, both entered by the user. */
+const isCustomResource = computed(
+    () => surveyData.scope.functionalUnit.resourceType === ResourceTypeSchema.enum.Other,
+);
 </script>
 
 <style scoped>
@@ -220,6 +251,11 @@ const resourceTypeOptions = computed(() =>
 }
 
 .scope-fu-select--grow {
+    width: 160px;
+    min-width: 140px;
+}
+
+.scope-fu-text {
     width: 160px;
     min-width: 140px;
 }

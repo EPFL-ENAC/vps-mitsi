@@ -73,9 +73,15 @@ export interface EmbodiedGroup {
 
 // Retain the existing Zod diagnostic path while renaming the public fleet-count result.
 const ResourceCountSchema = z.object({ resourcesInService: z.number().positive() });
+/** A hand-stated custom total, reused for the fleet count and its diagnostics. */
+const ManualFleetCountSchema = z.object({ manualFleetCount: z.number().int().positive() });
 const ResourceSelectionContextSchema = z.object({
     scope: z.object({
-        functionalUnit: ScopeSchema.shape.functionalUnit.pick({ resourceType: true }),
+        functionalUnit: ScopeSchema.shape.functionalUnit.pick({
+            resourceType: true,
+            resourceTypeOther: true,
+            manualFleetCount: true,
+        }),
     }),
 });
 const FunctionalUnitContextSchema = z.object({
@@ -227,7 +233,7 @@ export const useSurveyResultsStore = defineStore('surveyResults', () => {
     const selectedResourceFleetCount = computed<ComputationResult<number, HardwareItem>>(() => {
         const selection = ResourceSelectionContextSchema.safeParse({ scope: data.scope });
         if (!selection.success) return ComputationResult.failure([selection.error]);
-        const { resourceType } = selection.data.scope.functionalUnit;
+        const { resourceType, manualFleetCount } = selection.data.scope.functionalUnit;
         const excludedIfNeeded = data.hardware.filter((row) => !isSecondHandExcluded(row));
 
         // Fleet in service = Σ (element quantity × quantity of that same resource).
@@ -257,6 +263,13 @@ export const useSurveyResultsStore = defineStore('surveyResults', () => {
                         HardwareRamFleetMeasurementsSchema,
                         ramFleetTotal,
                     ).map(sum);
+                case ResourceTypeSchema.enum.Other:
+                    // Custom resources are not in the inventory; the total is stated by hand.
+                    return ComputationResult.validateAndMap(
+                        ManualFleetCountSchema,
+                        { manualFleetCount },
+                        (value) => value.manualFleetCount,
+                    );
             }
         };
 
