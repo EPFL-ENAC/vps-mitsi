@@ -912,17 +912,26 @@ test('category totals distinguish partial, failed, and excluded groups using ori
     assert.deepEqual(results.embodiedEmissionsByCategory, []);
 });
 
-test('resource sums report selected CPU or GPU measurements and preserve exclusions', () => {
+test('resource sums report selected CPU, GPU, Disk or RAM measurements and preserve exclusions', () => {
     const data = useSurveyDataStore();
     const results = useSurveyResultsStore();
     for (const [resourceType, field, otherField, expected] of [
         ['CPU', 'cpuQuantity', 'gpuQuantity', 6],
         ['GPU', 'gpuQuantity', 'cpuQuantity', 8],
+        ['Disk', 'storageQuantity', 'cpuQuantity', 10],
+        ['RAM', 'memoryQuantity', 'cpuQuantity', 12],
     ]) {
         data.scope.functionalUnit.resourceType = resourceType;
         data.includeSecondHandEmbodied = false;
         data.hardware = [
-            { ...validHardware(), quantity: 2, cpuQuantity: 3, gpuQuantity: 4 },
+            {
+                ...validHardware(),
+                quantity: 2,
+                cpuQuantity: 3,
+                gpuQuantity: 4,
+                storageQuantity: 5,
+                memoryQuantity: 6,
+            },
             { ...validHardware(), id: 'editing', [field]: null },
             { ...validHardware(), id: 'excluded', isSecondHand: true, quantity: null },
         ];
@@ -981,6 +990,172 @@ test('resource sums report selected CPU or GPU measurements and preserve exclusi
                 inputErrors: [],
                 ignoredInputs: [],
             },
+        );
+    }
+});
+
+test('Disk fleet counts quantity × storageQuantity and reports incomplete storage rows', () => {
+    const data = useSurveyDataStore();
+    const results = useSurveyResultsStore();
+    data.scope.functionalUnit.resourceType = 'Disk';
+    data.includeSecondHandEmbodied = false;
+    data.hardware = [
+        { ...validHardware(), quantity: 2, storageQuantity: 3 },
+        { ...validHardware(), id: 'second', quantity: 5, storageQuantity: 4 },
+    ];
+    assert.deepEqual(
+        { ...results.selectedResourceFleetCount },
+        {
+            success: 'success',
+            result: 26,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
+
+    // A row without a storage quantity is ignored but keeps its field-scoped diagnostic.
+    const editing = { ...validHardware(), id: 'editing', quantity: 4, storageQuantity: null };
+    data.hardware = [...data.hardware, editing];
+    const partial = results.selectedResourceFleetCount;
+    assert.equal(partial.success, 'partial');
+    assert.equal(partial.result, 26);
+    assert.deepEqual(partial.ignoredInputs, [editing]);
+    assert.deepEqual(
+        partial.inputErrors.map((error) => error.issues.map((issue) => issue.path)),
+        [[['storageQuantity']]],
+    );
+    assert.equal(results.lifespanEmissionsPerResourceKg.result, null);
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, null);
+
+    // Only incomplete rows left: nothing is countable, so the fleet count fails.
+    data.hardware = [editing];
+    assert.equal(results.selectedResourceFleetCount.success, 'failure');
+    assert.equal(results.selectedResourceFleetCount.result, null);
+    assert.deepEqual(results.selectedResourceFleetCount.ignoredInputs, [editing]);
+
+    // A missing element quantity is reported on the row's own field.
+    data.hardware = [{ ...validHardware(), id: 'no-quantity', quantity: null, storageQuantity: 3 }];
+    assert.deepEqual(
+        results.selectedResourceFleetCount.inputErrors.map((error) =>
+            error.issues.map((issue) => issue.path),
+        ),
+        [[['quantity']]],
+    );
+});
+
+test('RAM fleet counts quantity × memoryQuantity and reports incomplete memory rows', () => {
+    const data = useSurveyDataStore();
+    const results = useSurveyResultsStore();
+    data.scope.functionalUnit.resourceType = 'RAM';
+    data.includeSecondHandEmbodied = false;
+    data.hardware = [
+        { ...validHardware(), quantity: 2, memoryQuantity: 8 },
+        { ...validHardware(), id: 'second', quantity: 3, memoryQuantity: 4 },
+    ];
+    assert.deepEqual(
+        { ...results.selectedResourceFleetCount },
+        {
+            success: 'success',
+            result: 28,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
+
+    // A row without a memory quantity is ignored but keeps its field-scoped diagnostic.
+    const editing = { ...validHardware(), id: 'editing', quantity: 6, memoryQuantity: null };
+    data.hardware = [...data.hardware, editing];
+    const partial = results.selectedResourceFleetCount;
+    assert.equal(partial.success, 'partial');
+    assert.equal(partial.result, 28);
+    assert.deepEqual(partial.ignoredInputs, [editing]);
+    assert.deepEqual(
+        partial.inputErrors.map((error) => error.issues.map((issue) => issue.path)),
+        [[['memoryQuantity']]],
+    );
+    assert.equal(results.lifespanEmissionsPerResourceKg.result, null);
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, null);
+
+    // Only incomplete rows left: nothing is countable, so the fleet count fails.
+    data.hardware = [editing];
+    assert.equal(results.selectedResourceFleetCount.success, 'failure');
+    assert.equal(results.selectedResourceFleetCount.result, null);
+    assert.deepEqual(results.selectedResourceFleetCount.ignoredInputs, [editing]);
+
+    // A missing element quantity is reported on the row's own field.
+    data.hardware = [{ ...validHardware(), id: 'no-quantity', quantity: null, memoryQuantity: 8 }];
+    assert.deepEqual(
+        results.selectedResourceFleetCount.inputErrors.map((error) =>
+            error.issues.map((issue) => issue.path),
+        ),
+        [[['quantity']]],
+    );
+});
+
+test('Other fleet uses the manual total and scales emissions by the stated count', () => {
+    const data = useSurveyDataStore();
+    const results = useSurveyResultsStore();
+    data.includeSecondHandEmbodied = false;
+    data.scope.functionalUnit = {
+        timeUnit: 'hour',
+        usageDuration: 2,
+        resourceCount: 3,
+        resourceType: 'Other',
+        resourceTypeOther: 'sessions',
+        manualFleetCount: 6,
+    };
+    data.scope.lifespanYears = 4;
+    data.hardware = [{ ...validHardware(), quantity: 2, impactManufacturingDistributionEol: 100 }];
+
+    // The inventory is irrelevant: the stated total is the fleet in service.
+    assert.deepEqual(
+        { ...results.selectedResourceFleetCount },
+        { success: 'success', result: 6, inputErrors: [], ignoredInputs: [] },
+    );
+
+    // uses = (lifespanYears × timeUnitsPerYear × fleet) / (usageDuration × resourceCount).
+    const uses = (4 * 8760 * 6) / (2 * 3);
+    const total = results.totalLifespanEmissionsKg.result;
+    assert.equal(total, 200);
+    // Per functional unit spreads the total over uses; per resource divides it by the fleet.
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, total / uses);
+    assert.equal(results.lifespanEmissionsPerResourceKg.result, total / 6);
+
+    // Replacing the inventory leaves the manual total untouched while the total changes.
+    data.hardware = [{ ...validHardware(), quantity: 5, impactManufacturingDistributionEol: 20 }];
+    assert.equal(results.selectedResourceFleetCount.result, 6);
+    assert.equal(results.lifespanEmissionsPerResourceKg.result, 100 / 6);
+
+    // An empty inventory still states a fleet, but no emissions remain to spread over it.
+    data.hardware = [];
+    assert.equal(results.selectedResourceFleetCount.result, 6);
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, null);
+    assert.equal(results.lifespanEmissionsPerResourceKg.result, null);
+
+    // A missing manual total fails at the custom resource's own field.
+    data.scope.functionalUnit.manualFleetCount = null;
+    assert.equal(results.selectedResourceFleetCount.success, 'failure');
+    assert.equal(results.selectedResourceFleetCount.result, null);
+    assert.deepEqual(
+        results.selectedResourceFleetCount.inputErrors.map((error) =>
+            error.issues.map((issue) => issue.path),
+        ),
+        [[['manualFleetCount']]],
+    );
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, null);
+    assert.equal(results.lifespanEmissionsPerResourceKg.result, null);
+
+    // A zero or fractional total is not a countable fleet either; the context schema
+    // rejects it at the field's full store path rather than the store's own flat check.
+    for (const manualFleetCount of [0, 2.5, -1]) {
+        data.scope.functionalUnit.manualFleetCount = manualFleetCount;
+        assert.equal(results.selectedResourceFleetCount.success, 'failure', manualFleetCount);
+        assert.deepEqual(
+            results.selectedResourceFleetCount.inputErrors.map((error) =>
+                error.issues.map((issue) => issue.path),
+            ),
+            [[['scope', 'functionalUnit', 'manualFleetCount']]],
+            manualFleetCount,
         );
     }
 });
@@ -1737,11 +1912,27 @@ test('invalid resource selections fail before hardware validation and propagate 
         carbonIntensity: 1000,
         energyConsumption: 100,
     });
-    const invalidSelections = ['', undefined, null, ' ', 'cpu', 'gpu', ' CPU ', 'GPU ', 'other'];
+    const invalidSelections = [
+        '',
+        undefined,
+        null,
+        ' ',
+        'cpu',
+        'gpu',
+        ' CPU ',
+        'GPU ',
+        'other',
+        'disk',
+        'ram',
+        'DISK',
+        'RAM ',
+    ];
     const ready = {
         ...validHardware(),
         cpuQuantity: 3,
         gpuQuantity: 4,
+        storageQuantity: 5,
+        memoryQuantity: 6,
         impactManufacturingDistributionEol: 10,
     };
     for (const hardware of [
@@ -1764,7 +1955,13 @@ test('invalid resource selections fail before hardware validation and propagate 
                 'resourceType',
             ]);
             assert.equal(fleet.inputErrors[0].issues[0].code, 'invalid_value');
-            assert.deepEqual(fleet.inputErrors[0].issues[0].values, ['CPU', 'GPU']);
+            assert.deepEqual(fleet.inputErrors[0].issues[0].values, [
+                'CPU',
+                'GPU',
+                'Disk',
+                'RAM',
+                'Other',
+            ]);
             for (const ratio of [
                 results.emissionsPerFunctionalUnitKg,
                 results.lifespanEmissionsPerResourceKg,
@@ -1785,6 +1982,8 @@ test('invalid resource selections fail before hardware validation and propagate 
     for (const [resourceType, expectedFleet] of [
         ['CPU', 3],
         ['GPU', 4],
+        ['Disk', 5],
+        ['RAM', 6],
     ]) {
         data.scope.functionalUnit.resourceType = resourceType;
         assert.equal(results.selectedResourceFleetCount.success, 'success');
@@ -1794,4 +1993,14 @@ test('invalid resource selections fail before hardware validation and propagate 
         assert.equal(data.isScopeValid, true);
         assert.equal(data.resultsStatus, 'complete');
     }
+    // Custom resources ignore the inventory entirely and use the stated total.
+    data.scope.functionalUnit.resourceType = 'Other';
+    data.scope.functionalUnit.resourceTypeOther = 'sessions';
+    data.scope.functionalUnit.manualFleetCount = 7;
+    assert.equal(results.selectedResourceFleetCount.success, 'success');
+    assert.equal(results.selectedResourceFleetCount.result, 7);
+    assert.equal(results.emissionsPerFunctionalUnitKg.success, 'success');
+    assert.equal(results.lifespanEmissionsPerResourceKg.success, 'success');
+    assert.equal(data.isScopeValid, true);
+    assert.equal(data.resultsStatus, 'complete');
 });
