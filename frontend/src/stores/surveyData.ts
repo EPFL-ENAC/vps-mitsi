@@ -86,16 +86,6 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
             ),
     );
 
-    /** True when the draft holds nothing worth warning about */
-    const isStoreEmpty = computed<boolean>(
-        () =>
-            scope.value.organizationName === '' &&
-            scope.value.serviceName === '' &&
-            scope.value.function === '' &&
-            hardware.value.length === 0 &&
-            datacenters.value.length === 0,
-    );
-
     /** True when a hardware row carries every field needed for the totals. */
     const hardwareRowValid = (h: HardwareItem): boolean => HardwareItemSchema.safeParse(h).success;
 
@@ -247,6 +237,16 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
         }
     }
 
+    /** True when the file is a valid assessment that contains no survey data. Applies nothing. */
+    function isImportEmpty(json: string): boolean {
+        try {
+            const state = parseState(JSON.parse(json) as unknown);
+            return state !== null && isStateEmpty(state);
+        } catch {
+            return false;
+        }
+    }
+
     // ── Datacenter lifecycle ─────────────────────────────────────────────────
     function getDatacenterDeletionBlock(id: string): DatacenterDeletionBlock | null {
         const hardwareRowCount = hardware.value.filter((row) => row.datacenterId === id).length;
@@ -300,6 +300,17 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
         };
     }
 
+    /** True when an assessment (the current draft by default) holds nothing worth warning about. */
+    function isStateEmpty(state: MitsiState = buildState()): boolean {
+        return (
+            state.scope.organizationName === '' &&
+            state.scope.serviceName === '' &&
+            state.scope.function === '' &&
+            state.hardware.length === 0 &&
+            state.datacenters.length === 0
+        );
+    }
+
     function parseState(raw: unknown): MitsiState | null {
         const parsed = PersistedAssessmentSchema.safeParse(raw);
         if (!parsed.success) return null;
@@ -336,7 +347,6 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
         savedAt,
         exportedAt,
         isScopeValid,
-        isStoreEmpty,
         missingMandatoryHardware,
         scopeStatus,
         hardwareInventoryStatus,
@@ -353,5 +363,7 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
         addDatacenter,
         addBoundaryItem,
         addHardwareItem,
+        isStateEmpty,
+        isImportEmpty,
     };
 });

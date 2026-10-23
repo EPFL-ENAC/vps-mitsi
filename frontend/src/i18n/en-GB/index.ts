@@ -43,6 +43,8 @@ export default {
     mainImportSuccess: 'Assessment imported successfully.',
     mainImportEmpty: 'Assessment imported, but the file contains no survey data.',
     mainImportFailed: 'Import failed: the file is not a valid assessment file.',
+    mainImportWarningEmptyFile:
+        'The selected file contains NO SURVEY DATA. Your current assessment will be deleted and replaced with an empty one. Use Export first if you want to keep it.',
     mainNavWelcome: 'Welcome',
     mainNavScope: 'Scope of the assessment',
     mainNavInventory: 'Hardware inventory',

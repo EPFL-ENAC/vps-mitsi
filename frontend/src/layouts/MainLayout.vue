@@ -211,50 +211,44 @@ function saveAssessment(): void {
     }
 }
 
-/** QFile returns a File object directly, empty draft results in immediate import, while one containing data triggers warning */
-function onFilePicked(file: File | null): void {
+/** QFile returns a File object directly; existing data triggers a confirmation dialog */
+async function onFilePicked(file: File | null): Promise<void> {
     if (!file) return;
 
-    if (surveyData.isStoreEmpty) {
-        readAndImport(file);
+    const json = await file.text().catch(() => null);
+    if (json === null) {
+        $q.notify({ type: 'negative', message: t('mainImportFailed') });
         return;
     }
 
+    if (surveyData.isStateEmpty()) {
+        importText(json);
+        return;
+    }
+
+    const fileIsEmpty = surveyData.isImportEmpty(json);
+
     $q.dialog({
-        title: t('mainImportWarningTitle'),
-        message: t('mainImportWarning'),
+        title: fileIsEmpty ? `⚠️ ${t('mainImportWarningTitle')}` : t('mainImportWarningTitle'),
+        message: fileIsEmpty ? t('mainImportWarningEmptyFile') : t('mainImportWarning'),
         cancel: true,
         persistent: true,
-    }).onOk(() => {
-        readAndImport(file);
-    });
+        // Red OK button looks different for case when file is empty
+        ...(fileIsEmpty && { ok: { color: 'negative' } }),
+    }).onOk(() => importText(json));
 }
 
-/** Reads the file and gives text to the store */
-function readAndImport(file: File): void {
-    const reader = new FileReader();
-    reader.onload = () => {
-        const result = reader.result;
-        if (typeof result !== 'string') {
-            $q.notify({ type: 'negative', message: t('mainImportFailed') });
-            return;
-        }
-
-        if (surveyData.importJson(result)) {
-            // If the import was successful but the store is still empty, show a warning!
-            if (surveyData.isStoreEmpty) {
-                $q.notify({ type: 'warning', message: t('mainImportEmpty') });
-            } else {
-                $q.notify({ type: 'positive', message: t('mainImportSuccess') });
-            }
-        } else {
-            $q.notify({ type: 'negative', message: t('mainImportFailed') });
-        }
-    };
-    reader.onerror = () => {
+/** Gives the text to the store and reports the result */
+function importText(json: string): void {
+    if (!surveyData.importJson(json)) {
         $q.notify({ type: 'negative', message: t('mainImportFailed') });
-    };
-    reader.readAsText(file);
+        return;
+    }
+    $q.notify(
+        surveyData.isStateEmpty()
+            ? { type: 'warning', message: t('mainImportEmpty') }
+            : { type: 'positive', message: t('mainImportSuccess') },
+    );
 }
 
 /** Downloads whole assessment as a JSON file, named with the current date-time. */
