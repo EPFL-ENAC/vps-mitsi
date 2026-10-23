@@ -38,3 +38,12 @@ export function validHardware() {
         gpuQuantity: 0,
     });
 }
+export function defaultExportMetadata(overrides = {}) {
+    return { exportedBy: 'Test Assessor', comment: '', ...overrides };
+}
+/** Exported metadata is stamped per call and is never persisted, so compare payloads without it. */
+export function withoutMetadata(exported) {
+    const state = { ...exported };
+    delete state.metadata;
+    return state;
+}

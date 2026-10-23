@@ -34,6 +34,7 @@ import {
     type UnderlyingService,
     UnderlyingServiceSchema,
 } from 'src/models/UnderlyingService/schema';
+import type { ExportMetadataInput } from 'src/models/ExportMetadata/schema';
 
 /** Storage key used for browser persistence. */
 export const MITSI_STORAGE_KEY = 'mitsi-assessment';
@@ -83,16 +84,6 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
             datacenters.value.every(
                 (dc) => DatacenterGeneralInfoSchema.safeParse(dc.generalInfo).success,
             ),
-    );
-
-    /** True when the draft holds nothing worth warning about */
-    const isStoreEmpty = computed<boolean>(
-        () =>
-            scope.value.organizationName === '' &&
-            scope.value.serviceName === '' &&
-            scope.value.function === '' &&
-            hardware.value.length === 0 &&
-            datacenters.value.length === 0,
     );
 
     /** True when a hardware row carries every field needed for the totals. */
@@ -221,8 +212,14 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
     }
 
     // ── Import / export (versioned JSON) ─────────────────────────────────────
-    function exportJson(): string {
-        const state = MitsiStateDraftSchema.parse(buildState());
+    function exportJson(metadata: ExportMetadataInput): string {
+        const state = MitsiStateDraftSchema.parse({
+            metadata: {
+                ...metadata,
+                exportedAt: new Date().toISOString(),
+            },
+            ...buildState(),
+        });
         const json = JSON.stringify(state, null, 2);
         exportedAt.value = Date.now();
         return json;
@@ -235,6 +232,16 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
             persistDraft(state);
             applyState(state);
             return true;
+        } catch {
+            return false;
+        }
+    }
+
+    /** True when the file is a valid assessment that contains no survey data. Applies nothing. */
+    function isImportEmpty(json: string): boolean {
+        try {
+            const state = parseState(JSON.parse(json) as unknown);
+            return state !== null && isStateEmpty(state);
         } catch {
             return false;
         }
@@ -293,6 +300,17 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
         };
     }
 
+    /** True when an assessment (the current draft by default) holds nothing worth warning about. */
+    function isStateEmpty(state: MitsiState = buildState()): boolean {
+        return (
+            state.scope.organizationName === '' &&
+            state.scope.serviceName === '' &&
+            state.scope.function === '' &&
+            state.hardware.length === 0 &&
+            state.datacenters.length === 0
+        );
+    }
+
     function parseState(raw: unknown): MitsiState | null {
         const parsed = PersistedAssessmentSchema.safeParse(raw);
         if (!parsed.success) return null;
@@ -329,7 +347,6 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
         savedAt,
         exportedAt,
         isScopeValid,
-        isStoreEmpty,
         missingMandatoryHardware,
         scopeStatus,
         hardwareInventoryStatus,
@@ -346,5 +363,7 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
         addDatacenter,
         addBoundaryItem,
         addHardwareItem,
+        isStateEmpty,
+        isImportEmpty,
     };
 });
