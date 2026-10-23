@@ -994,6 +994,104 @@ test('resource sums report selected CPU, GPU, Disk or RAM measurements and prese
     }
 });
 
+test('Disk fleet counts quantity × storageQuantity and reports incomplete storage rows', () => {
+    const data = useSurveyDataStore();
+    const results = useSurveyResultsStore();
+    data.scope.functionalUnit.resourceType = 'Disk';
+    data.includeSecondHandEmbodied = false;
+    data.hardware = [
+        { ...validHardware(), quantity: 2, storageQuantity: 3 },
+        { ...validHardware(), id: 'second', quantity: 5, storageQuantity: 4 },
+    ];
+    assert.deepEqual(
+        { ...results.selectedResourceFleetCount },
+        {
+            success: 'success',
+            result: 26,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
+
+    // A row without a storage quantity is ignored but keeps its field-scoped diagnostic.
+    const editing = { ...validHardware(), id: 'editing', quantity: 4, storageQuantity: null };
+    data.hardware = [...data.hardware, editing];
+    const partial = results.selectedResourceFleetCount;
+    assert.equal(partial.success, 'partial');
+    assert.equal(partial.result, 26);
+    assert.deepEqual(partial.ignoredInputs, [editing]);
+    assert.deepEqual(
+        partial.inputErrors.map((error) => error.issues.map((issue) => issue.path)),
+        [[['storageQuantity']]],
+    );
+    assert.equal(results.lifespanEmissionsPerResourceKg.result, null);
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, null);
+
+    // Only incomplete rows left: nothing is countable, so the fleet count fails.
+    data.hardware = [editing];
+    assert.equal(results.selectedResourceFleetCount.success, 'failure');
+    assert.equal(results.selectedResourceFleetCount.result, null);
+    assert.deepEqual(results.selectedResourceFleetCount.ignoredInputs, [editing]);
+
+    // A missing element quantity is reported on the row's own field.
+    data.hardware = [{ ...validHardware(), id: 'no-quantity', quantity: null, storageQuantity: 3 }];
+    assert.deepEqual(
+        results.selectedResourceFleetCount.inputErrors.map((error) =>
+            error.issues.map((issue) => issue.path),
+        ),
+        [[['quantity']]],
+    );
+});
+
+test('RAM fleet counts quantity × memoryQuantity and reports incomplete memory rows', () => {
+    const data = useSurveyDataStore();
+    const results = useSurveyResultsStore();
+    data.scope.functionalUnit.resourceType = 'RAM';
+    data.includeSecondHandEmbodied = false;
+    data.hardware = [
+        { ...validHardware(), quantity: 2, memoryQuantity: 8 },
+        { ...validHardware(), id: 'second', quantity: 3, memoryQuantity: 4 },
+    ];
+    assert.deepEqual(
+        { ...results.selectedResourceFleetCount },
+        {
+            success: 'success',
+            result: 28,
+            inputErrors: [],
+            ignoredInputs: [],
+        },
+    );
+
+    // A row without a memory quantity is ignored but keeps its field-scoped diagnostic.
+    const editing = { ...validHardware(), id: 'editing', quantity: 6, memoryQuantity: null };
+    data.hardware = [...data.hardware, editing];
+    const partial = results.selectedResourceFleetCount;
+    assert.equal(partial.success, 'partial');
+    assert.equal(partial.result, 28);
+    assert.deepEqual(partial.ignoredInputs, [editing]);
+    assert.deepEqual(
+        partial.inputErrors.map((error) => error.issues.map((issue) => issue.path)),
+        [[['memoryQuantity']]],
+    );
+    assert.equal(results.lifespanEmissionsPerResourceKg.result, null);
+    assert.equal(results.emissionsPerFunctionalUnitKg.result, null);
+
+    // Only incomplete rows left: nothing is countable, so the fleet count fails.
+    data.hardware = [editing];
+    assert.equal(results.selectedResourceFleetCount.success, 'failure');
+    assert.equal(results.selectedResourceFleetCount.result, null);
+    assert.deepEqual(results.selectedResourceFleetCount.ignoredInputs, [editing]);
+
+    // A missing element quantity is reported on the row's own field.
+    data.hardware = [{ ...validHardware(), id: 'no-quantity', quantity: null, memoryQuantity: 8 }];
+    assert.deepEqual(
+        results.selectedResourceFleetCount.inputErrors.map((error) =>
+            error.issues.map((issue) => issue.path),
+        ),
+        [[['quantity']]],
+    );
+});
+
 test('resource selection and functional-unit scaling are composed from current assessment inputs', () => {
     const data = useSurveyDataStore();
     const results = useSurveyResultsStore();
