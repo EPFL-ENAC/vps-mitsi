@@ -237,43 +237,43 @@ export const useSurveyResultsStore = defineStore('surveyResults', () => {
         const excludedIfNeeded = data.hardware.filter((row) => !isSecondHandExcluded(row));
 
         // Fleet in service = Σ (element quantity × quantity of that same resource).
-        const fleetTotal = (): ComputationResult<number, HardwareItem> => {
-            switch (resourceType) {
-                case ResourceTypeSchema.enum.CPU:
-                    return ComputationResult.bulkValidateAndMap(
-                        excludedIfNeeded,
-                        HardwareCpuFleetMeasurementsSchema,
-                        cpuFleetTotal,
-                    ).map(sum);
-                case ResourceTypeSchema.enum.GPU:
-                    return ComputationResult.bulkValidateAndMap(
-                        excludedIfNeeded,
-                        HardwareGpuFleetMeasurementsSchema,
-                        gpuFleetTotal,
-                    ).map(sum);
-                case ResourceTypeSchema.enum.Disk:
-                    return ComputationResult.bulkValidateAndMap(
-                        excludedIfNeeded,
-                        HardwareDiskFleetMeasurementsSchema,
-                        diskFleetTotal,
-                    ).map(sum);
-                case ResourceTypeSchema.enum.RAM:
-                    return ComputationResult.bulkValidateAndMap(
-                        excludedIfNeeded,
-                        HardwareRamFleetMeasurementsSchema,
-                        ramFleetTotal,
-                    ).map(sum);
-                case ResourceTypeSchema.enum.Other:
-                    // Custom resources are not in the inventory; the total is stated by hand.
-                    return ComputationResult.validateAndMap(
-                        ManualFleetCountSchema,
-                        { manualFleetCount },
-                        (value) => value.manualFleetCount,
-                    );
+        switch (resourceType) {
+            case ResourceTypeSchema.enum.CPU:
+                return ComputationResult.bulkValidateAndMap(
+                    excludedIfNeeded,
+                    HardwareCpuFleetMeasurementsSchema,
+                    cpuFleetTotal,
+                ).map(sum);
+            case ResourceTypeSchema.enum.GPU:
+                return ComputationResult.bulkValidateAndMap(
+                    excludedIfNeeded,
+                    HardwareGpuFleetMeasurementsSchema,
+                    gpuFleetTotal,
+                ).map(sum);
+            case ResourceTypeSchema.enum.Disk:
+                return ComputationResult.bulkValidateAndMap(
+                    excludedIfNeeded,
+                    HardwareDiskFleetMeasurementsSchema,
+                    diskFleetTotal,
+                ).map(sum);
+            case ResourceTypeSchema.enum.RAM:
+                return ComputationResult.bulkValidateAndMap(
+                    excludedIfNeeded,
+                    HardwareRamFleetMeasurementsSchema,
+                    ramFleetTotal,
+                ).map(sum);
+            case ResourceTypeSchema.enum.Other:
+                // Custom resources are not in the inventory; the total is stated by hand.
+                return ComputationResult.validateAndMap(
+                    ManualFleetCountSchema,
+                    { manualFleetCount },
+                    (value) => value.manualFleetCount,
+                );
+            default: {
+                const exhaustiveCheck: never = resourceType;
+                throw new Error(`Unhandled resource type: ${String(exhaustiveCheck)}`);
             }
-        };
-
-        return fleetTotal();
+        }
     });
 
     const emissionsPerFunctionalUnitKg = computed<ComputationResult<number, EmissionInput>>(() => {
