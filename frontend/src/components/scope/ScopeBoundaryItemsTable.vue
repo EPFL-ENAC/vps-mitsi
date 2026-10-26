@@ -1,122 +1,91 @@
 <template>
-    <q-btn flat color="primary" dense class="q-mb-sm" :label="t('scopeBndAdd')" @click="addItem" />
-    <q-table
-        :rows="items"
-        :columns="columns"
-        :table-colspan="columns.length + 1"
-        row-key="id"
-        :pagination="{ rowsPerPage: 0 }"
-        :rows-per-page-options="[0]"
-        dense
-        flat
-        bordered
-        hide-bottom
-        class="scope-boundary-table"
-    >
-        <template #header="slotProps">
-            <q-tr :props="slotProps">
-                <q-th
-                    v-for="col in slotProps.cols"
-                    :key="col.name"
-                    :props="slotProps"
-                    :data-kind="col.kind"
+    <div>
+        <div v-if="items.length > 0" class="q-mb-sm">
+            <div
+                v-for="item in items"
+                :key="item.id"
+                class="boundary-row row items-center q-gutter-sm q-mb-sm"
+            >
+                <span
+                    class="boundary-prefix"
+                    :class="{ 'boundary-prefix--included': kind === 'included' }"
                 >
-                    <span :class="{ 'zod-required-label': isSchemaRequired(col.zod) }">
-                        {{ col.label }}
-                    </span>
-                </q-th>
-                <q-th auto-width />
-            </q-tr>
-        </template>
+                    {{ t(`scopeBoundary.${kind}.prefix`) }}
+                </span>
 
-        <template #body="slotProps">
-            <q-tr :props="slotProps">
-                <q-td
-                    v-for="col in slotProps.cols"
-                    :key="col.name"
-                    :props="slotProps"
-                    :data-kind="col.kind"
-                >
-                    <ZodValidatedTextInput
-                        v-model="slotProps.row[col.field]"
-                        :schema="col.zod"
-                        :aria-label="col.label"
-                        dense
-                        outlined
-                        hide-bottom-space
-                    />
-                </q-td>
-                <q-td auto-width>
-                    <q-btn
-                        flat
-                        dense
-                        icon="delete"
-                        :aria-label="t('scopeBndDelete')"
-                        @click="removeItem(slotProps.row.id)"
-                    />
-                </q-td>
-            </q-tr>
-        </template>
-    </q-table>
+                <ZodValidatedTextInput
+                    v-model="item.type"
+                    :schema="BoundaryItemSchema.shape.type"
+                    :placeholder="t('scopeBoundary.placeholders.type')"
+                    dense
+                    outlined
+                    hide-bottom-space
+                    class="boundary-input"
+                />
+
+                <span class="boundary-separator">{{ t('scopeBoundary.separators.usedFor') }}</span>
+
+                <ZodValidatedTextInput
+                    v-model="item.purpose"
+                    :schema="BoundaryItemSchema.shape.purpose"
+                    :placeholder="t('scopeBoundary.placeholders.purpose')"
+                    dense
+                    outlined
+                    hide-bottom-space
+                    class="boundary-input"
+                />
+
+                <span class="boundary-separator">{{ t('scopeBoundary.separators.because') }}</span>
+
+                <ZodValidatedTextInput
+                    v-model="item.reason"
+                    :schema="BoundaryItemSchema.shape.reason"
+                    :placeholder="t(`scopeBoundary.placeholders.${kind}Reason`)"
+                    dense
+                    outlined
+                    hide-bottom-space
+                    class="boundary-input boundary-input--grow"
+                />
+
+                <q-btn
+                    flat
+                    dense
+                    round
+                    icon="delete"
+                    :aria-label="t('scopeBndDelete')"
+                    @click="removeItem(item.id)"
+                />
+            </div>
+        </div>
+
+        <q-btn
+            flat
+            dense
+            class="boundary-add-btn text-weight-bold"
+            :class="kind === 'included' ? 'text-primary' : 'text-dark'"
+            :label="`+ ${t(`scopeBoundary.${kind}.add`)}`"
+            @click="addItem"
+        />
+    </div>
 </template>
 
 <script setup lang="ts">
 import { useSurveyDataStore } from 'src/stores/surveyData';
-
 import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
 import { computed } from 'vue';
-import type { QTableColumn } from 'quasar';
-import type { z } from 'zod';
-import { type BoundaryItem, BoundaryItemSchema } from 'src/models/Scope/schema';
+import { BoundaryItemSchema } from 'src/models/Scope/schema';
 import { useI18n } from 'vue-i18n';
-
-import { createSchemaColumn } from 'src/utils/tables';
-import { isSchemaRequired } from 'src/composables/useValidation';
-
-const surveyData = useSurveyDataStore();
-
-interface BoundaryColumn extends QTableColumn<BoundaryItem> {
-    field: Exclude<keyof BoundaryItem, 'id'>;
-    kind: 'text';
-    zod: z.ZodType;
-}
 
 const props = defineProps<{
     kind: 'included' | 'excluded';
 }>();
 
+const surveyData = useSurveyDataStore();
 const { t } = useI18n();
 
 const items = computed(() =>
     props.kind === 'included' ? surveyData.scope.includedItems : surveyData.scope.excludedItems,
 );
-
-type ColumnSpec = Omit<BoundaryColumn, 'name' | 'label' | 'zod'> & {
-    label?: string;
-};
-
-const schemaColumn = createSchemaColumn(BoundaryItemSchema.shape, (field) =>
-    t(`scopeBoundaryColumns.${field}`),
-);
-
-function column(spec: ColumnSpec): BoundaryColumn {
-    const { label, ...options } = spec;
-
-    return {
-        ...schemaColumn(spec.field, label),
-        ...options,
-    };
-}
-
-const columns = computed<BoundaryColumn[]>(() => [
-    column({ field: 'type', kind: 'text' }),
-    column({ field: 'purpose', kind: 'text' }),
-    column({
-        field: 'reason',
-        kind: 'text',
-        label: t(`scopeBoundaryColumns.${props.kind}.reason`),
-    }),
-]);
 
 function addItem(): void {
     surveyData.addBoundaryItem(props.kind);
@@ -129,9 +98,33 @@ function removeItem(id: string): void {
 </script>
 
 <style scoped lang="scss">
-@use 'src/css/table-cells';
+.boundary-prefix {
+    font-weight: 700;
+    white-space: nowrap;
+    min-width: 140px;
+    color: #1d1d1d;
 
-.scope-boundary-table {
-    @include table-cells.cells;
+    &--included {
+        color: #0b6b66;
+    }
+}
+
+.boundary-separator {
+    color: #555;
+    white-space: nowrap;
+}
+
+.boundary-input {
+    flex: 1 1 200px;
+    min-width: 150px;
+
+    &--grow {
+        flex: 1.5 1 260px;
+    }
+}
+
+.boundary-add-btn {
+    letter-spacing: 0.5px;
+    padding-left: 0;
 }
 </style>
