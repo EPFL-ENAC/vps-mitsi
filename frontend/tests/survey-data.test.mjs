@@ -228,7 +228,7 @@ test('imports reject invalid values and future versions without changing state o
     }
 });
 
-test('orphan references are filtered only at load/import, while draft placeholders survive', () => {
+test('load and import keep every hardware row, including unknown and unassigned references', () => {
     const store = useSurveyDataStore();
     setupScope(store);
     store.hardware.push(
@@ -239,9 +239,10 @@ test('orphan references are filtered only at load/import, while draft placeholde
     assert.equal(store.saveToStorage(), true);
     assert.equal(JSON.parse(store.exportJson(defaultExportMetadata())).hardware.length, 3);
     assert.equal(store.importJson(store.exportJson(defaultExportMetadata())), true);
+    // References are never silently filtered, so all three rows survive the round trip.
     assert.deepEqual(
         store.hardware.map((row) => row.id),
-        ['h1', 'blank'],
+        ['h1', 'blank', 'orphan'],
     );
 });
 

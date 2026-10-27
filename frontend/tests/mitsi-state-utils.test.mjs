@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { MITSI_SCHEMA_VERSION, MitsiStateDraftSchema } from '../src/models/MitsiState/schema.ts';
-import { isImportEmpty, isStateEmpty, parseState } from '../src/models/MitsiState/utils.ts';
+import {
+    isImportEmpty,
+    isStateEmpty,
+    PersistedAssessmentSchema,
+} from '../src/models/MitsiState/utils.ts';
 
 import { defaultExportMetadata, validHardware } from './helpers/survey-fixtures.mjs';
 
@@ -33,34 +37,49 @@ test('isStateEmpty only flags assessments without scope names, hardware, or data
     );
 });
 
-test('parseState returns a validated state, drops orphan hardware, and rejects invalid payloads', () => {
-    assert.equal(parseState(null), null);
-    assert.equal(parseState({}), null);
-    assert.equal(parseState({ ...blankState(), schemaVersion: MITSI_SCHEMA_VERSION + 1 }), null);
+test('PersistedAssessmentSchema validates the declared schema version, not a creation default', () => {
+    // No version supplied -> rejected (unlike the draft schema, which fills a default).
+    const withoutVersion = { ...blankState() };
+    delete withoutVersion.schemaVersion;
+    assert.equal(PersistedAssessmentSchema.safeParse(withoutVersion).success, false);
 
+    // Stale or unknown versions are rejected.
+    assert.equal(
+        PersistedAssessmentSchema.safeParse({
+            ...blankState(),
+            schemaVersion: MITSI_SCHEMA_VERSION + 1,
+        }).success,
+        false,
+    );
+    assert.equal(
+        PersistedAssessmentSchema.safeParse({ ...blankState(), schemaVersion: 'v5' }).success,
+        false,
+    );
+
+    // The current version on a well-formed payload is accepted and returned verbatim.
+    const parsed = PersistedAssessmentSchema.safeParse(blankState());
+    assert.equal(parsed.success, true);
+    assert.equal(parsed.data.schemaVersion, MITSI_SCHEMA_VERSION);
+});
+
+test('PersistedAssessmentSchema keeps invalid shapes out and never drops hardware rows', () => {
+    assert.equal(PersistedAssessmentSchema.safeParse(null).success, false);
+    assert.equal(PersistedAssessmentSchema.safeParse({}).success, false);
+    assert.equal(
+        PersistedAssessmentSchema.safeParse({ ...blankState(), hardware: 'not-an-array' }).success,
+        false,
+    );
+
+    // Hardware referencing an unknown datacenterId is retained, not silently filtered out.
     const withOrphan = {
         ...blankState({ datacenters: [{ id: 'dc1' }] }),
         hardware: [validHardware(), { ...validHardware(), id: 'h2', datacenterId: 'missing' }],
     };
-    const parsed = parseState(withOrphan);
-    assert.ok(parsed);
-    // The real orphan is filtered out while the assigned row survives.
+    const parsed = PersistedAssessmentSchema.safeParse(withOrphan);
+    assert.equal(parsed.success, true);
     assert.deepEqual(
-        parsed.hardware.map((row) => row.id),
-        ['h1'],
-    );
-});
-
-test('parseState keeps unassigned rows (empty datacenterId) as unfinished drafts', () => {
-    const withUnassigned = {
-        ...blankState({ datacenters: [{ id: 'dc1' }] }),
-        hardware: [{ ...validHardware(), id: 'h2', datacenterId: '' }],
-    };
-    const parsed = parseState(withUnassigned);
-    assert.ok(parsed);
-    assert.deepEqual(
-        parsed.hardware.map((row) => row.id),
-        ['h2'],
+        parsed.data.hardware.map((row) => row.id),
+        ['h1', 'h2'],
     );
 });
 

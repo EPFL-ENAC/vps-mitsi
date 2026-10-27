@@ -9,7 +9,7 @@ import {
     type MitsiState,
     MitsiStateDraftSchema,
 } from 'src/models/MitsiState/schema';
-import { isStateEmpty, parseState, PersistedAssessmentSchema } from 'src/models/MitsiState/utils';
+import { isStateEmpty, PersistedAssessmentSchema } from 'src/models/MitsiState/utils';
 import type { BlockStatus } from 'src/types/ui';
 import {
     type DatacenterDraft,
@@ -172,11 +172,13 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
     // ── Persistence (client-side, Quasar LocalStorage) ───────────────────────
     function loadFromStorage(): void {
         const raw: unknown = LocalStorage.getItem(MITSI_STORAGE_KEY);
-        const draft = StoredDraftSchema.safeParse(raw);
-        const state = parseState(draft.success ? draft.data.assessment : raw);
-        if (!state) return;
-        applyState(state);
-        savedAt.value = draft.success ? draft.data.savedAt : null;
+        const parsed = StoredDraftSchema.safeParse(raw);
+        const assessment = parsed.success
+            ? parsed.data.assessment
+            : PersistedAssessmentSchema.safeParse(raw).data;
+        if (!assessment) return;
+        applyState(assessment);
+        savedAt.value = parsed.success ? parsed.data.savedAt : null;
     }
 
     function persistDraft(assessment: MitsiState): void {
@@ -222,16 +224,15 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
 
     function importJson(json: string): boolean {
         try {
-            const state = parseState(JSON.parse(json) as unknown);
-            if (!state) return false;
-            persistDraft(state);
-            applyState(state);
+            const parsed = PersistedAssessmentSchema.safeParse(JSON.parse(json));
+            if (!parsed.success) return false;
+            persistDraft(parsed.data);
+            applyState(parsed.data);
             return true;
         } catch {
             return false;
         }
     }
-
     /** True when the current draft holds no survey data; delegates to the pure model helper. */
     const isEmpty = computed<boolean>(() => isStateEmpty(buildState()));
 

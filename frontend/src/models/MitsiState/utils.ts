@@ -20,27 +20,11 @@ export function isStateEmpty(state: MitsiState): boolean {
     );
 }
 
-/** Validates a persisted/imported payload without any store side effect. */
-export function parseState(raw: unknown): MitsiState | null {
-    const parsed = PersistedAssessmentSchema.safeParse(raw);
-    if (!parsed.success) return null;
-    const state = parsed.data;
-    const dcIds = new Set(state.datacenters.map((dc) => dc.id));
-    // An empty reference is an unfinished draft. Only filter real orphans,
-    // and only when loading: saving must not silently remove edited rows.
-    return {
-        ...state,
-        hardware: state.hardware.filter(
-            (row) => row.datacenterId === '' || dcIds.has(row.datacenterId),
-        ),
-    };
-}
-
 /** True when the file is a valid assessment that contains no survey data. Applies nothing. */
 export function isImportEmpty(json: string): boolean {
     try {
-        const state = parseState(JSON.parse(json) as unknown);
-        return state !== null && isStateEmpty(state);
+        const parsed = PersistedAssessmentSchema.safeParse(JSON.parse(json));
+        return parsed.success && isStateEmpty(parsed.data);
     } catch {
         return false;
     }
