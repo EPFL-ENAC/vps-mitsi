@@ -8,8 +8,8 @@ import {
     MITSI_SCHEMA_VERSION,
     type MitsiState,
     MitsiStateDraftSchema,
-    MitsiStateSchema,
 } from 'src/models/MitsiState/schema';
+import { isStateEmpty, parseState, PersistedAssessmentSchema } from 'src/models/MitsiState/utils';
 import type { BlockStatus } from 'src/types/ui';
 import {
     type DatacenterDraft,
@@ -45,11 +45,6 @@ export type RemoveDatacenterResult =
     | { removed: true }
     | { removed: false; reason: 'not_found' }
     | { removed: false; reason: 'in_use'; usage: DatacenterDeletionBlock };
-
-/** Loaded assessments must declare their version instead of receiving a creation default. */
-const PersistedAssessmentSchema = MitsiStateDraftSchema.extend({
-    schemaVersion: MitsiStateSchema.shape.schemaVersion,
-});
 
 /** Browser persistence metadata stays separate from the exported assessment. */
 const StoredDraftSchema = z.object({
@@ -237,15 +232,8 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
         }
     }
 
-    /** True when the file is a valid assessment that contains no survey data. Applies nothing. */
-    function isImportEmpty(json: string): boolean {
-        try {
-            const state = parseState(JSON.parse(json) as unknown);
-            return state !== null && isStateEmpty(state);
-        } catch {
-            return false;
-        }
-    }
+    /** True when the current draft holds no survey data; delegates to the pure model helper. */
+    const isEmpty = computed<boolean>(() => isStateEmpty(buildState()));
 
     // ── Datacenter lifecycle ─────────────────────────────────────────────────
     function getDatacenterDeletionBlock(id: string): DatacenterDeletionBlock | null {
@@ -300,32 +288,7 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
         };
     }
 
-    /** True when an assessment (the current draft by default) holds nothing worth warning about. */
-    function isStateEmpty(state: MitsiState = buildState()): boolean {
-        return (
-            state.scope.organizationName === '' &&
-            state.scope.serviceName === '' &&
-            state.scope.function === '' &&
-            state.hardware.length === 0 &&
-            state.datacenters.length === 0
-        );
-    }
-
-    function parseState(raw: unknown): MitsiState | null {
-        const parsed = PersistedAssessmentSchema.safeParse(raw);
-        if (!parsed.success) return null;
-        const state = parsed.data;
-        const dcIds = new Set(state.datacenters.map((dc) => dc.id));
-        // An empty reference is an unfinished draft. Only filter real orphans,
-        // and only when loading: saving must not silently remove edited rows.
-        return {
-            ...state,
-            hardware: state.hardware.filter(
-                (row) => row.datacenterId === '' || dcIds.has(row.datacenterId),
-            ),
-        };
-    }
-
+    /** Applies a validated assessment to the editable refs. */
     function applyState(state: MitsiState): void {
         scope.value = state.scope;
         hardware.value = state.hardware;
@@ -363,7 +326,6 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
         addDatacenter,
         addBoundaryItem,
         addHardwareItem,
-        isStateEmpty,
-        isImportEmpty,
+        isEmpty,
     };
 });

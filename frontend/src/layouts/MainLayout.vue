@@ -169,6 +169,7 @@ import { useI18n } from 'vue-i18n';
 
 import type { BlockKey, BlockStatus } from 'src/types/ui';
 import type { ExportMetadataInput } from 'src/models/ExportMetadata/schema';
+import { isImportEmpty } from 'src/models/MitsiState/utils';
 import { formatDatacenterName, formatResult } from 'src/utils/format';
 import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
 import ExportAssessmentDialog from 'src/components/ExportAssessmentDialog.vue';
@@ -221,12 +222,12 @@ async function onFilePicked(file: File | null): Promise<void> {
         return;
     }
 
-    if (surveyData.isStateEmpty()) {
+    if (surveyData.isEmpty) {
         importText(json);
         return;
     }
 
-    const fileIsEmpty = surveyData.isImportEmpty(json);
+    const fileIsEmpty = isImportEmpty(json);
 
     $q.dialog({
         title: fileIsEmpty ? `⚠️ ${t('mainImportWarningTitle')}` : t('mainImportWarningTitle'),
@@ -245,7 +246,7 @@ function importText(json: string): void {
         return;
     }
     $q.notify(
-        surveyData.isStateEmpty()
+        surveyData.isEmpty
             ? { type: 'warning', message: t('mainImportEmpty') }
             : { type: 'positive', message: t('mainImportSuccess') },
     );

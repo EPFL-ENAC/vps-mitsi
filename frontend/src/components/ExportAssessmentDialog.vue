@@ -74,7 +74,7 @@ function resetForm(): void {
     form.comment = '';
 }
 
-const isFormValid = computed(() => form.exportedBy.trim().length > 0);
+const isFormValid = computed(() => ExportMetadataDraftSchema.safeParse(form).success);
 
 function onConfirm(): void {
     const parsed = ExportMetadataDraftSchema.safeParse(form);
