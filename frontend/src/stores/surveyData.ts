@@ -173,12 +173,10 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
     function loadFromStorage(): void {
         const raw: unknown = LocalStorage.getItem(MITSI_STORAGE_KEY);
         const parsed = StoredDraftSchema.safeParse(raw);
-        const assessment = parsed.success
-            ? parsed.data.assessment
-            : PersistedAssessmentSchema.safeParse(raw).data;
-        if (!assessment) return;
-        applyState(assessment);
-        savedAt.value = parsed.success ? parsed.data.savedAt : null;
+        if (!parsed.success) return;
+
+        applyState(parsed.data.assessment);
+        savedAt.value = parsed.data.savedAt;
     }
 
     function persistDraft(assessment: MitsiState): void {

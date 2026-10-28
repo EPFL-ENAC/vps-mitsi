@@ -106,20 +106,6 @@ test('import persists its local save time and restores it on reload', () => {
     assert.equal(restored.scope.organizationName, 'Imported');
 });
 
-test('unwrapped current-version drafts load without an invented timestamp', () => {
-    const assessment = MitsiStateDraftSchema.parse({ scope: { organizationName: 'Legacy' } });
-    const legacy = JSON.stringify(assessment);
-    stored.set(MITSI_STORAGE_KEY, legacy);
-    const store = useSurveyDataStore();
-    store.savedAt = 123;
-    store.loadFromStorage();
-    assert.equal(store.savedAt, null);
-    assert.equal(store.scope.organizationName, 'Legacy');
-    assert.equal(stored.get(MITSI_STORAGE_KEY), legacy);
-    assert.equal(store.saveToStorage(), true);
-    assert.deepEqual(JSON.parse(stored.get(MITSI_STORAGE_KEY)).assessment, assessment);
-});
-
 test('missing or invalid timestamp metadata does not discard valid assessments', () => {
     const assessment = MitsiStateDraftSchema.parse({ scope: { organizationName: 'Keep me' } });
     const store = useSurveyDataStore();
