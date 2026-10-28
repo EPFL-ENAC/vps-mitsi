@@ -10,6 +10,7 @@ import {
     UnderlyingServiceSchema,
     UnderlyingServiceDraftSchema,
 } from 'src/models/UnderlyingService/schema';
+import { ExportMetadataSchema } from 'src/models/ExportMetadata/schema';
 import { draftField } from 'src/models/shared/schema';
 
 /** Bumped whenever the persisted/exported JSON shape changes. */
@@ -19,6 +20,7 @@ export const MITSI_SCHEMA_VERSION = 5;
 /** Canonical whole-assessment validation; no default values or data filtering. */
 export const MitsiStateSchema = z.object({
     schemaVersion: z.literal(MITSI_SCHEMA_VERSION),
+    metadata: ExportMetadataSchema.optional(),
     scope: ScopeSchema,
     hardware: z.array(HardwareItemSchema),
     monitoringPeriod: MonitoringPeriodSchema,
@@ -33,6 +35,7 @@ export const MitsiStateSchema = z.object({
 /** Persistable drafts may be incomplete, but supplied values must obey their rules. */
 export const MitsiStateDraftSchema = MitsiStateSchema.extend({
     schemaVersion: draftField(MitsiStateSchema.shape.schemaVersion, MITSI_SCHEMA_VERSION),
+    metadata: ExportMetadataSchema.optional(),
     scope: ScopeDraftSchema.default(() => ScopeDraftSchema.parse({})),
     hardware: z.array(HardwareItemDraftSchema).default(() => []),
     monitoringPeriod: MonitoringPeriodDraftSchema.default(() =>

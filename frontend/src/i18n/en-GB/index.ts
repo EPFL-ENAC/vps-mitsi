@@ -26,12 +26,25 @@ export default {
     mainExport: 'Export',
     mainExportSuccess: 'File successfully downloaded.',
     mainExportFailed: 'Browser blocked the download.',
+    // --- Export metadata dialog (see src/components/ExportAssessmentDialog.vue) ---
+    exportDialogTitle: 'Export assessment',
+    exportDialogHint:
+        'These details are stored in the exported JSON file to document who produced it and when.',
+    exportDialogExportedByLabel: 'Assessor name',
+    exportDialogExportedByPlaceholder: 'Name of the person exporting this assessment',
+    exportDialogCommentLabel: 'Comment (optional)',
+    exportDialogCommentPlaceholder: 'Anything worth noting about this export',
+    exportDialogCancel: 'Cancel',
+    exportDialogConfirm: 'Export',
     mainImport: 'Import',
     mainImportWarningTitle: 'Import will replace the draft',
     mainImportWarning:
         'Your current assessment will be deleted. Use Export first if you want to keep it.',
     mainImportSuccess: 'Assessment imported successfully.',
+    mainImportEmpty: 'Assessment imported, but the file contains no survey data.',
     mainImportFailed: 'Import failed: the file is not a valid assessment file.',
+    mainImportWarningEmptyFile:
+        'The selected file contains NO SURVEY DATA. Your current assessment will be deleted and replaced with an empty one. Use Export first if you want to keep it.',
     mainNavWelcome: 'Welcome',
     mainNavScope: 'Scope of the assessment',
     mainNavInventory: 'Hardware inventory',

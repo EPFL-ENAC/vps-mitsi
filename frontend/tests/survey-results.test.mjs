@@ -16,7 +16,7 @@ import { MitsiStateDraftSchema } from '../src/models/MitsiState/schema.ts';
 import { HardwareItemDraftSchema } from '../src/models/HardwareItem/schema.ts';
 import { UnderlyingServiceDraftSchema } from '../src/models/UnderlyingService/schema.ts';
 
-import { setupScope, validHardware } from './helpers/survey-fixtures.mjs';
+import { defaultExportMetadata, setupScope, validHardware } from './helpers/survey-fixtures.mjs';
 
 let stored;
 beforeEach(() => {
@@ -477,7 +477,7 @@ test('cleared nested energy survives persistence and reset restores fresh assess
     setupScope(store);
     store.datacenters[0].energy.energyConsumption = 12;
     store.clearDatacenterEnergy('dc1');
-    const json = store.exportJson();
+    const json = store.exportJson(defaultExportMetadata());
     const state = JSON.parse(json);
     assert.equal('energy' in state, false);
     assert.equal('datacenters' in state.scope, false);
@@ -499,7 +499,7 @@ test('cleared nested energy survives persistence and reset restores fresh assess
         store.underlyingServices.push(UnderlyingServiceDraftSchema.parse({ co2EstimateKg: 12 }));
         assert.equal(store.energyConsumptionStatus, 'partial');
         assert.equal(store.saveToStorage(), true);
-        store.exportJson();
+        store.exportJson(defaultExportMetadata());
         assert.ok(store.savedAt);
         assert.ok(store.exportedAt);
         assert.equal(stored.has(MITSI_STORAGE_KEY), true);

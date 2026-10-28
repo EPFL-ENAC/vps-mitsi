@@ -38,6 +38,8 @@
             </q-toolbar>
         </q-header>
 
+        <ExportAssessmentDialog v-model:open="exportDialogOpen" @confirm="onExportConfirmed" />
+
         <q-drawer v-model="leftDrawerOpen" show-if-above :width="280" bordered>
             <q-list padding>
                 <q-item v-ripple clickable to="/" exact>
@@ -166,8 +168,11 @@ import { useQuasar, date, exportFile } from 'quasar';
 import { useI18n } from 'vue-i18n';
 
 import type { BlockKey, BlockStatus } from 'src/types/ui';
+import type { ExportMetadataInput } from 'src/models/ExportMetadata/schema';
+import { isImportEmpty } from 'src/models/MitsiState/utils';
 import { formatDatacenterName, formatResult } from 'src/utils/format';
 import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
+import ExportAssessmentDialog from 'src/components/ExportAssessmentDialog.vue';
 
 const surveyData = useSurveyDataStore();
 const surveyResults = useSurveyResultsStore();
@@ -183,6 +188,8 @@ const { t, locale } = useI18n();
 const epflLogoUrl = `${import.meta.env.BASE_URL}epfl.svg`;
 
 const leftDrawerOpen = ref(false);
+/** Controls the modal that collects export metadata before downloading. */
+const exportDialogOpen = ref(false);
 const operationalResultOptions = computed(() => ({
     missingLabel: t('mainNotApplicable'),
     partialLabel: surveyResults.operationalCalculationCoverage.isComplete
@@ -205,48 +212,56 @@ function saveAssessment(): void {
     }
 }
 
-/** QFile returns a File object directly, empty draft results in immediate import, while one containing data triggers warning */
-function onFilePicked(file: File | null): void {
+/** QFile returns a File object directly; existing data triggers a confirmation dialog */
+async function onFilePicked(file: File | null): Promise<void> {
     if (!file) return;
 
-    if (surveyData.isStoreEmpty) {
-        readAndImport(file);
+    const json = await file.text().catch(() => null);
+    if (json === null) {
+        $q.notify({ type: 'negative', message: t('mainImportFailed') });
         return;
     }
 
+    if (surveyData.isEmpty) {
+        importText(json);
+        return;
+    }
+
+    const fileIsEmpty = isImportEmpty(json);
+
     $q.dialog({
-        title: t('mainImportWarningTitle'),
-        message: t('mainImportWarning'),
+        title: fileIsEmpty ? `⚠️ ${t('mainImportWarningTitle')}` : t('mainImportWarningTitle'),
+        message: fileIsEmpty ? t('mainImportWarningEmptyFile') : t('mainImportWarning'),
         cancel: true,
         persistent: true,
-    }).onOk(() => {
-        readAndImport(file);
-    });
+        // Red OK button looks different for case when file is empty
+        ...(fileIsEmpty && { ok: { color: 'negative' } }),
+    }).onOk(() => importText(json));
 }
 
-/** Reads the file and gives text to the store */
-function readAndImport(file: File): void {
-    const reader = new FileReader();
-    reader.onload = () => {
-        const result = reader.result;
-        if (typeof result !== 'string') return;
-        if (surveyData.importJson(result)) {
-            $q.notify({ type: 'positive', message: t('mainImportSuccess') });
-        } else {
-            $q.notify({ type: 'negative', message: t('mainImportFailed') });
-        }
-    };
-    reader.onerror = () => {
+/** Gives the text to the store and reports the result */
+function importText(json: string): void {
+    if (!surveyData.importJson(json)) {
         $q.notify({ type: 'negative', message: t('mainImportFailed') });
-    };
-    reader.readAsText(file);
+        return;
+    }
+    $q.notify(
+        surveyData.isEmpty
+            ? { type: 'warning', message: t('mainImportEmpty') }
+            : { type: 'positive', message: t('mainImportSuccess') },
+    );
 }
 
 /** Downloads whole assessment as a JSON file, named with the current date-time. */
 function exportAssessment(): void {
+    exportDialogOpen.value = true;
+}
+
+/** Runs once the export dialog collected and validated its metadata. */
+function onExportConfirmed(metadata: ExportMetadataInput): void {
     const status = exportFile(
         `mitsi-assessment-${date.formatDate(new Date(), 'YYYY-MM-DD_HH-mm-ss')}.json`,
-        surveyData.exportJson(),
+        surveyData.exportJson(metadata),
         { mimeType: 'application/json' },
     );
     if (status === true) {
