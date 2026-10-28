@@ -173,12 +173,10 @@
             :title-tooltip="$t('scopeBndColumnsTooltip')"
             purpose="report"
         >
-            <div class="text-subtitle1 q-mb-xs">{{ $t('scopeBndIncludedTitle') }}</div>
             <ScopeBoundaryItemsTable kind="included" />
 
             <q-separator spaced />
 
-            <div class="text-subtitle1 q-mb-xs">{{ $t('scopeBndExcludedTitle') }}</div>
             <ScopeBoundaryItemsTable kind="excluded" />
         </AssessmentSection>
 

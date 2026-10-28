@@ -144,17 +144,28 @@ export default {
         '{name} cannot be deleted. It is referenced by {inv}. Reassign or remove those first.',
     // Boundaries — included & excluded
     scopeBoundariesInclExclTitle: 'Boundaries — included & excluded',
-    scopeBndIncludedTitle: 'Included in the IT service (accounted for)',
-    scopeBndExcludedTitle: 'Excluded from the IT service (not accounted for)',
-    scopeBoundaryColumns: {
-        type: 'Type',
-        purpose: 'Purpose',
-        included: { reason: 'Reason of inclusion' },
-        excluded: { reason: 'Reason of exclusion' },
+    scopeBoundary: {
+        included: {
+            prefix: 'The service counts',
+            add: 'ADD SOMETHING THE SERVICE COUNTS',
+        },
+        excluded: {
+            prefix: 'It leaves out',
+            add: 'ADD SOMETHING IT LEAVES OUT',
+        },
+        separators: {
+            usedFor: 'used for',
+            because: 'because',
+        },
+        placeholders: {
+            type: 'what?',
+            purpose: 'what purpose?',
+            includedReason: 'why does it belong?',
+            excludedReason: 'why is it left out?',
+        },
     },
     scopeBndColumnsTooltip:
         'Document what is included in / excluded from the IT service — type, purpose, reason.',
-    scopeBndAdd: '+ Add',
     scopeBndDelete: 'Delete',
     // Lifespan
     scopeLifespanTitle: 'Lifespan',
