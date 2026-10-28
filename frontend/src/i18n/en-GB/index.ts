@@ -110,7 +110,15 @@ export default {
     scopeResourceType: {
         CPU: 'CPU',
         GPU: 'GPU',
+        Disk: 'Disk',
+        RAM: 'RAM',
+        Other: 'Other',
     },
+    scopeFuResourceTypeOtherLabel: 'Resource name',
+    scopeFuResourceTypeOtherPlaceholder: 'e.g. sessions',
+    scopeFuResourceTypeOtherTooltip: 'e.g. sessions — the custom resource of one usage',
+    scopeFuManualFleetCountTooltip:
+        'Total quantity of this resource active across the entire infrastructure',
     scopeFuTimeUnitTooltip: "e.g. hours — 'for 2 hours with 2 CPUs'",
     scopeFuDurationTooltip: "e.g. 2 — 'for 2 hours with 2 CPUs'",
     scopeFuResourceCountTooltip: 'e.g. 2 CPUs — one usage uses 2 resources',

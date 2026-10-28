@@ -369,7 +369,13 @@ test('unfinished descriptive scope fields do not mark complete emission values a
 });
 
 test('resource select derives translated options from the enum and requires a supported selection', async () => {
-    const labels = { CPU: 'Processors', GPU: 'Graphics processors' };
+    const labels = {
+        CPU: 'Processors',
+        GPU: 'Graphics processors',
+        Disk: 'Storage devices',
+        RAM: 'Memory modules',
+        Other: 'Custom resources',
+    };
     const result = await renderTables(ScopePage, {
         messages: { ...en, scopeResourceType: labels },
         setupStore: setupScope,
@@ -379,15 +385,27 @@ test('resource select derives translated options from the enum and requires a su
         resourceSelect.options,
         ResourceTypeSchema.options.map((value) => ({ value, label: labels[value] })),
     );
-    for (const invalid of ['', null, undefined, 'cpu', 'other']) {
+    for (const invalid of ['', null, undefined, 'cpu', 'other', 'disk', 'ram']) {
         assert.equal(typeof resourceSelect.rules[0](invalid), 'string');
     }
-    for (const resourceType of ['CPU', 'GPU']) {
+    for (const resourceType of ['CPU', 'GPU', 'Disk', 'RAM']) {
         assert.equal(resourceSelect.rules[0](resourceType), true);
         resourceSelect.$emit('update:modelValue', resourceType);
         assert.equal(result.store.scope.functionalUnit.resourceType, resourceType);
         assert.equal(result.store.isScopeValid, true);
     }
+    // A custom resource is a supported selection on its own; its extra fields are optional.
+    assert.equal(resourceSelect.rules[0]('Other'), true);
+    resourceSelect.$emit('update:modelValue', 'Other');
+    assert.equal(result.store.scope.functionalUnit.resourceType, 'Other');
+    assert.equal(result.store.isScopeValid, true);
+    result.store.scope.functionalUnit.resourceTypeOther = 'sessions';
+    result.store.scope.functionalUnit.manualFleetCount = 5;
+    assert.equal(result.store.isScopeValid, true);
+    // An unusable total still invalidates the scope through the field's own rule.
+    result.store.scope.functionalUnit.manualFleetCount = 0;
+    assert.equal(result.store.isScopeValid, false);
+    result.store.scope.functionalUnit.manualFleetCount = 5;
     resourceSelect.$emit('update:modelValue', '');
     assert.equal(result.store.scope.functionalUnit.resourceType, '');
     assert.equal(result.store.isScopeValid, false);
