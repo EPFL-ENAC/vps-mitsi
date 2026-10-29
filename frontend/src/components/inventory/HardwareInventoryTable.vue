@@ -315,6 +315,7 @@ const columns = computed<InventoryColumn[]>(() => [
     {
         name: 'subtotal',
         field: 'subtotal',
+        align: 'left',
         label: t('inventoryColumns.subtotal'),
         group: 'impact',
         mode: 'simple',
