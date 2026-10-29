@@ -4,7 +4,7 @@
             <div
                 v-for="item in items"
                 :key="item.id"
-                class="boundary-row row items-center q-gutter-sm q-mb-sm"
+                class="boundary-row row items-baseline q-gutter-sm q-mb-sm"
             >
                 <span
                     class="boundary-prefix"

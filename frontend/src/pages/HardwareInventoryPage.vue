@@ -29,7 +29,7 @@
         </div>
 
         <!-- Stats line -->
-        <div class="row items-center q-col-gutter-md q-mb-sm">
+        <div class="row items-baseline q-col-gutter-md q-mb-sm">
             <i18n-t
                 keypath="inventoryStats"
                 tag="div"
