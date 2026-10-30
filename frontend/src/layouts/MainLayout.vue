@@ -433,10 +433,4 @@ function formatTimeAgo(ts: number): string {
     white-space: nowrap;
     color: #6b7280;
 }
-
-/* vertical separator EPFL | MITSI */
-.header-brand__logo {
-    border-right: 1px solid #e0e0e0;
-    padding-right: 0.8em;
-}
 </style>
