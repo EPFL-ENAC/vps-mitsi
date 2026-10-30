@@ -5,7 +5,7 @@ import { draftField, nullableNumber } from 'src/models/shared/schema';
 export const DatacenterGeneralInfoSchema = z.object({
     abbreviation: z.string().min(1),
     name: z.string().min(1),
-    comment: z.string(),
+    comment: z.string().optional().default(''),
 });
 
 export const DatacenterGeneralInfoDraftSchema = DatacenterGeneralInfoSchema.extend({
@@ -16,18 +16,18 @@ export const DatacenterGeneralInfoDraftSchema = DatacenterGeneralInfoSchema.exte
 
 /** Energy information owned by a datacenter. */
 export const DatacenterEnergySchema = z.object({
-    comment: z.string(),
-    location: z.string(),
-    locationComment: z.string(),
+    comment: z.string().trim().min(1),
+    location: z.string().trim().min(1),
+    locationComment: z.string().trim().min(1),
     /** Carbon intensity of the grid mix (gCO₂/kWh). */
     carbonIntensity: z.number().min(0),
-    carbonIntensityComment: z.string(),
+    carbonIntensityComment: z.string().trim().min(1),
     /** Optional; the report must note whether PUE was included. */
     pue: nullableNumber(z.number().min(0)),
-    pueComment: z.string(),
+    pueComment: z.string().optional().default(''),
     /** Grid electricity consumed (kWh over the monitoring period). */
     energyConsumption: z.number().min(0),
-    energyComment: z.string(),
+    energyComment: z.string().trim().min(1),
 });
 
 export const DatacenterEnergyDraftSchema = DatacenterEnergySchema.extend({

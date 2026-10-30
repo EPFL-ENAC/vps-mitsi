@@ -31,59 +31,70 @@ body {
     height: 24px;
     width: auto;
     flex-shrink: 0;
+    border-right: 1px solid #e0e0e0;
+    padding-right: 0.8em;
 }
 
-// ─── Left Drawer ─────────────────────────────────────────────────────────────
-// Drawer list items: thin separator lines between entries
-.q-drawer .q-item::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 15px;
-    right: 50px;
-    height: 1px;
-    background: #ebebeb;
-    transition: background 0.3s;
-}
+// ─── Left Drawer Navigation ──────────────────────────────────────────────────
+.q-drawer {
+    // Remove pseudo-element dividers between list items
+    .q-item::before {
+        content: none !important;
+    }
 
-.q-drawer .q-item:first-child::before {
-    content: none;
-}
+    // Default item styling
+    .q-item {
+        border-radius: 8px;
+        margin: 2px 8px;
+        min-height: 44px;
+        color: #1a1a1a;
+        transition: background-color 0.2s ease;
 
-// Active / selected item: light grey bg + EPFL red right accent border
-.q-drawer .q-item--active {
-    background: #e6e6e6;
-    border-right: 2px solid $primary;
-    color: #1a1a1a;
-    font-weight: bold;
-}
+        // Subtitles keep neutral grey
+        .q-item__label--caption {
+            color: #6b7280 !important;
+        }
 
-.q-drawer .q-item--active::before {
-    content: none;
-}
+        // Hover effect: slight darkening, text stays dark
+        &:hover {
+            background-color: #f2f4f7;
+            color: #1a1a1a !important;
 
-// Keep non-active items flush (no right border offset)
-.q-drawer .q-item:not(.q-item--active) {
-    border-right: 2px solid transparent;
-}
+            .q-icon {
+                color: #1a1a1a !important;
+            }
+        }
 
-// Hover
-.q-drawer .q-item:hover {
-    color: $primary;
-}
+        // Active route: soft grey pill background, override turquoise link color
+        &--active,
+        &.q-router-link--active,
+        &.q-router-link--exact-active {
+            background-color: #eceff2 !important;
+            color: #1a1a1a !important;
+            font-weight: 600;
+            border-right: none;
 
-.q-drawer .q-item .q-focus-helper {
-    background: transparent !important;
-}
+            .q-item__label {
+                color: #1a1a1a !important;
+            }
 
-.q-drawer .q-item:hover::before {
-    background: $primary;
-}
+            .q-icon {
+                color: #1a1a1a !important;
+            }
+        }
+    }
 
-.q-btn--outline::before {
-    border-color: $border-color !important;
-}
+    // Collapsible Assessment header: transparent and unindented
+    .q-expansion-item__container > .q-item {
+        margin: 0;
+        border-radius: 0;
+        background: transparent !important;
 
+        &:hover {
+            background: transparent !important;
+        }
+    }
+}
 // ─── Logo & Language Select ──────────────────────────────────────────────────
 .logo {
     height: auto;

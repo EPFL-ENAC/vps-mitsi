@@ -11,7 +11,7 @@ import { ComputationResult } from '../src/utils/computation.ts';
 import { formatKg } from '../src/utils/format.ts';
 import en from '../src/i18n/en-GB/index.ts';
 import { renderTables } from './helpers/render-tables.mjs';
-import { setupScope, validHardware } from './helpers/survey-fixtures.mjs';
+import { setupScope, validEnergy, validHardware } from './helpers/survey-fixtures.mjs';
 
 /** Inspect the real tooltip's slot separately: Quasar portals are closed during SSR. */
 async function renderResult(computation, { props = {}, slots = {}, messages = en } = {}) {
@@ -341,6 +341,7 @@ test('totals keep numeric formatting, coverage labels, emphasis, and status-spec
     const complete = await renderTables(ResultsTotalSection, {
         setupStore(store) {
             setupScope(store);
+            Object.assign(store.datacenters[0].energy, validEnergy());
             store.datacenters[0].energy.carbonIntensity = 1000;
             store.datacenters[0].energy.energyConsumption = 100;
             store.monitoringPeriod.unit = 'year';
