@@ -11,6 +11,7 @@ import {
 import { DatacenterDraftSchema, DatacenterSchema } from '../src/models/Datacenter/schema.ts';
 import { TimeUnitSchema } from '../src/models/TimeUnit/schema.ts';
 import { timeUnitsPerYear } from '../src/models/TimeUnit/utils.ts';
+import { validEnergy } from './helpers/survey-fixtures.mjs';
 
 test('measured energy emissions depend only on local energy fields', () => {
     const energy = Object.freeze({
@@ -31,7 +32,7 @@ test('one trusted datacenter produces operational emissions without changing its
     const draft = DatacenterDraftSchema.parse({
         id: 'dc',
         generalInfo: { name: 'Datacenter', abbreviation: 'DC' },
-        energy: { energyConsumption: 100, carbonIntensity: 500, pue: 1.5 },
+        energy: validEnergy({ energyConsumption: 100, carbonIntensity: 500, pue: 1.5 }),
     });
     const validated = DatacenterSchema.parse(draft);
     const datacenter = Object.freeze({
@@ -61,7 +62,7 @@ test('trusted datacenter calculations preserve optional PUE and valid zero measu
         const draft = DatacenterDraftSchema.parse({
             id: 'dc',
             generalInfo: { name: 'Datacenter', abbreviation: 'DC' },
-            energy: { carbonIntensity: 500, energyConsumption: 100, ...patch },
+            energy: validEnergy({ carbonIntensity: 500, energyConsumption: 100, ...patch }),
         });
         const datacenter = DatacenterSchema.parse(draft);
         const result = calculateDatacenterOperational(datacenter, 1, 3);

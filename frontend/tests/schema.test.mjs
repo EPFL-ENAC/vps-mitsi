@@ -25,7 +25,9 @@ import {
 } from '../src/models/MitsiState/schema.ts';
 import { MonitoringPeriodDraftSchema } from '../src/models/MonitoringPeriod/schema.ts';
 import { UnderlyingServiceDraftSchema } from '../src/models/UnderlyingService/schema.ts';
+import { PersistedAssessmentSchema } from '../src/models/MitsiState/utils.ts';
 import { nullableNumber } from '../src/models/shared/schema.ts';
+import { validEnergy } from './helpers/survey-fixtures.mjs';
 
 const jsonRoundTrip = (value) => JSON.parse(JSON.stringify(value));
 
@@ -99,13 +101,23 @@ test('every draft can parse its own defaults after JSON serialization', () => {
         ScopeDraftSchema,
         HardwareItemDraftSchema,
         MonitoringPeriodDraftSchema,
-        DatacenterEnergyDraftSchema,
         UnderlyingServiceDraftSchema,
         MitsiStateDraftSchema,
     ]) {
         const blank = schema.parse({});
         assert.deepEqual(jsonRoundTrip(schema.parse(jsonRoundTrip(blank))), jsonRoundTrip(blank));
     }
+
+    // Datacenter energy is the exception: its draft defaults are blank strings, but the
+    // canonical schema requires non-empty comments, so a blank draft no longer round-trips.
+    const blankEnergy = DatacenterEnergyDraftSchema.parse({});
+    assert.equal(blankEnergy.location, '');
+    assert.equal(DatacenterEnergyDraftSchema.safeParse(jsonRoundTrip(blankEnergy)).success, false);
+    const filledEnergy = DatacenterEnergyDraftSchema.parse(validEnergy());
+    assert.deepEqual(
+        jsonRoundTrip(DatacenterEnergyDraftSchema.parse(jsonRoundTrip(filledEnergy))),
+        jsonRoundTrip(filledEnergy),
+    );
 });
 
 test('partial drafts retain blank required strings and empty numeric fields', () => {
@@ -117,13 +129,25 @@ test('partial drafts retain blank required strings and empty numeric fields', ()
         hardware: [{ id: 'h1', name: 'Server', datacenterId: 'dc1' }],
         datacenters: [{ id: 'dc1' }],
     });
-    assert.deepEqual(
-        jsonRoundTrip(MitsiStateDraftSchema.parse(jsonRoundTrip(partial))),
-        jsonRoundTrip(partial),
-    );
+    assert.equal(partial.datacenters[0].energy.location, '');
+    assert.equal(partial.datacenters[0].energy.carbonIntensity, null);
+    // Blank energy strings are outside the canonical schema, so a whole-state draft whose
+    // datacenter energy is still empty cannot be re-parsed as a persisted assessment.
+    assert.equal(MitsiStateDraftSchema.safeParse(jsonRoundTrip(partial)).success, false);
+    assert.equal(PersistedAssessmentSchema.safeParse(partial).success, false);
     assert.equal(MitsiStateSchema.safeParse(partial).success, false);
     assert.equal(HardwareItemSchema.safeParse(partial.hardware[0]).success, false);
     assert.equal(DatacenterEnergySchema.safeParse(partial.datacenters[0].energy).success, false);
+
+    // Once the energy block is filled in, the same state round-trips unchanged.
+    const filled = MitsiStateDraftSchema.parse({
+        ...partial,
+        datacenters: [{ ...partial.datacenters[0], energy: validEnergy() }],
+    });
+    assert.deepEqual(
+        jsonRoundTrip(MitsiStateDraftSchema.parse(jsonRoundTrip(filled))),
+        jsonRoundTrip(filled),
+    );
 });
 
 test('default factories do not share nested objects or arrays', () => {
@@ -220,11 +244,19 @@ test('datacenters require IDs and own independent, round-trippable nested drafts
     first.energy.energyConsumption = 0;
     assert.equal(second.generalInfo.name, '');
     assert.equal(second.energy.energyConsumption, null);
-    assert.deepEqual(DatacenterDraftSchema.parse(jsonRoundTrip(first)), first);
     assert.equal(DatacenterGeneralInfoSchema.safeParse(first.generalInfo).success, false);
     first.generalInfo.abbreviation = 'A';
     assert.equal(DatacenterGeneralInfoSchema.safeParse(first.generalInfo).success, true);
     assert.equal(DatacenterEnergySchema.safeParse(first.energy).success, false);
+
+    // A datacenter whose energy block is still blank cannot round-trip: the canonical
+    // schema requires non-empty energy comments, so re-parsing the draft throws.
+    assert.equal(DatacenterDraftSchema.safeParse(jsonRoundTrip(first)).success, false);
+
+    // Filling in the energy block restores round-trip stability.
+    first.energy = DatacenterEnergyDraftSchema.parse(validEnergy());
+    assert.deepEqual(DatacenterDraftSchema.parse(jsonRoundTrip(first)), first);
+    assert.equal(DatacenterEnergySchema.safeParse(first.energy).success, true);
 });
 
 test('nullable numbers preserve bounds and distinguish missing values from zero', () => {
@@ -247,12 +279,37 @@ test('nullable numbers preserve bounds and distinguish missing values from zero'
             assert.equal(DatacenterEnergyDraftSchema.safeParse({ [field]: value }).success, false);
         }
     }
-    const energy = DatacenterEnergyDraftSchema.parse({
-        carbonIntensity: 100,
-        energyConsumption: 0,
-    });
+    const energy = DatacenterEnergyDraftSchema.parse(
+        validEnergy({ carbonIntensity: 100, energyConsumption: 0 }),
+    );
     assert.equal(DatacenterEnergySchema.safeParse(energy).success, true);
     assert.equal(DatacenterEnergyDraftSchema.safeParse({ carbonIntensity: 0 }).success, true);
+
+    // The mandatory energy strings are non-empty; the numeric fields alone are not enough.
+    assert.equal(
+        DatacenterEnergySchema.safeParse({ carbonIntensity: 100, energyConsumption: 0 }).success,
+        false,
+    );
+    for (const field of [
+        'comment',
+        'location',
+        'locationComment',
+        'carbonIntensityComment',
+        'energyComment',
+    ]) {
+        for (const blank of ['', '   ']) {
+            assert.equal(
+                DatacenterEnergySchema.safeParse({ ...validEnergy(), [field]: blank }).success,
+                false,
+                `${field} must reject ${JSON.stringify(blank)}`,
+            );
+        }
+        assert.equal(
+            DatacenterEnergySchema.safeParse({ ...validEnergy(), [field]: undefined }).success,
+            false,
+            `${field} is mandatory`,
+        );
+    }
 });
 
 test('resource selection uses exact enum values while drafts retain an unanswered selection', () => {

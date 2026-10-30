@@ -13,6 +13,7 @@ import { UnderlyingServiceDraftSchema } from '../src/models/UnderlyingService/sc
 import {
     defaultExportMetadata,
     setupScope,
+    validEnergy,
     validHardware,
     withoutMetadata,
 } from './helpers/survey-fixtures.mjs';
@@ -36,6 +37,8 @@ test('blank and partially edited assessments survive save and reload, including 
     store.addBoundaryItem('included');
     store.addHardwareItem();
     store.scope.organizationName = 'EPFL';
+    // A datacenter must carry its mandatory energy strings to be persistable.
+    Object.assign(store.datacenters[0].energy, validEnergy());
     assert.equal(store.saveToStorage(), true);
     const snapshot = store.exportJson(defaultExportMetadata());
     setActivePinia(createPinia());
@@ -181,6 +184,8 @@ test('save and export normalize cleared numerics without turning invalid values 
     store.scope.lifespanYears = '';
     store.hardware.push({ ...validHardware(), quantity: null });
     store.addDatacenter();
+    // Mandatory energy strings stay filled so the cleared numerics remain persistable.
+    Object.assign(store.datacenters[0].energy, validEnergy());
     store.datacenters[0].energy.pue = '';
     store.datacenters[0].energy.energyConsumption = '';
     assert.equal(store.saveToStorage(), true);
@@ -217,6 +222,8 @@ test('imports reject invalid values and future versions without changing state o
 test('load and import keep every hardware row, including unknown and unassigned references', () => {
     const store = useSurveyDataStore();
     setupScope(store);
+    // The scope datacenter needs its mandatory energy strings to stay persistable.
+    Object.assign(store.datacenters[0].energy, validEnergy());
     store.hardware.push(
         validHardware(),
         HardwareItemDraftSchema.parse({ id: 'blank' }),
@@ -265,10 +272,9 @@ test('completion validates all canonical scope and hardware fields', () => {
 test('energy and results completion require a valid monitoring period and optional PUE', () => {
     const store = useSurveyDataStore();
     setupScope(store);
-    store.datacenters[0].energy = DatacenterEnergyDraftSchema.parse({
-        carbonIntensity: 1,
-        energyConsumption: 0,
-    });
+    store.datacenters[0].energy = DatacenterEnergyDraftSchema.parse(
+        validEnergy({ carbonIntensity: 1, energyConsumption: 0 }),
+    );
     assert.equal(store.energyConsumptionStatus, 'complete');
     assert.equal(store.resultsStatus, 'partial');
     for (const patch of [{ value: 0.5 }, { unit: 'unknown' }]) {
@@ -424,10 +430,9 @@ test('section statuses follow input validity, invalidation, clearing, and reset'
 
     setupScope(data);
     data.hardware = [validHardware()];
-    data.datacenters[0].energy = DatacenterEnergyDraftSchema.parse({
-        carbonIntensity: 100,
-        energyConsumption: 0,
-    });
+    data.datacenters[0].energy = DatacenterEnergyDraftSchema.parse(
+        validEnergy({ carbonIntensity: 100, energyConsumption: 0 }),
+    );
     assert.equal(data.scopeStatus, 'complete');
     assert.equal(data.hardwareInventoryStatus, 'complete');
     assert.equal(data.energyConsumptionStatus, 'complete');
@@ -509,6 +514,8 @@ test('every cleared numeric field stays empty through export, import, and storag
         for (const field of fields) row[field] = empty;
         row.rackUnit = empty;
         data.addDatacenter();
+        // Mandatory energy strings stay filled; only the numeric fields are cleared here.
+        Object.assign(data.datacenters[0].energy, validEnergy());
         for (const field of ['pue', 'carbonIntensity', 'energyConsumption'])
             data.datacenters[0].energy[field] = empty;
         data.underlyingServices = [UnderlyingServiceDraftSchema.parse({})];
@@ -546,11 +553,9 @@ test('explicit zero measurements survive saving and loading unchanged', () => {
     const data = useSurveyDataStore();
     setupScope(data);
     data.hardware = [{ ...validHardware(), rackUnit: 0 }];
-    data.datacenters[0].energy = DatacenterEnergyDraftSchema.parse({
-        carbonIntensity: 0,
-        energyConsumption: 0,
-        pue: 0,
-    });
+    data.datacenters[0].energy = DatacenterEnergyDraftSchema.parse(
+        validEnergy({ carbonIntensity: 0, energyConsumption: 0, pue: 0 }),
+    );
     data.includeUnderlyingServices = true;
     data.underlyingServices = [UnderlyingServiceDraftSchema.parse({ co2EstimateKg: 0 })];
     assert.equal(data.resultsStatus, 'complete');

@@ -76,11 +76,21 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
     const isScopeValid = computed<boolean>(
         () =>
             ScopeSchema.safeParse(scope.value).success &&
+            isFunctionalUnitValid.value &&
             datacenters.value.length > 0 &&
             datacenters.value.every(
                 (dc) => DatacenterGeneralInfoSchema.safeParse(dc.generalInfo).success,
             ),
     );
+
+    const isFunctionalUnitValid = computed<boolean>(() => {
+        const fu = scope.value.functionalUnit;
+        return (
+            ScopeSchema.shape.functionalUnit.safeParse(fu).success &&
+            (fu.resourceType !== ResourceTypeSchema.enum.Other ||
+                (Boolean(fu.resourceTypeOther?.trim()) && fu.manualFleetCount != null))
+        );
+    });
 
     /** True when a hardware row carries every field needed for the totals. */
     const hardwareRowValid = (h: HardwareItem): boolean => HardwareItemSchema.safeParse(h).success;
@@ -152,11 +162,6 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
 
     // ── Scope progress ("x/3") ───────────────────────────
     const scopeCompletedStepCount = computed<number>(() => {
-        const fu = scope.value.functionalUnit;
-        const isOtherValid =
-            fu.resourceType !== ResourceTypeSchema.enum.Other ||
-            ((fu.resourceTypeOther?.trim().length ?? 0) > 0 && fu.manualFleetCount != null);
-
         const step1 = ScopeSchema.pick({
             organizationName: true,
             assessors: true,
@@ -164,7 +169,7 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
             function: true,
         }).safeParse(scope.value).success;
 
-        const step2 = ScopeSchema.shape.functionalUnit.safeParse(fu).success && isOtherValid;
+        const step2 = isFunctionalUnitValid.value;
 
         const step3 =
             datacenters.value.length > 0 &&

@@ -12,6 +12,24 @@ function validScope() {
         functionalUnit: { usageDuration: 1, resourceCount: 1, resourceType: 'CPU' },
     });
 }
+
+/**
+ * A datacenter energy block that satisfies `DatacenterEnergySchema`.
+ * `location`, `comment`, `locationComment`, `carbonIntensityComment` and
+ * `energyComment` are mandatory non-empty strings; only `pue`/`pueComment` are optional.
+ */
+export function validEnergy(overrides = {}) {
+    return {
+        location: 'Lausanne, Switzerland',
+        comment: 'Measured via PDU',
+        locationComment: 'Primary site',
+        carbonIntensity: 500,
+        carbonIntensityComment: 'Swiss grid mix average',
+        energyConsumption: 100,
+        energyComment: 'Metered over the monitoring period',
+        ...overrides,
+    };
+}
 export function setupScope(store) {
     store.scope = validScope();
     store.monitoringPeriod.value = 1;

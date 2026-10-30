@@ -21,7 +21,7 @@ import { HardwareItemDraftSchema } from '../src/models/HardwareItem/schema.ts';
 import { ResourceTypeSchema } from '../src/models/FunctionalUnit/schema.ts';
 import en from '../src/i18n/en-GB/index.ts';
 import { renderTables } from './helpers/render-tables.mjs';
-import { setupScope, validHardware } from './helpers/survey-fixtures.mjs';
+import { setupScope, validEnergy, validHardware } from './helpers/survey-fixtures.mjs';
 
 const text = (html) => html.replace(/<[^>]*>/g, '');
 
@@ -327,7 +327,11 @@ test('results and report share partial totals, PUE labels, functional units and 
                     DatacenterDraftSchema.parse({
                         id: 'ready',
                         generalInfo: { name: 'Ready', abbreviation: 'R' },
-                        energy: { carbonIntensity: 1000, energyConsumption: 100, pue: 1.5 },
+                        energy: validEnergy({
+                            carbonIntensity: 1000,
+                            energyConsumption: 100,
+                            pue: 1.5,
+                        }),
                     }),
                     DatacenterDraftSchema.parse({
                         id: 'draft',
@@ -436,12 +440,13 @@ test('resource select derives translated options from the enum and requires a su
         assert.equal(result.store.scope.functionalUnit.resourceType, resourceType);
         assert.equal(result.store.isScopeValid, true);
     }
-    // A custom resource is a supported selection on its own; its extra fields are optional.
+    // A custom resource is a supported selection, but it needs a name and a total to be valid.
     assert.equal(resourceSelect.rules[0]('Other'), true);
     resourceSelect.$emit('update:modelValue', 'Other');
     assert.equal(result.store.scope.functionalUnit.resourceType, 'Other');
-    assert.equal(result.store.isScopeValid, true);
+    assert.equal(result.store.isScopeValid, false);
     result.store.scope.functionalUnit.resourceTypeOther = 'sessions';
+    assert.equal(result.store.isScopeValid, false);
     result.store.scope.functionalUnit.manualFleetCount = 5;
     assert.equal(result.store.isScopeValid, true);
     // An unusable total still invalidates the scope through the field's own rule.

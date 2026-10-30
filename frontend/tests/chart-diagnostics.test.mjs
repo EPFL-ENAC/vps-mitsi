@@ -13,7 +13,7 @@ import { BLUE_SCALE, RED_SCALE } from '../src/utils/charts.ts';
 import { useSurveyResultsStore } from '../src/stores/surveyResults.ts';
 import en from '../src/i18n/en-GB/index.ts';
 import { renderTables } from './helpers/render-tables.mjs';
-import { setupScope, validHardware } from './helpers/survey-fixtures.mjs';
+import { setupScope, validEnergy, validHardware } from './helpers/survey-fixtures.mjs';
 
 const statuses = ['success', 'partial', 'failure'];
 const text = (html) =>
@@ -58,6 +58,7 @@ function setupSources(
               ? [readyHardware, draftHardware]
               : [draftHardware];
     const readyDatacenter = store.datacenters[0];
+    Object.assign(readyDatacenter.energy, validEnergy());
     readyDatacenter.energy.carbonIntensity = 1000;
     readyDatacenter.energy.energyConsumption = value * 10;
     const draftDatacenter = DatacenterDraftSchema.parse({
@@ -163,12 +164,12 @@ test('datacenter treemap sorts emissions into equal-width bands with correct sha
                 DatacenterDraftSchema.parse({
                     id: 'smaller',
                     generalInfo: { abbreviation: 'S', name: 'Smaller' },
-                    energy: { carbonIntensity: 1000, energyConsumption: 25 },
+                    energy: validEnergy({ carbonIntensity: 1000, energyConsumption: 25 }),
                 }),
                 DatacenterDraftSchema.parse({
                     id: 'larger',
                     generalInfo: { abbreviation: 'L', name: 'Larger' },
-                    energy: { carbonIntensity: 1000, energyConsumption: 75 },
+                    energy: validEnergy({ carbonIntensity: 1000, energyConsumption: 75 }),
                 }),
             ];
         },
@@ -492,6 +493,8 @@ test('heading statuses translate and disappear when the sources are repaired', a
     });
     assert.equal(text(heading(split.html, en.resultsChartSplitTitle)), 'Incomplete');
     split.store.hardware[1].impactManufacturingDistributionEol = 0;
+    // The draft datacenter also needs its mandatory energy strings before it can be valid.
+    Object.assign(split.store.datacenters[1].energy, validEnergy());
     split.store.datacenters[1].energy.carbonIntensity = 0;
     split.store.datacenters[1].energy.energyConsumption = 0;
     assert.equal(text(heading(await split.renderAgain(), en.resultsChartSplitTitle)), '');

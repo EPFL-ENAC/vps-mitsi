@@ -7,7 +7,7 @@ export const MonitoringUnitSchema = z.enum(['day', 'week', 'month', 'year']);
 export const MonitoringPeriodSchema = z.object({
     unit: MonitoringUnitSchema,
     value: z.number().min(1),
-    comment: z.string(),
+    comment: z.string().optional().default(''),
 });
 
 export const MonitoringPeriodDraftSchema = MonitoringPeriodSchema.extend({
