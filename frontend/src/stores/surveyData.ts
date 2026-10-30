@@ -30,6 +30,7 @@ import {
     ScopeSchema,
     ScopeDraftSchema,
 } from 'src/models/Scope/schema';
+import { ResourceTypeSchema } from 'src/models/FunctionalUnit/schema';
 import {
     type UnderlyingService,
     UnderlyingServiceSchema,
@@ -148,6 +149,31 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
             MonitoringPeriodSchema.safeParse(monitoringPeriod.value).success &&
             datacenters.value.every((dc) => DatacenterEnergySchema.safeParse(dc.energy).success),
     );
+
+    // ── Scope progress ("x/3") ───────────────────────────
+    const scopeCompletedStepCount = computed<number>(() => {
+        const fu = scope.value.functionalUnit;
+        const isOtherValid =
+            fu.resourceType !== ResourceTypeSchema.enum.Other ||
+            ((fu.resourceTypeOther?.trim().length ?? 0) > 0 && fu.manualFleetCount != null);
+
+        const step1 = ScopeSchema.pick({
+            organizationName: true,
+            assessors: true,
+            serviceName: true,
+            function: true,
+        }).safeParse(scope.value).success;
+
+        const step2 = ScopeSchema.shape.functionalUnit.safeParse(fu).success && isOtherValid;
+
+        const step3 =
+            datacenters.value.length > 0 &&
+            datacenters.value.every(
+                (dc) => DatacenterGeneralInfoSchema.safeParse(dc.generalInfo).success,
+            );
+
+        return [step1, step2, step3].filter(Boolean).length;
+    });
 
     const scopeStatus = computed(() => statusFor(isScopeValid.value, scopeHasUserInput.value));
     const hardwareInventoryStatus = computed(() =>
@@ -310,6 +336,7 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
         exportedAt,
         isScopeValid,
         missingMandatoryHardware,
+        scopeCompletedStepCount,
         scopeStatus,
         hardwareInventoryStatus,
         energyConsumptionStatus,
