@@ -168,7 +168,7 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
                 (dc) => DatacenterGeneralInfoSchema.safeParse(dc.generalInfo).success,
             );
 
-        return [step1, step2, step3].filter(Boolean).length;
+        return [step1, step2, step3].filter((x) => x === true).length;
     });
 
     const scopeStatus = computed(() => statusFor(isScopeValid.value, scopeHasUserInput.value));
