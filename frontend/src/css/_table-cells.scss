@@ -1,13 +1,19 @@
 @mixin cells {
     width: 100%;
 
-    [data-kind] {
+    // Keep siblings on one baseline when a field grows with a validation error.
+    th,
+    td {
+        vertical-align: top;
+    }
+
+    // `:where()` keeps zero specificity so an explicit `text-right` still wins.
+    :where([data-kind]) {
         text-align: left;
     }
 
     [data-kind='number'],
     [data-kind='derived'] {
-        text-align: right;
         min-width: 110px;
     }
 
@@ -25,5 +31,7 @@
 
     [data-kind='toggle'] {
         min-width: 80px;
+        text-align: center;
+        padding-top: 4px;
     }
 }
