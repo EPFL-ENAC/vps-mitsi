@@ -6,7 +6,7 @@ export const ResourceTypeSchema = z.enum(['CPU', 'GPU', 'Disk', 'RAM', 'Other'])
 export type ResourceType = z.infer<typeof ResourceTypeSchema>;
 
 /** The functional unit is built as a fill-in-the-blank sentence. */
-export const FunctionalUnitSchema = z.object({
+export const BaseFunctionalUnitSchema = z.object({
     timeUnit: TimeUnitSchema,
     usageDuration: z.number().positive(),
     resourceCount: z.number().int().min(1),
@@ -17,13 +17,23 @@ export const FunctionalUnitSchema = z.object({
     manualFleetCount: optionalNumber(z.number().int().positive()),
 });
 
-export const FunctionalUnitDraftSchema = FunctionalUnitSchema.extend({
-    timeUnit: draftField(FunctionalUnitSchema.shape.timeUnit, 'hour'),
-    usageDuration: draftNumber(FunctionalUnitSchema.shape.usageDuration),
-    resourceCount: draftNumber(FunctionalUnitSchema.shape.resourceCount),
+export const FunctionalUnitDraftSchema = BaseFunctionalUnitSchema.extend({
+    timeUnit: draftField(BaseFunctionalUnitSchema.shape.timeUnit, 'hour'),
+    usageDuration: draftNumber(BaseFunctionalUnitSchema.shape.usageDuration),
+    resourceCount: draftNumber(BaseFunctionalUnitSchema.shape.resourceCount),
     resourceType: ResourceTypeSchema.or(z.literal('')).default(''),
-    resourceTypeOther: draftField(FunctionalUnitSchema.shape.resourceTypeOther, ''),
+    resourceTypeOther: draftField(BaseFunctionalUnitSchema.shape.resourceTypeOther, ''),
     manualFleetCount: draftNumber(z.number().int().positive()),
 });
+
+/**
+ * Fully validated functional unit, custom resource 'Other' requires both a
+ * name and a fleet count
+ */
+export const FunctionalUnitSchema = BaseFunctionalUnitSchema.refine(
+    (fu) =>
+        fu.resourceType !== ResourceTypeSchema.enum.Other ||
+        (Boolean(fu.resourceTypeOther?.trim()) && fu.manualFleetCount != null),
+);
 
 export type FunctionalUnit = z.infer<typeof FunctionalUnitDraftSchema>;

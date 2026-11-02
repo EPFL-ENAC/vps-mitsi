@@ -22,7 +22,7 @@ import {
 } from 'src/models/UnderlyingService/schema';
 import { MonitoringPeriodSchema } from 'src/models/MonitoringPeriod/schema';
 import { ScopeSchema } from 'src/models/Scope/schema';
-import { ResourceTypeSchema } from 'src/models/FunctionalUnit/schema';
+import { ResourceTypeSchema, BaseFunctionalUnitSchema } from 'src/models/FunctionalUnit/schema';
 import {
     calculateDatacenterOperational,
     type DatacenterOperationalResult,
@@ -77,7 +77,7 @@ const ResourceCountSchema = z.object({ resourcesInService: z.number().positive()
 const ManualFleetCountSchema = z.object({ manualFleetCount: z.number().int().positive() });
 const ResourceSelectionContextSchema = z.object({
     scope: z.object({
-        functionalUnit: ScopeSchema.shape.functionalUnit.pick({
+        functionalUnit: BaseFunctionalUnitSchema.pick({
             resourceType: true,
             resourceTypeOther: true,
             manualFleetCount: true,

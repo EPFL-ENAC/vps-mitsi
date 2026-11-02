@@ -59,7 +59,6 @@ export default {
     mainNavResults: 'Results',
     mainNavResultsLockedHint: 'Unlocks when assessments completed',
     mainNavLocked: 'Locked',
-    mainNavReport: 'Report',
     mainStatusRead: 'Read',
     mainStatusComplete: 'Complete',
     mainStatusPartial: 'In progress',
