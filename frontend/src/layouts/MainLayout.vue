@@ -139,31 +139,6 @@
                         {{ $t('mainNavLocked') }}
                     </q-item-section>
                 </q-item>
-
-                <!-- Report -->
-                <q-item
-                    v-ripple
-                    clickable
-                    :disable="!resultsUnlocked"
-                    :to="resultsUnlocked ? '/report' : undefined"
-                >
-                    <q-item-section avatar>
-                        <q-icon :name="resultsUnlocked ? 'print' : 'lock'" />
-                    </q-item-section>
-                    <q-item-section>
-                        <q-item-label>{{ $t('mainNavReport') }}</q-item-label>
-                        <q-item-label v-if="!resultsUnlocked" caption lines="2">
-                            {{ $t('mainNavResultsLockedHint') }}
-                        </q-item-label>
-                    </q-item-section>
-                    <q-item-section
-                        v-if="!resultsUnlocked"
-                        side
-                        class="nav-badge text-caption text-grey-7"
-                    >
-                        {{ $t('mainNavLocked') }}
-                    </q-item-section>
-                </q-item>
             </q-list>
         </q-drawer>
 
