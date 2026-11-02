@@ -10,7 +10,7 @@ import ResultsFunctionalUnitSection from '../src/components/results/ResultsFunct
 import MainLayout from '../src/layouts/MainLayout.vue';
 import { DatacenterDraftSchema } from '../src/models/Datacenter/schema.ts';
 import { renderTables } from './helpers/render-tables.mjs';
-import { setupScope, validHardware } from './helpers/survey-fixtures.mjs';
+import { setupScope, validEnergy, validHardware } from './helpers/survey-fixtures.mjs';
 import en from '../src/i18n/en-GB/index.ts';
 
 function setupReady(store) {
@@ -18,6 +18,8 @@ function setupReady(store) {
     store.scope.functionalUnit.resourceType = 'CPU';
     store.scope.functionalUnit.timeUnit = 'year';
     store.monitoringPeriod.unit = 'year';
+    // Mandatory energy strings must be filled for the datacenter to be computable.
+    Object.assign(store.datacenters[0].energy, validEnergy());
     store.datacenters[0].energy.carbonIntensity = 1000;
     store.datacenters[0].energy.energyConsumption = 100;
     store.hardware = [

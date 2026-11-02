@@ -8,7 +8,7 @@ import {
     PersistedAssessmentSchema,
 } from '../src/models/MitsiState/utils.ts';
 
-import { defaultExportMetadata, validHardware } from './helpers/survey-fixtures.mjs';
+import { defaultExportMetadata, validEnergy, validHardware } from './helpers/survey-fixtures.mjs';
 
 /** A blank draft produced by the schema defaults (no store involved). */
 function blankState(overrides = {}) {
@@ -71,8 +71,9 @@ test('PersistedAssessmentSchema keeps invalid shapes out and never drops hardwar
     );
 
     // Hardware referencing an unknown datacenterId is retained, not silently filtered out.
+    // The datacenter's energy block is filled so the state stays within the canonical schema.
     const withOrphan = {
-        ...blankState({ datacenters: [{ id: 'dc1' }] }),
+        ...blankState({ datacenters: [{ id: 'dc1', energy: validEnergy() }] }),
         hardware: [validHardware(), { ...validHardware(), id: 'h2', datacenterId: 'missing' }],
     };
     const parsed = PersistedAssessmentSchema.safeParse(withOrphan);

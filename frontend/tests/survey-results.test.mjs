@@ -16,7 +16,12 @@ import { MitsiStateDraftSchema } from '../src/models/MitsiState/schema.ts';
 import { HardwareItemDraftSchema } from '../src/models/HardwareItem/schema.ts';
 import { UnderlyingServiceDraftSchema } from '../src/models/UnderlyingService/schema.ts';
 
-import { defaultExportMetadata, setupScope, validHardware } from './helpers/survey-fixtures.mjs';
+import {
+    defaultExportMetadata,
+    setupScope,
+    validEnergy,
+    validHardware,
+} from './helpers/survey-fixtures.mjs';
 
 let stored;
 beforeEach(() => {
@@ -92,10 +97,9 @@ test('energy calculations validate drafts in the store without mutating inputs',
     setupScope(data);
     data.monitoringPeriod.unit = 'year';
     const dc = data.datacenters[0];
-    const energy = DatacenterEnergyDraftSchema.parse({
-        energyConsumption: 100,
-        carbonIntensity: 500,
-    });
+    const energy = DatacenterEnergyDraftSchema.parse(
+        validEnergy({ energyConsumption: 100, carbonIntensity: 500 }),
+    );
 
     for (const draft of [
         DatacenterEnergyDraftSchema.parse({}),
@@ -232,17 +236,17 @@ test('operational collection preserves valid rows, ignored datacenter identity, 
         DatacenterDraftSchema.parse({
             id: 'zero',
             generalInfo: { name: 'Zero', abbreviation: 'Z' },
-            energy: { carbonIntensity: 500, energyConsumption: 0 },
+            energy: validEnergy({ carbonIntensity: 500, energyConsumption: 0 }),
         }),
         DatacenterDraftSchema.parse({
             id: 'bad-pue',
             generalInfo: { name: 'Bad PUE', abbreviation: 'P' },
-            energy: { carbonIntensity: 500, energyConsumption: 100 },
+            energy: validEnergy({ carbonIntensity: 500, energyConsumption: 100 }),
         }),
         DatacenterDraftSchema.parse({
             id: 'ready',
             generalInfo: { name: 'Ready', abbreviation: 'R' },
-            energy: { carbonIntensity: 500, energyConsumption: 100, pue: 1.5 },
+            energy: validEnergy({ carbonIntensity: 500, energyConsumption: 100, pue: 1.5 }),
         }),
     ];
     const [missing, zero, badPue, ready] = data.datacenters;
@@ -270,12 +274,19 @@ test('operational collection preserves valid rows, ignored datacenter identity, 
     assert.equal(partial.ignoredInputs[1], badPue);
     assert.equal(partial.inputErrors.length, 2);
     assert.ok(partial.inputErrors.every((error) => error instanceof z.ZodError));
+    // An unfilled datacenter reports every mandatory energy field, including the
+    // non-empty comment strings; the malformed PUE reports only its own field.
     assert.deepEqual(
         partial.inputErrors.map((error) => error.issues.map((issue) => issue.path)),
         [
             [
+                ['energy', 'comment'],
+                ['energy', 'location'],
+                ['energy', 'locationComment'],
                 ['energy', 'carbonIntensity'],
+                ['energy', 'carbonIntensityComment'],
                 ['energy', 'energyConsumption'],
+                ['energy', 'energyComment'],
             ],
             [['energy', 'pue']],
         ],
@@ -291,8 +302,7 @@ test('operational collection preserves valid rows, ignored datacenter identity, 
     });
     assert.equal(JSON.stringify(data.$state), before);
 
-    missing.energy.carbonIntensity = 1000;
-    missing.energy.energyConsumption = 10;
+    Object.assign(missing.energy, validEnergy({ carbonIntensity: 1000, energyConsumption: 10 }));
     badPue.energy.pue = null;
     assert.equal(results.datacenterOperationalResults.success, 'success');
     assert.deepEqual(results.datacenterOperationalResults.inputErrors, []);
@@ -362,6 +372,7 @@ test('partial totals include only computable energy and react to direct nested e
         impactManufacturingDistributionEol: 50,
     });
     const a = store.datacenters[0];
+    Object.assign(a.energy, validEnergy());
     a.energy.carbonIntensity = 1000;
     a.energy.energyConsumption = 100;
     store.datacenters.push(
@@ -386,6 +397,7 @@ test('partial totals include only computable energy and react to direct nested e
     assert.equal(results.emissionsPerFunctionalUnitKg.result, 150 / 8760);
     assert.equal(store.resultsStatus, 'partial');
     const b = store.datacenters[1];
+    Object.assign(b.energy, validEnergy());
     b.energy.carbonIntensity = 1000;
     b.energy.energyConsumption = 200;
     assert.equal(results.totalOperationalEmissionsKg.result, 300);
@@ -413,6 +425,7 @@ test('invalid shared inputs withhold energy estimates and real zero results rema
     setupScope(store);
     store.scope.functionalUnit.resourceType = 'CPU';
     store.hardware.push({ ...validHardware(), cpuQuantity: 1 });
+    Object.assign(store.datacenters[0].energy, validEnergy());
     store.datacenters[0].energy.carbonIntensity = 100;
     store.datacenters[0].energy.energyConsumption = 0;
     assert.equal(results.totalOperationalEmissionsKg.result, 0);
@@ -475,8 +488,11 @@ test('cleared nested energy survives persistence and reset restores fresh assess
     const store = useSurveyDataStore();
     const results = useSurveyResultsStore();
     setupScope(store);
+    Object.assign(store.datacenters[0].energy, validEnergy());
     store.datacenters[0].energy.energyConsumption = 12;
     store.clearDatacenterEnergy('dc1');
+    // Clearing resets the whole energy block, so refill the mandatory strings before saving.
+    Object.assign(store.datacenters[0].energy, validEnergy({ energyConsumption: null }));
     const json = store.exportJson(defaultExportMetadata());
     const state = JSON.parse(json);
     assert.equal('energy' in state, false);
@@ -493,6 +509,8 @@ test('cleared nested energy survives persistence and reset restores fresh assess
         store.addBoundaryItem('excluded');
         store.addHardwareItem();
         store.addDatacenter();
+        // Added datacenters start blank; fill the mandatory energy strings so saves succeed.
+        Object.assign(store.datacenters.at(-1).energy, validEnergy());
         store.monitoringPeriod.value = 7;
         store.includeSecondHandEmbodied = true;
         store.includeUnderlyingServices = true;
@@ -752,10 +770,9 @@ test('existing results follow imported, loaded, and reset data without stale ref
     assessment.hardware = [
         { ...validHardware(), cpuQuantity: 2, impactManufacturingDistributionEol: 50 },
     ];
-    assessment.datacenters[0].energy = DatacenterEnergyDraftSchema.parse({
-        carbonIntensity: 1000,
-        energyConsumption: 100,
-    });
+    assessment.datacenters[0].energy = DatacenterEnergyDraftSchema.parse(
+        validEnergy({ carbonIntensity: 1000, energyConsumption: 100 }),
+    );
     assert.equal(data.importJson(JSON.stringify(assessment)), true);
     assert.equal(data.resultsStatus, 'complete');
     assert.equal(results.totalLifespanEmissionsKg.result, 150);
@@ -795,10 +812,9 @@ test('reading calculations never persists or normalizes the editable inputs in p
     const data = useSurveyDataStore();
     setupScope(data);
     data.monitoringPeriod.unit = 'year';
-    data.datacenters[0].energy = DatacenterEnergyDraftSchema.parse({
-        carbonIntensity: 1000,
-        energyConsumption: 100,
-    });
+    data.datacenters[0].energy = DatacenterEnergyDraftSchema.parse(
+        validEnergy({ carbonIntensity: 1000, energyConsumption: 100 }),
+    );
     data.datacenters[0].energy.pue = '';
     const before = JSON.stringify(data.$state);
     const results = useSurveyResultsStore();
@@ -818,11 +834,9 @@ test('operational totals combine local energy with monitoring units and lifespan
     const results = useSurveyResultsStore();
     setupScope(data);
     data.scope.lifespanYears = 2;
-    data.datacenters[0].energy = DatacenterEnergyDraftSchema.parse({
-        energyConsumption: 3000,
-        carbonIntensity: 400,
-        pue: 1.5,
-    });
+    data.datacenters[0].energy = DatacenterEnergyDraftSchema.parse(
+        validEnergy({ energyConsumption: 3000, carbonIntensity: 400, pue: 1.5 }),
+    );
     data.monitoringPeriod.value = 30;
     assert.equal(results.datacenterOperationalResults.result[0].co2Period, 1800);
     assert.ok(Math.abs(results.totalOperationalEmissionsKg.result - 43800) < 1e-8);
@@ -1255,7 +1269,9 @@ test('combined emissions distinguish absent measurements, measured zeros and par
     assert.equal(results.totalLifespanEmissionsKg.result, 12);
     assert.deepEqual(results.totalLifespanEmissionsKg.ignoredInputs, [data.hardware[0], dc]);
     data.hardware[0].impactManufacturingDistributionEol = 8;
-    dc.energy = DatacenterEnergyDraftSchema.parse({ energyConsumption: 10, carbonIntensity: 1000 });
+    dc.energy = DatacenterEnergyDraftSchema.parse(
+        validEnergy({ energyConsumption: 10, carbonIntensity: 1000 }),
+    );
     assert.equal(results.totalLifespanEmissionsKg.success, 'partial');
     assert.equal(results.totalLifespanEmissionsKg.result, 20);
     assert.deepEqual(
@@ -1755,10 +1771,9 @@ test('enabled underlying estimates must be valid for totals and assessment compl
     const results = useSurveyResultsStore();
     setupScope(data);
     data.hardware = [validHardware()];
-    data.datacenters[0].energy = DatacenterEnergyDraftSchema.parse({
-        carbonIntensity: 0,
-        energyConsumption: 100,
-    });
+    data.datacenters[0].energy = DatacenterEnergyDraftSchema.parse(
+        validEnergy({ carbonIntensity: 0, energyConsumption: 100 }),
+    );
     data.includeUnderlyingServices = true;
     data.underlyingServices = [
         UnderlyingServiceDraftSchema.parse({ co2EstimateKg: 10 }),
@@ -1866,10 +1881,9 @@ test('store-owned PUE presentation preserves supplied zero and rejects invalid e
     setupScope(data);
     data.monitoringPeriod.unit = 'year';
     const dc = data.datacenters[0];
-    dc.energy = DatacenterEnergyDraftSchema.parse({
-        carbonIntensity: 400,
-        energyConsumption: 3000,
-    });
+    dc.energy = DatacenterEnergyDraftSchema.parse(
+        validEnergy({ carbonIntensity: 400, energyConsumption: 3000 }),
+    );
     for (const [pue, expected] of [
         [null, 1200],
         [0, 0],
@@ -1908,10 +1922,9 @@ test('invalid resource selections fail before hardware validation and propagate 
     const results = useSurveyResultsStore();
     setupScope(data);
     data.monitoringPeriod.unit = 'year';
-    data.datacenters[0].energy = DatacenterEnergyDraftSchema.parse({
-        carbonIntensity: 1000,
-        energyConsumption: 100,
-    });
+    data.datacenters[0].energy = DatacenterEnergyDraftSchema.parse(
+        validEnergy({ carbonIntensity: 1000, energyConsumption: 100 }),
+    );
     const invalidSelections = [
         '',
         undefined,
