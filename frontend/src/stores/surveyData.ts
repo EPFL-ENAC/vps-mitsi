@@ -30,7 +30,6 @@ import {
     ScopeSchema,
     ScopeDraftSchema,
 } from 'src/models/Scope/schema';
-import { ResourceTypeSchema } from 'src/models/FunctionalUnit/schema';
 import {
     type UnderlyingService,
     UnderlyingServiceSchema,
@@ -76,21 +75,11 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
     const isScopeValid = computed<boolean>(
         () =>
             ScopeSchema.safeParse(scope.value).success &&
-            isFunctionalUnitValid.value &&
             datacenters.value.length > 0 &&
             datacenters.value.every(
                 (dc) => DatacenterGeneralInfoSchema.safeParse(dc.generalInfo).success,
             ),
     );
-
-    const isFunctionalUnitValid = computed<boolean>(() => {
-        const fu = scope.value.functionalUnit;
-        return (
-            ScopeSchema.shape.functionalUnit.safeParse(fu).success &&
-            (fu.resourceType !== ResourceTypeSchema.enum.Other ||
-                (Boolean(fu.resourceTypeOther?.trim()) && fu.manualFleetCount != null))
-        );
-    });
 
     /** True when a hardware row carries every field needed for the totals. */
     const hardwareRowValid = (h: HardwareItem): boolean => HardwareItemSchema.safeParse(h).success;
@@ -169,7 +158,9 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
             function: true,
         }).safeParse(scope.value).success;
 
-        const step2 = isFunctionalUnitValid.value;
+        const step2 = ScopeSchema.shape.functionalUnit.safeParse(
+            scope.value.functionalUnit,
+        ).success;
 
         const step3 =
             datacenters.value.length > 0 &&
@@ -177,7 +168,7 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
                 (dc) => DatacenterGeneralInfoSchema.safeParse(dc.generalInfo).success,
             );
 
-        return [step1, step2, step3].filter(Boolean).length;
+        return [step1, step2, step3].filter((x) => x === true).length;
     });
 
     const scopeStatus = computed(() => statusFor(isScopeValid.value, scopeHasUserInput.value));
