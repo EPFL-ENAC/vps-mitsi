@@ -184,7 +184,7 @@ test('empty editable tables still render translated column headers', async () =>
         [EnergyDatacentersTable, {}, en.energyColumns.carbonIntensity],
     ]) {
         const result = await renderTables(component, { props });
-        assert.match(result.html, new RegExp(expected));
+        assert.ok(result.html.includes(expected));
         assert.equal(result.tables[0].rows.length, 0);
     }
 });
