@@ -73,7 +73,7 @@
                             {{ $t('scopeFunctionalUnitLabel') }}
                         </span>
                     </div>
-                    <div class="scope-fu row items-baseline q-gutter-sm flex-nowrap">
+                    <div class="scope-fu row items-center q-gutter-sm flex-nowrap">
                         <span>{{ $t('scopeFuBefore') }}</span>
                         <ZodValidatedNumberInput
                             v-model="surveyData.scope.functionalUnit.usageDuration"
@@ -131,7 +131,6 @@
                             v-model="surveyData.scope.functionalUnit.resourceTypeOther"
                             class="scope-fu-text"
                             :schema="FunctionalUnitSchema.shape.resourceTypeOther"
-                            :label="$t('scopeFuResourceTypeOtherLabel')"
                             :placeholder="$t('scopeFuResourceTypeOtherPlaceholder')"
                             dense
                             outlined

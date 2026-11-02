@@ -356,47 +356,95 @@ test('resource selection uses exact enum values while drafts retain an unanswere
     }
 });
 
-test('custom resource fields stay optional and independent of the selected type', () => {
+test('selecting Other requires a custom name and fleet count on the validated schema', () => {
     const input = { timeUnit: 'hour', usageDuration: 1, resourceCount: 1, resourceType: 'Other' };
-    for (const schema of [FunctionalUnitSchema, FunctionalUnitDraftSchema]) {
-        // Selecting 'Other' imposes no cross-field requirement: the store owns that check.
-        assert.equal(schema.safeParse(input).success, true);
 
-        // A custom name is optional free text and is preserved verbatim.
-        for (const resourceTypeOther of ['', '   ', 'seats']) {
-            const parsed = schema.safeParse({ ...input, resourceTypeOther });
-            assert.equal(parsed.success, true, JSON.stringify(resourceTypeOther));
-            assert.equal(parsed.data.resourceTypeOther, resourceTypeOther);
-        }
-
-        // The total, when supplied, must be a positive integer.
-        for (const manualFleetCount of [0, 1.5, -1, '4']) {
-            const invalid = schema.safeParse({ ...input, manualFleetCount });
-            assert.equal(invalid.success, false, JSON.stringify(manualFleetCount));
-            assert.deepEqual(
-                invalid.error.issues.map((issue) => issue.path),
-                [['manualFleetCount']],
-            );
-        }
-
-        // Clearing the total is an unanswered value, not a measurement.
-        assert.equal(schema.safeParse({ ...input, manualFleetCount: '' }).success, true);
-        assert.equal(schema.safeParse({ ...input, manualFleetCount: null }).success, true);
-
-        const valid = schema.safeParse({
-            ...input,
-            resourceTypeOther: 'seats',
-            manualFleetCount: 4,
-        });
-        assert.equal(valid.success, true);
-        assert.equal(valid.data.resourceTypeOther, 'seats');
-        assert.equal(valid.data.manualFleetCount, 4);
+    // The cross-field rule lives on the validated schema; blank name or total is rejected.
+    for (const missing of [
+        {},
+        { resourceTypeOther: 'seats' },
+        { manualFleetCount: 4 },
+        { resourceTypeOther: '', manualFleetCount: 4 },
+        { resourceTypeOther: '   ', manualFleetCount: 4 },
+        { resourceTypeOther: 'seats', manualFleetCount: null },
+        { resourceTypeOther: 'seats', manualFleetCount: '' },
+    ]) {
+        const parsed = FunctionalUnitSchema.safeParse({ ...input, ...missing });
+        assert.equal(parsed.success, false, JSON.stringify(missing));
     }
 
-    // The same optional fields are accepted alongside every supported resource type.
-    for (const resourceType of ['CPU', 'GPU', 'Disk', 'RAM', 'Other']) {
+    // Supplying both fields satisfies the refinement and preserves them verbatim.
+    const valid = FunctionalUnitSchema.safeParse({
+        ...input,
+        resourceTypeOther: '  seats  ',
+        manualFleetCount: 4,
+    });
+    assert.equal(valid.success, true);
+    assert.equal(valid.data.resourceTypeOther, '  seats  ');
+    assert.equal(valid.data.manualFleetCount, 4);
+});
+
+test('custom resource fields stay optional on drafts and validate their own shape', () => {
+    const input = { timeUnit: 'hour', usageDuration: 1, resourceCount: 1, resourceType: 'Other' };
+
+    // Drafts stay permissive: an unfinished custom resource is not an error yet.
+    assert.equal(FunctionalUnitDraftSchema.safeParse(input).success, true);
+    assert.equal(
+        FunctionalUnitDraftSchema.safeParse({ ...input, resourceTypeOther: '   ' }).success,
+        true,
+    );
+    assert.equal(
+        FunctionalUnitDraftSchema.safeParse({ ...input, manualFleetCount: '' }).success,
+        true,
+    );
+    assert.equal(
+        FunctionalUnitDraftSchema.safeParse({ ...input, manualFleetCount: null }).success,
+        true,
+    );
+
+    // A custom name is optional free text and is preserved verbatim.
+    for (const resourceTypeOther of ['', '   ', 'seats']) {
+        const parsed = FunctionalUnitDraftSchema.safeParse({ ...input, resourceTypeOther });
+        assert.equal(parsed.success, true, JSON.stringify(resourceTypeOther));
+        assert.equal(parsed.data.resourceTypeOther, resourceTypeOther);
+    }
+
+    // The total, when supplied, must be a positive integer.
+    for (const manualFleetCount of [0, 1.5, -1, '4']) {
+        const invalid = FunctionalUnitDraftSchema.safeParse({ ...input, manualFleetCount });
+        assert.equal(invalid.success, false, JSON.stringify(manualFleetCount));
+        assert.deepEqual(
+            invalid.error.issues.map((issue) => issue.path),
+            [['manualFleetCount']],
+        );
+    }
+
+    const valid = FunctionalUnitDraftSchema.safeParse({
+        ...input,
+        resourceTypeOther: 'seats',
+        manualFleetCount: 4,
+    });
+    assert.equal(valid.success, true);
+    assert.equal(valid.data.resourceTypeOther, 'seats');
+    assert.equal(valid.data.manualFleetCount, 4);
+});
+
+test('the custom-resource requirement only applies to the Other type', () => {
+    const input = { timeUnit: 'hour', usageDuration: 1, resourceCount: 1 };
+    for (const resourceType of ['CPU', 'GPU', 'Disk', 'RAM']) {
         assert.equal(
             FunctionalUnitSchema.safeParse({ ...input, resourceType }).success,
+            true,
+            resourceType,
+        );
+        // The optional custom fields are accepted alongside concrete resource types.
+        assert.equal(
+            FunctionalUnitSchema.safeParse({
+                ...input,
+                resourceType,
+                resourceTypeOther: 'seats',
+                manualFleetCount: 4,
+            }).success,
             true,
             resourceType,
         );

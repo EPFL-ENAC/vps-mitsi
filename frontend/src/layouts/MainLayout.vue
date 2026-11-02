@@ -40,7 +40,7 @@
 
         <ExportAssessmentDialog v-model:open="exportDialogOpen" @confirm="onExportConfirmed" />
 
-        <q-drawer v-model="leftDrawerOpen" show-if-above :width="280" bordered>
+        <q-drawer v-model="leftDrawerOpen" show-if-above :width="350" bordered>
             <q-list padding>
                 <!-- Welcome -->
                 <q-item v-ripple clickable to="/" exact>
@@ -72,7 +72,7 @@
                                 {{ $t('mainNavScopeSubtitle') }}
                             </q-item-label>
                         </q-item-section>
-                        <q-item-section side class="nav-badge text-caption text-grey-7">
+                        <q-item-section side top class="nav-badge text-caption text-grey-7">
                             {{
                                 $t('mainNavScopeSteps', {
                                     done: surveyData.scopeCompletedStepCount,
@@ -92,7 +92,7 @@
                                 {{ $t('mainNavInventorySubtitle') }}
                             </q-item-label>
                         </q-item-section>
-                        <q-item-section side class="nav-badge text-caption text-grey-7">
+                        <q-item-section side top class="nav-badge text-caption text-grey-7">
                             {{ $t('mainNavHardwareRows', { n: surveyData.hardware.length }) }}
                         </q-item-section>
                     </q-item>
@@ -107,7 +107,7 @@
                                 {{ $t('mainNavEnergySubtitle') }}
                             </q-item-label>
                         </q-item-section>
-                        <q-item-section side class="nav-badge text-caption text-grey-7">
+                        <q-item-section side top class="nav-badge text-caption text-grey-7">
                             {{ energyBadgeLabel }}
                         </q-item-section>
                     </q-item>
@@ -127,31 +127,6 @@
                     </q-item-section>
                     <q-item-section>
                         <q-item-label>{{ $t('mainNavResults') }}</q-item-label>
-                        <q-item-label v-if="!resultsUnlocked" caption lines="2">
-                            {{ $t('mainNavResultsLockedHint') }}
-                        </q-item-label>
-                    </q-item-section>
-                    <q-item-section
-                        v-if="!resultsUnlocked"
-                        side
-                        class="nav-badge text-caption text-grey-7"
-                    >
-                        {{ $t('mainNavLocked') }}
-                    </q-item-section>
-                </q-item>
-
-                <!-- Report -->
-                <q-item
-                    v-ripple
-                    clickable
-                    :disable="!resultsUnlocked"
-                    :to="resultsUnlocked ? '/report' : undefined"
-                >
-                    <q-item-section avatar>
-                        <q-icon :name="resultsUnlocked ? 'print' : 'lock'" />
-                    </q-item-section>
-                    <q-item-section>
-                        <q-item-label>{{ $t('mainNavReport') }}</q-item-label>
                         <q-item-label v-if="!resultsUnlocked" caption lines="2">
                             {{ $t('mainNavResultsLockedHint') }}
                         </q-item-label>
