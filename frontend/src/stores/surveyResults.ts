@@ -12,6 +12,8 @@ import {
     HardwareStorageMeasurementsSchema,
     HardwareCpuFleetMeasurementsSchema,
     HardwareGpuFleetMeasurementsSchema,
+    HardwareDiskFleetMeasurementsSchema,
+    HardwareRamFleetMeasurementsSchema,
     type HardwareCategory,
 } from 'src/models/HardwareItem/schema';
 import {
@@ -31,6 +33,8 @@ import {
     storageTotal as calculateStorageTotal,
     cpuFleetTotal,
     gpuFleetTotal,
+    diskFleetTotal,
+    ramFleetTotal,
 } from 'src/models/HardwareItem/computations';
 import { timeUnitsPerYear } from 'src/models/TimeUnit/utils';
 import { sum } from 'src/utils/math';
@@ -69,9 +73,15 @@ export interface EmbodiedGroup {
 
 // Retain the existing Zod diagnostic path while renaming the public fleet-count result.
 const ResourceCountSchema = z.object({ resourcesInService: z.number().positive() });
+/** A hand-stated custom total, reused for the fleet count and its diagnostics. */
+const ManualFleetCountSchema = z.object({ manualFleetCount: z.number().int().positive() });
 const ResourceSelectionContextSchema = z.object({
     scope: z.object({
-        functionalUnit: ScopeSchema.shape.functionalUnit.pick({ resourceType: true }),
+        functionalUnit: ScopeSchema.shape.functionalUnit.pick({
+            resourceType: true,
+            resourceTypeOther: true,
+            manualFleetCount: true,
+        }),
     }),
 });
 const FunctionalUnitContextSchema = z.object({
@@ -219,25 +229,51 @@ export const useSurveyResultsStore = defineStore('surveyResults', () => {
         return ComputationResult.sum(contributions, { empty: 'failure' });
     });
 
-    /** Selected CPU/GPU fleet count, applying the same second-hand exclusion as embodied emissions. */
+    /** Selected resource fleet count, applying the same second-hand exclusion as embodied emissions. */
     const selectedResourceFleetCount = computed<ComputationResult<number, HardwareItem>>(() => {
         const selection = ResourceSelectionContextSchema.safeParse({ scope: data.scope });
         if (!selection.success) return ComputationResult.failure([selection.error]);
-        const { resourceType } = selection.data.scope.functionalUnit;
+        const { resourceType, manualFleetCount } = selection.data.scope.functionalUnit;
         const excludedIfNeeded = data.hardware.filter((row) => !isSecondHandExcluded(row));
 
-        if (resourceType === ResourceTypeSchema.enum.CPU) {
-            return ComputationResult.bulkValidateAndMap(
-                excludedIfNeeded,
-                HardwareCpuFleetMeasurementsSchema,
-                cpuFleetTotal,
-            ).map(sum);
+        // Fleet in service = Σ (element quantity × quantity of that same resource).
+        switch (resourceType) {
+            case ResourceTypeSchema.enum.CPU:
+                return ComputationResult.bulkValidateAndMap(
+                    excludedIfNeeded,
+                    HardwareCpuFleetMeasurementsSchema,
+                    cpuFleetTotal,
+                ).map(sum);
+            case ResourceTypeSchema.enum.GPU:
+                return ComputationResult.bulkValidateAndMap(
+                    excludedIfNeeded,
+                    HardwareGpuFleetMeasurementsSchema,
+                    gpuFleetTotal,
+                ).map(sum);
+            case ResourceTypeSchema.enum.Disk:
+                return ComputationResult.bulkValidateAndMap(
+                    excludedIfNeeded,
+                    HardwareDiskFleetMeasurementsSchema,
+                    diskFleetTotal,
+                ).map(sum);
+            case ResourceTypeSchema.enum.RAM:
+                return ComputationResult.bulkValidateAndMap(
+                    excludedIfNeeded,
+                    HardwareRamFleetMeasurementsSchema,
+                    ramFleetTotal,
+                ).map(sum);
+            case ResourceTypeSchema.enum.Other:
+                // Custom resources are not in the inventory; the total is stated by hand.
+                return ComputationResult.validateAndMap(
+                    ManualFleetCountSchema,
+                    { manualFleetCount },
+                    (value) => value.manualFleetCount,
+                );
+            default: {
+                const exhaustiveCheck: never = resourceType;
+                throw new Error(`Unhandled resource type: ${String(exhaustiveCheck)}`);
+            }
         }
-        return ComputationResult.bulkValidateAndMap(
-            excludedIfNeeded,
-            HardwareGpuFleetMeasurementsSchema,
-            gpuFleetTotal,
-        ).map(sum);
     });
 
     const emissionsPerFunctionalUnitKg = computed<ComputationResult<number, EmissionInput>>(() => {

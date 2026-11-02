@@ -3,6 +3,7 @@ name: Performance
 about: "Runtime, memory, speed, or storage inefficiency"
 title: ""
 labels: [perf]
+type: Task
 assignees: ""
 ---
 

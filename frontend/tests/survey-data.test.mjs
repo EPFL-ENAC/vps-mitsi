@@ -10,7 +10,13 @@ import { HardwareItemDraftSchema } from '../src/models/HardwareItem/schema.ts';
 import { MITSI_SCHEMA_VERSION, MitsiStateDraftSchema } from '../src/models/MitsiState/schema.ts';
 import { UnderlyingServiceDraftSchema } from '../src/models/UnderlyingService/schema.ts';
 
-import { setupScope, validHardware } from './helpers/survey-fixtures.mjs';
+import {
+    defaultExportMetadata,
+    setupScope,
+    validEnergy,
+    validHardware,
+    withoutMetadata,
+} from './helpers/survey-fixtures.mjs';
 
 let stored;
 beforeEach(() => {
@@ -31,12 +37,22 @@ test('blank and partially edited assessments survive save and reload, including 
     store.addBoundaryItem('included');
     store.addHardwareItem();
     store.scope.organizationName = 'EPFL';
+    // A datacenter must carry its mandatory energy strings to be persistable.
+    Object.assign(store.datacenters[0].energy, validEnergy());
     assert.equal(store.saveToStorage(), true);
-    const snapshot = store.exportJson();
+    const snapshot = store.exportJson(defaultExportMetadata());
     setActivePinia(createPinia());
     const restored = useSurveyDataStore();
     restored.loadFromStorage();
-    assert.equal(restored.exportJson(), snapshot);
+    // exportedAt is stamped per call, so compare the assessment payload without it.
+    const { metadata: firstMetadata, ...stateSnapshot } = JSON.parse(snapshot);
+    const { metadata: secondMetadata, ...restoredSnapshot } = JSON.parse(
+        restored.exportJson(defaultExportMetadata()),
+    );
+    assert.deepEqual(restoredSnapshot, stateSnapshot);
+    assert.equal(firstMetadata.exportedBy, 'Test Assessor');
+    assert.equal(secondMetadata.exportedBy, 'Test Assessor');
+    assert.match(firstMetadata.exportedAt, /^\d{4}-\d{2}-\d{2}T/);
     assert.equal(restored.hardware.length, 1);
     assert.equal(restored.datacenters.length, 1);
     assert.equal(restored.scope.includedItems.length, 1);
@@ -52,16 +68,19 @@ test('save timestamps survive reload and only advance on successful persistence'
     assert.equal(store.saveToStorage(), true);
     const firstSavedAt = now;
     assert.equal(store.savedAt, firstSavedAt);
+    // Storage holds the assessment only; export metadata is never persisted with it.
+    const exportedState = withoutMetadata(JSON.parse(store.exportJson(defaultExportMetadata())));
     assert.deepEqual(JSON.parse(stored.get(MITSI_STORAGE_KEY)), {
-        assessment: JSON.parse(store.exportJson()),
+        assessment: exportedState,
         savedAt: firstSavedAt,
     });
 
     now += 60_000;
     store.scope.organizationName = 'Edited';
-    const exported = JSON.parse(store.exportJson());
+    const exported = JSON.parse(store.exportJson(defaultExportMetadata()));
     assert.equal('savedAt' in exported, false);
     assert.equal('assessment' in exported, false);
+    assert.equal(exported.metadata.exportedBy, 'Test Assessor');
     assert.equal(store.savedAt, firstSavedAt);
     assert.equal(JSON.parse(stored.get(MITSI_STORAGE_KEY)).savedAt, firstSavedAt);
 
@@ -88,20 +107,6 @@ test('import persists its local save time and restores it on reload', () => {
     restored.loadFromStorage();
     assert.equal(restored.savedAt, now);
     assert.equal(restored.scope.organizationName, 'Imported');
-});
-
-test('unwrapped current-version drafts load without an invented timestamp', () => {
-    const assessment = MitsiStateDraftSchema.parse({ scope: { organizationName: 'Legacy' } });
-    const legacy = JSON.stringify(assessment);
-    stored.set(MITSI_STORAGE_KEY, legacy);
-    const store = useSurveyDataStore();
-    store.savedAt = 123;
-    store.loadFromStorage();
-    assert.equal(store.savedAt, null);
-    assert.equal(store.scope.organizationName, 'Legacy');
-    assert.equal(stored.get(MITSI_STORAGE_KEY), legacy);
-    assert.equal(store.saveToStorage(), true);
-    assert.deepEqual(JSON.parse(stored.get(MITSI_STORAGE_KEY)).assessment, assessment);
 });
 
 test('missing or invalid timestamp metadata does not discard valid assessments', () => {
@@ -141,7 +146,7 @@ test('invalid saves and exports preserve previous storage and timestamps', () =>
     const store = useSurveyDataStore();
     store.hardware.push(validHardware());
     assert.equal(store.saveToStorage(), true);
-    store.exportJson();
+    store.exportJson(defaultExportMetadata());
     const previous = stored.get(MITSI_STORAGE_KEY);
     const savedAt = store.savedAt;
     const exportedAt = store.exportedAt;
@@ -149,7 +154,7 @@ test('invalid saves and exports preserve previous storage and timestamps', () =>
     assert.equal(store.saveToStorage(), false);
     assert.equal(stored.get(MITSI_STORAGE_KEY), previous);
     assert.equal(store.savedAt, savedAt);
-    assert.throws(() => store.exportJson());
+    assert.throws(() => store.exportJson(defaultExportMetadata()));
     assert.equal(store.exportedAt, exportedAt);
     assert.equal(store.hardware[0].quantity, -1);
 });
@@ -166,6 +171,8 @@ test('storage failures return false and do not mark the assessment saved', () =>
     assert.equal(store.saveToStorage(), false);
     assert.equal(store.savedAt, savedAt);
     assert.equal(stored.get(MITSI_STORAGE_KEY), previous);
+    // persistDraft is attempted inside the import, so the blocked write surfaces
+    // as a failed import even though the file itself parses.
     assert.equal(store.importJson(JSON.stringify({ schemaVersion: MITSI_SCHEMA_VERSION })), false);
     assert.equal(store.scope.organizationName, 'Edited');
     assert.equal(store.savedAt, savedAt);
@@ -177,14 +184,19 @@ test('save and export normalize cleared numerics without turning invalid values 
     store.scope.lifespanYears = '';
     store.hardware.push({ ...validHardware(), quantity: null });
     store.addDatacenter();
+    // Mandatory energy strings stay filled so the cleared numerics remain persistable.
+    Object.assign(store.datacenters[0].energy, validEnergy());
     store.datacenters[0].energy.pue = '';
     store.datacenters[0].energy.energyConsumption = '';
     assert.equal(store.saveToStorage(), true);
-    const snapshot = JSON.parse(store.exportJson());
+    const snapshot = JSON.parse(store.exportJson(defaultExportMetadata()));
+    assert.equal(snapshot.metadata.exportedBy, 'Test Assessor');
     assert.equal(snapshot.scope.lifespanYears, null);
     assert.equal(snapshot.hardware[0].quantity, null);
     assert.equal(snapshot.datacenters[0].energy.pue, null);
-    assert.deepEqual(JSON.parse(stored.get(MITSI_STORAGE_KEY)).assessment, snapshot);
+    // Storage holds the assessment only; export metadata is never persisted with it.
+    const exportedState = withoutMetadata(snapshot);
+    assert.deepEqual(JSON.parse(stored.get(MITSI_STORAGE_KEY)).assessment, exportedState);
 });
 
 test('imports reject invalid values and future versions without changing state or storage', () => {
@@ -207,20 +219,23 @@ test('imports reject invalid values and future versions without changing state o
     }
 });
 
-test('orphan references are filtered only at load/import, while draft placeholders survive', () => {
+test('load and import keep every hardware row, including unknown and unassigned references', () => {
     const store = useSurveyDataStore();
     setupScope(store);
+    // The scope datacenter needs its mandatory energy strings to stay persistable.
+    Object.assign(store.datacenters[0].energy, validEnergy());
     store.hardware.push(
         validHardware(),
         HardwareItemDraftSchema.parse({ id: 'blank' }),
         HardwareItemDraftSchema.parse({ id: 'orphan', datacenterId: 'unknown' }),
     );
     assert.equal(store.saveToStorage(), true);
-    assert.equal(JSON.parse(store.exportJson()).hardware.length, 3);
-    assert.equal(store.importJson(store.exportJson()), true);
+    assert.equal(JSON.parse(store.exportJson(defaultExportMetadata())).hardware.length, 3);
+    assert.equal(store.importJson(store.exportJson(defaultExportMetadata())), true);
+    // References are never silently filtered, so all three rows survive the round trip.
     assert.deepEqual(
         store.hardware.map((row) => row.id),
-        ['h1', 'blank'],
+        ['h1', 'blank', 'orphan'],
     );
 });
 
@@ -257,10 +272,9 @@ test('completion validates all canonical scope and hardware fields', () => {
 test('energy and results completion require a valid monitoring period and optional PUE', () => {
     const store = useSurveyDataStore();
     setupScope(store);
-    store.datacenters[0].energy = DatacenterEnergyDraftSchema.parse({
-        carbonIntensity: 1,
-        energyConsumption: 0,
-    });
+    store.datacenters[0].energy = DatacenterEnergyDraftSchema.parse(
+        validEnergy({ carbonIntensity: 1, energyConsumption: 0 }),
+    );
     assert.equal(store.energyConsumptionStatus, 'complete');
     assert.equal(store.resultsStatus, 'partial');
     for (const patch of [{ value: 0.5 }, { unit: 'unknown' }]) {
@@ -342,7 +356,7 @@ test('fresh and saved defaults have no progress and never instantiate the result
     ];
     assert.deepEqual(statuses(), Array(4).fill('not_started'));
     data.saveToStorage();
-    data.exportJson();
+    data.exportJson(defaultExportMetadata());
     data.loadFromStorage();
     assert.deepEqual(statuses(), Array(4).fill('not_started'));
     data.scope.organizationName = 'EPFL';
@@ -416,10 +430,9 @@ test('section statuses follow input validity, invalidation, clearing, and reset'
 
     setupScope(data);
     data.hardware = [validHardware()];
-    data.datacenters[0].energy = DatacenterEnergyDraftSchema.parse({
-        carbonIntensity: 100,
-        energyConsumption: 0,
-    });
+    data.datacenters[0].energy = DatacenterEnergyDraftSchema.parse(
+        validEnergy({ carbonIntensity: 100, energyConsumption: 0 }),
+    );
     assert.equal(data.scopeStatus, 'complete');
     assert.equal(data.hardwareInventoryStatus, 'complete');
     assert.equal(data.energyConsumptionStatus, 'complete');
@@ -501,13 +514,17 @@ test('every cleared numeric field stays empty through export, import, and storag
         for (const field of fields) row[field] = empty;
         row.rackUnit = empty;
         data.addDatacenter();
+        // Mandatory energy strings stay filled; only the numeric fields are cleared here.
+        Object.assign(data.datacenters[0].energy, validEnergy());
         for (const field of ['pue', 'carbonIntensity', 'energyConsumption'])
             data.datacenters[0].energy[field] = empty;
         data.underlyingServices = [UnderlyingServiceDraftSchema.parse({})];
         data.underlyingServices[0].co2EstimateKg = empty;
         assert.equal(data.saveToStorage(), true);
-        const json = data.exportJson();
+        const metadata = defaultExportMetadata({ exportedBy: 'Cleared Fields' });
+        const json = data.exportJson(metadata);
         const snapshot = JSON.parse(json);
+        assert.equal(snapshot.metadata.exportedBy, 'Cleared Fields');
         assert.equal(snapshot.scope.lifespanYears, null);
         assert.equal(snapshot.scope.functionalUnit.usageDuration, null);
         assert.equal(snapshot.scope.functionalUnit.resourceCount, null);
@@ -518,11 +535,15 @@ test('every cleared numeric field stays empty through export, import, and storag
             assert.equal(snapshot.datacenters[0].energy[field], null);
         assert.equal(snapshot.underlyingServices[0].co2EstimateKg, null);
         assert.equal(data.importJson(json), true);
-        assert.equal(data.exportJson(), json);
+        // Same metadata, same payload; only exportedAt is re-stamped on each call.
+        const afterReimport = withoutMetadata(JSON.parse(data.exportJson(metadata)));
+        const original = withoutMetadata(snapshot);
+        assert.deepEqual(afterReimport, original);
         setActivePinia(createPinia());
         const restored = useSurveyDataStore();
         restored.loadFromStorage();
-        assert.equal(restored.exportJson(), json);
+        const afterReload = withoutMetadata(JSON.parse(restored.exportJson(metadata)));
+        assert.deepEqual(afterReload, original);
         assert.equal(restored.scopeStatus, 'partial');
         assert.equal(restored.resultsStatus, 'partial');
     }
@@ -532,26 +553,30 @@ test('explicit zero measurements survive saving and loading unchanged', () => {
     const data = useSurveyDataStore();
     setupScope(data);
     data.hardware = [{ ...validHardware(), rackUnit: 0 }];
-    data.datacenters[0].energy = DatacenterEnergyDraftSchema.parse({
-        carbonIntensity: 0,
-        energyConsumption: 0,
-        pue: 0,
-    });
+    data.datacenters[0].energy = DatacenterEnergyDraftSchema.parse(
+        validEnergy({ carbonIntensity: 0, energyConsumption: 0, pue: 0 }),
+    );
     data.includeUnderlyingServices = true;
     data.underlyingServices = [UnderlyingServiceDraftSchema.parse({ co2EstimateKg: 0 })];
     assert.equal(data.resultsStatus, 'complete');
     assert.equal(data.saveToStorage(), true);
-    const json = data.exportJson();
+    const metadata = defaultExportMetadata({ exportedBy: 'Zero Measurements' });
+    const json = data.exportJson(metadata);
     const snapshot = JSON.parse(json);
+    assert.equal(snapshot.metadata.exportedBy, 'Zero Measurements');
     assert.equal(snapshot.hardware[0].impactManufacturingDistributionEol, 0);
     assert.equal(snapshot.hardware[0].rackUnit, 0);
     assert.equal(snapshot.datacenters[0].energy.pue, 0);
     assert.equal(snapshot.underlyingServices[0].co2EstimateKg, 0);
     assert.equal(data.importJson(json), true);
-    assert.equal(data.exportJson(), json);
+    // Same metadata, same payload; only exportedAt is re-stamped on each call.
+    const afterReimport = withoutMetadata(JSON.parse(data.exportJson(metadata)));
+    const original = withoutMetadata(snapshot);
+    assert.deepEqual(afterReimport, original);
     setActivePinia(createPinia());
     const restored = useSurveyDataStore();
     restored.loadFromStorage();
-    assert.equal(restored.exportJson(), json);
+    const afterReload = withoutMetadata(JSON.parse(restored.exportJson(metadata)));
+    assert.deepEqual(afterReload, original);
     assert.equal(restored.resultsStatus, 'complete');
 });

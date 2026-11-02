@@ -73,7 +73,7 @@
                             {{ $t('scopeFunctionalUnitLabel') }}
                         </span>
                     </div>
-                    <div class="scope-fu row items-center q-gutter-sm flex-nowrap">
+                    <div class="scope-fu row items-baseline q-gutter-sm flex-nowrap">
                         <span>{{ $t('scopeFuBefore') }}</span>
                         <ZodValidatedNumberInput
                             v-model="surveyData.scope.functionalUnit.usageDuration"
@@ -126,6 +126,32 @@
                                 $t('scopeFuResourceTypeTooltip')
                             }}</q-tooltip>
                         </ZodValidatedSelect>
+                        <ZodValidatedTextInput
+                            v-if="isCustomResource"
+                            v-model="surveyData.scope.functionalUnit.resourceTypeOther"
+                            class="scope-fu-text"
+                            :schema="FunctionalUnitSchema.shape.resourceTypeOther"
+                            :label="$t('scopeFuResourceTypeOtherLabel')"
+                            :placeholder="$t('scopeFuResourceTypeOtherPlaceholder')"
+                            dense
+                            outlined
+                            hide-bottom-space
+                        >
+                            <q-tooltip anchor="center right" self="center left">{{
+                                $t('scopeFuResourceTypeOtherTooltip')
+                            }}</q-tooltip>
+                        </ZodValidatedTextInput>
+                        <ZodValidatedNumberInput
+                            v-if="isCustomResource"
+                            v-model="surveyData.scope.functionalUnit.manualFleetCount"
+                            class="scope-fu-input"
+                            :schema="FunctionalUnitSchema.shape.manualFleetCount"
+                            dense
+                            outlined
+                            hide-bottom-space
+                        >
+                            <q-tooltip>{{ $t('scopeFuManualFleetCountTooltip') }}</q-tooltip>
+                        </ZodValidatedNumberInput>
                     </div>
                 </div>
             </div>
@@ -147,12 +173,10 @@
             :title-tooltip="$t('scopeBndColumnsTooltip')"
             purpose="report"
         >
-            <div class="text-subtitle1 q-mb-xs">{{ $t('scopeBndIncludedTitle') }}</div>
             <ScopeBoundaryItemsTable kind="included" />
 
             <q-separator spaced />
 
-            <div class="text-subtitle1 q-mb-xs">{{ $t('scopeBndExcludedTitle') }}</div>
             <ScopeBoundaryItemsTable kind="excluded" />
         </AssessmentSection>
 
@@ -207,6 +231,11 @@ const resourceTypeOptions = computed(() =>
         label: t(`scopeResourceType.${value}`),
     })),
 );
+
+/** Custom resources need a name and a hand-stated total, both entered by the user. */
+const isCustomResource = computed(
+    () => surveyData.scope.functionalUnit.resourceType === ResourceTypeSchema.enum.Other,
+);
 </script>
 
 <style scoped>
@@ -220,6 +249,11 @@ const resourceTypeOptions = computed(() =>
 }
 
 .scope-fu-select--grow {
+    width: 160px;
+    min-width: 140px;
+}
+
+.scope-fu-text {
     width: 160px;
     min-width: 140px;
 }

@@ -68,6 +68,31 @@ test('functional-unit text uses the current translated sentence and time unit', 
     assert.equal(buildFunctionalUnitSentence(t, fu), '3 CPU: 2 days');
 });
 
+test('custom resources render the entered name and fall back to the generic label', () => {
+    const { t } = createI18n({ legacy: false, locale: 'en', messages: { en } }).global;
+    const fu = FunctionalUnitSchema.parse({
+        timeUnit: 'day',
+        usageDuration: 2,
+        resourceCount: 3,
+        resourceType: 'Other',
+        resourceTypeOther: 'user session',
+        manualFleetCount: 5,
+    });
+    assert.equal(
+        buildFunctionalUnitSentence(t, fu),
+        'Usage of 2 day of the service with 3 user session',
+    );
+
+    // A blank name never leaks into the sentence; the generic label stands in.
+    for (const resourceTypeOther of [undefined, '', '   ']) {
+        assert.equal(
+            buildFunctionalUnitSentence(t, { ...fu, resourceTypeOther }),
+            'Usage of 2 day of the service with 3 Other',
+            JSON.stringify(resourceTypeOther),
+        );
+    }
+});
+
 test('PUE labels trust the store result and preserve explicit zero', () => {
     const { t } = createI18n({ legacy: false, locale: 'en', messages: { en } }).global;
     assert.equal(formatPueInclusion(t, { status: 'omitted' }), 'not included');

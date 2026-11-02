@@ -21,7 +21,7 @@ import { HardwareItemDraftSchema } from '../src/models/HardwareItem/schema.ts';
 import { ResourceTypeSchema } from '../src/models/FunctionalUnit/schema.ts';
 import en from '../src/i18n/en-GB/index.ts';
 import { renderTables } from './helpers/render-tables.mjs';
-import { setupScope, validHardware } from './helpers/survey-fixtures.mjs';
+import { setupScope, validEnergy, validHardware } from './helpers/survey-fixtures.mjs';
 
 const text = (html) => html.replace(/<[^>]*>/g, '');
 
@@ -31,7 +31,9 @@ const datacenter = () =>
         generalInfo: { abbreviation: 'DC', name: 'Test datacenter' },
     });
 const input = (result, label) =>
-    result.inputs.find((control) => control.$attrs['aria-label'] === label);
+    result.inputs.find(
+        (control) => control.$attrs['aria-label'] === label || control.$attrs.placeholder === label,
+    );
 const button = (result, label) =>
     result.buttons.find((control) => control.$attrs['aria-label'] === label);
 
@@ -97,7 +99,7 @@ test('scope deletion still blocks referenced datacenters and confirms unreferenc
     assert.equal(unused.store.datacenters.length, 0);
 });
 
-test('boundary tables keep persistent contextual headers and edit the selected collection', async () => {
+test('boundary rows render sentence inputs and edit selected collection only', async () => {
     for (const kind of ['included', 'excluded']) {
         const result = await renderTables(ScopeBoundaryItemsTable, {
             props: { kind },
@@ -105,17 +107,43 @@ test('boundary tables keep persistent contextual headers and edit the selected c
                 store.scope[`${kind}Items`] = [BoundaryItemDraftSchema.parse({ id: 'b1' })];
             },
         });
-        assertCellKinds(result);
-        const label = en.scopeBoundaryColumns[kind].reason;
-        assert.match(result.html, new RegExp(label));
-        input(result, label).$emit('update:modelValue', 'Assessment boundary');
-        assert.equal(result.store.scope[`${kind}Items`][0].reason, 'Assessment boundary');
-        assert.equal(
-            result.store.scope[kind === 'included' ? 'excludedItems' : 'includedItems'].length,
-            0,
+        const { prefix, add } = en.scopeBoundary[kind];
+        const { usedFor, because } = en.scopeBoundary.separators;
+        const placeholders = en.scopeBoundary.placeholders;
+
+        // Sentence flow: prefix, then 'used for' / 'because' separators around the inputs.
+        assert.match(result.html, new RegExp(prefix));
+        assert.match(result.html, new RegExp(usedFor));
+        assert.match(result.html, new RegExp(because));
+        assert.deepEqual(
+            result.inputs.map((control) => control.$attrs.placeholder),
+            [placeholders.type, placeholders.purpose, placeholders[kind + 'Reason']],
         );
+
+        // Two-way binding writes every field to the selected collection only.
+        const otherKind = kind === 'included' ? 'excluded' : 'included';
+        for (const [placeholder, field] of [
+            [placeholders.type, 'type'],
+            [placeholders.purpose, 'purpose'],
+            [placeholders[kind + 'Reason'], 'reason'],
+        ]) {
+            input(result, placeholder).$emit('update:modelValue', `${field}-value`);
+            assert.equal(result.store.scope[`${kind}Items`][0][field], `${field}-value`);
+        }
+        assert.equal(result.store.scope[`${otherKind}Items`].length, 0);
+
+        // The kind-specific add button appends to the selected collection only.
+        const addButton = result.buttons.find((control) => control.$props.label === `+ ${add}`);
+        addButton.$emit('click');
+        assert.equal(result.store.scope[`${kind}Items`].length, 2);
+        assert.equal(result.store.scope[`${otherKind}Items`].length, 0);
+
+        // Deleting a row removes it from the selected collection only.
         button(result, en.scopeBndDelete).$emit('click');
-        assert.equal(result.store.scope[`${kind}Items`].length, 0);
+        const remaining = result.store.scope[`${kind}Items`];
+        assert.equal(remaining.length, 1);
+        assert.notEqual(remaining[0].id, 'b1');
+        assert.equal(result.store.scope[`${otherKind}Items`].length, 0);
     }
 });
 
@@ -153,12 +181,26 @@ test('energy inputs retain canonical validation and nested updates; clear requir
 test('empty editable tables still render translated column headers', async () => {
     for (const [component, props, expected] of [
         [ScopeDatacentersTable, {}, en.scopeDatacenterColumns.name],
-        [ScopeBoundaryItemsTable, { kind: 'included' }, en.scopeBoundaryColumns.included.reason],
         [EnergyDatacentersTable, {}, en.energyColumns.carbonIntensity],
     ]) {
         const result = await renderTables(component, { props });
         assert.match(result.html, new RegExp(expected));
         assert.equal(result.tables[0].rows.length, 0);
+    }
+});
+
+test('empty boundary state renders only kind-specific add button', async () => {
+    for (const kind of ['included', 'excluded']) {
+        const { html, inputs, buttons } = await renderTables(ScopeBoundaryItemsTable, {
+            props: { kind },
+        });
+        // No rows yet: no sentence inputs and no dangling prefix, only the add action.
+        assert.equal(inputs.length, 0);
+        assert.doesNotMatch(html, new RegExp(en.scopeBoundary[kind].prefix));
+        assert.equal(
+            buttons.some((control) => control.$props.label === `+ ${en.scopeBoundary[kind].add}`),
+            true,
+        );
     }
 });
 
@@ -285,7 +327,11 @@ test('results and report share partial totals, PUE labels, functional units and 
                     DatacenterDraftSchema.parse({
                         id: 'ready',
                         generalInfo: { name: 'Ready', abbreviation: 'R' },
-                        energy: { carbonIntensity: 1000, energyConsumption: 100, pue: 1.5 },
+                        energy: validEnergy({
+                            carbonIntensity: 1000,
+                            energyConsumption: 100,
+                            pue: 1.5,
+                        }),
                     }),
                     DatacenterDraftSchema.parse({
                         id: 'draft',
@@ -369,7 +415,13 @@ test('unfinished descriptive scope fields do not mark complete emission values a
 });
 
 test('resource select derives translated options from the enum and requires a supported selection', async () => {
-    const labels = { CPU: 'Processors', GPU: 'Graphics processors' };
+    const labels = {
+        CPU: 'Processors',
+        GPU: 'Graphics processors',
+        Disk: 'Storage devices',
+        RAM: 'Memory modules',
+        Other: 'Custom resources',
+    };
     const result = await renderTables(ScopePage, {
         messages: { ...en, scopeResourceType: labels },
         setupStore: setupScope,
@@ -379,15 +431,28 @@ test('resource select derives translated options from the enum and requires a su
         resourceSelect.options,
         ResourceTypeSchema.options.map((value) => ({ value, label: labels[value] })),
     );
-    for (const invalid of ['', null, undefined, 'cpu', 'other']) {
+    for (const invalid of ['', null, undefined, 'cpu', 'other', 'disk', 'ram']) {
         assert.equal(typeof resourceSelect.rules[0](invalid), 'string');
     }
-    for (const resourceType of ['CPU', 'GPU']) {
+    for (const resourceType of ['CPU', 'GPU', 'Disk', 'RAM']) {
         assert.equal(resourceSelect.rules[0](resourceType), true);
         resourceSelect.$emit('update:modelValue', resourceType);
         assert.equal(result.store.scope.functionalUnit.resourceType, resourceType);
         assert.equal(result.store.isScopeValid, true);
     }
+    // A custom resource is a supported selection, but it needs a name and a total to be valid.
+    assert.equal(resourceSelect.rules[0]('Other'), true);
+    resourceSelect.$emit('update:modelValue', 'Other');
+    assert.equal(result.store.scope.functionalUnit.resourceType, 'Other');
+    assert.equal(result.store.isScopeValid, false);
+    result.store.scope.functionalUnit.resourceTypeOther = 'sessions';
+    assert.equal(result.store.isScopeValid, false);
+    result.store.scope.functionalUnit.manualFleetCount = 5;
+    assert.equal(result.store.isScopeValid, true);
+    // An unusable total still invalidates the scope through the field's own rule.
+    result.store.scope.functionalUnit.manualFleetCount = 0;
+    assert.equal(result.store.isScopeValid, false);
+    result.store.scope.functionalUnit.manualFleetCount = 5;
     resourceSelect.$emit('update:modelValue', '');
     assert.equal(result.store.scope.functionalUnit.resourceType, '');
     assert.equal(result.store.isScopeValid, false);

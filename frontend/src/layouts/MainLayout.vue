@@ -38,40 +38,131 @@
             </q-toolbar>
         </q-header>
 
+        <ExportAssessmentDialog v-model:open="exportDialogOpen" @confirm="onExportConfirmed" />
+
         <q-drawer v-model="leftDrawerOpen" show-if-above :width="280" bordered>
             <q-list padding>
+                <!-- Welcome -->
                 <q-item v-ripple clickable to="/" exact>
                     <q-item-section avatar>
                         <q-icon name="home" />
                     </q-item-section>
                     <q-item-section>{{ $t('mainNavWelcome') }}</q-item-section>
+                    <q-item-section side class="nav-badge text-caption text-grey-7">
+                        {{ $t('mainStatusRead') }}
+                    </q-item-section>
                 </q-item>
+
+                <!-- Assessment Dropdown -->
+                <q-expansion-item
+                    default-opened
+                    dense
+                    switch-toggle-side
+                    expand-icon="keyboard_arrow_down"
+                    header-class="text-weight-bold"
+                    :label="$t('mainNavAssessment')"
+                >
+                    <q-item v-ripple clickable to="/scope" class="q-pl-lg">
+                        <q-item-section avatar>
+                            <q-icon name="my_location" />
+                        </q-item-section>
+                        <q-item-section>
+                            <q-item-label>{{ $t('mainNavScope') }}</q-item-label>
+                            <q-item-label caption lines="1">
+                                {{ $t('mainNavScopeSubtitle') }}
+                            </q-item-label>
+                        </q-item-section>
+                        <q-item-section side class="nav-badge text-caption text-grey-7">
+                            {{
+                                $t('mainNavScopeSteps', {
+                                    done: surveyData.scopeCompletedStepCount,
+                                    total: 3,
+                                })
+                            }}
+                        </q-item-section>
+                    </q-item>
+
+                    <q-item v-ripple clickable to="/inventory" class="q-pl-lg">
+                        <q-item-section avatar>
+                            <q-icon name="memory" />
+                        </q-item-section>
+                        <q-item-section>
+                            <q-item-label>{{ $t('mainNavInventory') }}</q-item-label>
+                            <q-item-label caption lines="1">
+                                {{ $t('mainNavInventorySubtitle') }}
+                            </q-item-label>
+                        </q-item-section>
+                        <q-item-section side class="nav-badge text-caption text-grey-7">
+                            {{ $t('mainNavHardwareRows', { n: surveyData.hardware.length }) }}
+                        </q-item-section>
+                    </q-item>
+
+                    <q-item v-ripple clickable to="/energy" class="q-pl-lg">
+                        <q-item-section avatar>
+                            <q-icon name="bolt" />
+                        </q-item-section>
+                        <q-item-section>
+                            <q-item-label>{{ $t('mainNavEnergy') }}</q-item-label>
+                            <q-item-label caption lines="1">
+                                {{ $t('mainNavEnergySubtitle') }}
+                            </q-item-label>
+                        </q-item-section>
+                        <q-item-section side class="nav-badge text-caption text-grey-7">
+                            {{ energyBadgeLabel }}
+                        </q-item-section>
+                    </q-item>
+                </q-expansion-item>
 
                 <q-separator spaced />
 
+                <!-- Results -->
                 <q-item
-                    v-for="(block, key) in assessmentBlocks"
-                    :key="key"
                     v-ripple
                     clickable
-                    :to="block.to"
+                    :disable="!resultsUnlocked"
+                    :to="resultsUnlocked ? '/results' : undefined"
                 >
                     <q-item-section avatar>
-                        <q-icon :name="block.icon" />
+                        <q-icon :name="resultsUnlocked ? 'insights' : 'lock'" />
                     </q-item-section>
-                    <q-item-section>{{ $t(block.labelKey) }}</q-item-section>
-                    <q-item-section side>
-                        <span
-                            class="completion-dot"
-                            :class="`completion-dot--${block.status}`"
-                            :title="$t(completionLabelKey(block.status))"
-                        />
+                    <q-item-section>
+                        <q-item-label>{{ $t('mainNavResults') }}</q-item-label>
+                        <q-item-label v-if="!resultsUnlocked" caption lines="2">
+                            {{ $t('mainNavResultsLockedHint') }}
+                        </q-item-label>
+                    </q-item-section>
+                    <q-item-section
+                        v-if="!resultsUnlocked"
+                        side
+                        class="nav-badge text-caption text-grey-7"
+                    >
+                        {{ $t('mainNavLocked') }}
                     </q-item-section>
                 </q-item>
-                <q-separator spaced />
-                <q-item v-ripple clickable to="/report">
-                    <q-item-section avatar><q-icon name="print" /></q-item-section>
-                    <q-item-section>{{ $t('mainNavReport') }}</q-item-section>
+
+                <!-- Report -->
+                <q-item
+                    v-ripple
+                    clickable
+                    :disable="!resultsUnlocked"
+                    :to="resultsUnlocked ? '/report' : undefined"
+                >
+                    <q-item-section avatar>
+                        <q-icon :name="resultsUnlocked ? 'print' : 'lock'" />
+                    </q-item-section>
+                    <q-item-section>
+                        <q-item-label>{{ $t('mainNavReport') }}</q-item-label>
+                        <q-item-label v-if="!resultsUnlocked" caption lines="2">
+                            {{ $t('mainNavResultsLockedHint') }}
+                        </q-item-label>
+                    </q-item-section>
+                    <q-item-section
+                        v-if="!resultsUnlocked"
+                        side
+                        class="nav-badge text-caption text-grey-7"
+                    >
+                        {{ $t('mainNavLocked') }}
+                    </q-item-section>
                 </q-item>
             </q-list>
         </q-drawer>
@@ -165,24 +256,22 @@ import { computed, ref } from 'vue';
 import { useQuasar, date, exportFile } from 'quasar';
 import { useI18n } from 'vue-i18n';
 
-import type { BlockKey, BlockStatus } from 'src/types/ui';
+import type { ExportMetadataInput } from 'src/models/ExportMetadata/schema';
+import { isImportEmpty } from 'src/models/MitsiState/utils';
 import { formatDatacenterName, formatResult } from 'src/utils/format';
 import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
+import ExportAssessmentDialog from 'src/components/ExportAssessmentDialog.vue';
 
 const surveyData = useSurveyDataStore();
 const surveyResults = useSurveyResultsStore();
-
-interface BlockDef {
-    labelKey: string;
-    to: string;
-    icon: string;
-    status: BlockStatus;
-}
 
 const { t, locale } = useI18n();
 const epflLogoUrl = `${import.meta.env.BASE_URL}epfl.svg`;
 
 const leftDrawerOpen = ref(false);
+/** Controls the modal that collects export metadata before downloading. */
+const exportDialogOpen = ref(false);
+
 const operationalResultOptions = computed(() => ({
     missingLabel: t('mainNotApplicable'),
     partialLabel: surveyResults.operationalCalculationCoverage.isComplete
@@ -192,11 +281,13 @@ const operationalResultOptions = computed(() => ({
               total: surveyResults.operationalCalculationCoverage.totalDatacenterCount,
           }),
 }));
+
 const combinedResultOptions = computed(() => ({
     missingLabel: t('mainNotApplicable'),
     partialLabel:
         surveyResults.totalLifespanEmissionsKg.success === 'partial' ? t('resultsPartial') : '',
 }));
+
 const $q = useQuasar();
 
 function saveAssessment(): void {
@@ -205,48 +296,56 @@ function saveAssessment(): void {
     }
 }
 
-/** QFile returns a File object directly, empty draft results in immediate import, while one containing data triggers warning */
-function onFilePicked(file: File | null): void {
+/** QFile returns a File object directly; existing data triggers a confirmation dialog */
+async function onFilePicked(file: File | null): Promise<void> {
     if (!file) return;
 
-    if (surveyData.isStoreEmpty) {
-        readAndImport(file);
+    const json = await file.text().catch(() => null);
+    if (json === null) {
+        $q.notify({ type: 'negative', message: t('mainImportFailed') });
         return;
     }
 
+    if (surveyData.isEmpty) {
+        importText(json);
+        return;
+    }
+
+    const fileIsEmpty = isImportEmpty(json);
+
     $q.dialog({
-        title: t('mainImportWarningTitle'),
-        message: t('mainImportWarning'),
+        title: fileIsEmpty ? `⚠️ ${t('mainImportWarningTitle')}` : t('mainImportWarningTitle'),
+        message: fileIsEmpty ? t('mainImportWarningEmptyFile') : t('mainImportWarning'),
         cancel: true,
         persistent: true,
-    }).onOk(() => {
-        readAndImport(file);
-    });
+        // Red OK button looks different for case when file is empty
+        ...(fileIsEmpty && { ok: { color: 'negative' } }),
+    }).onOk(() => importText(json));
 }
 
-/** Reads the file and gives text to the store */
-function readAndImport(file: File): void {
-    const reader = new FileReader();
-    reader.onload = () => {
-        const result = reader.result;
-        if (typeof result !== 'string') return;
-        if (surveyData.importJson(result)) {
-            $q.notify({ type: 'positive', message: t('mainImportSuccess') });
-        } else {
-            $q.notify({ type: 'negative', message: t('mainImportFailed') });
-        }
-    };
-    reader.onerror = () => {
+/** Gives the text to the store and reports the result */
+function importText(json: string): void {
+    if (!surveyData.importJson(json)) {
         $q.notify({ type: 'negative', message: t('mainImportFailed') });
-    };
-    reader.readAsText(file);
+        return;
+    }
+    $q.notify(
+        surveyData.isEmpty
+            ? { type: 'warning', message: t('mainImportEmpty') }
+            : { type: 'positive', message: t('mainImportSuccess') },
+    );
 }
 
 /** Downloads whole assessment as a JSON file, named with the current date-time. */
 function exportAssessment(): void {
+    exportDialogOpen.value = true;
+}
+
+/** Runs once the export dialog collected and validated its metadata. */
+function onExportConfirmed(metadata: ExportMetadataInput): void {
     const status = exportFile(
         `mitsi-assessment-${date.formatDate(new Date(), 'YYYY-MM-DD_HH-mm-ss')}.json`,
-        surveyData.exportJson(),
+        surveyData.exportJson(metadata),
         { mimeType: 'application/json' },
     );
     if (status === true) {
@@ -256,45 +355,15 @@ function exportAssessment(): void {
     }
 }
 
-const assessmentBlocks = computed<Record<BlockKey, BlockDef>>(() => {
-    return {
-        scope: {
-            labelKey: 'mainNavScope',
-            to: '/scope',
-            icon: 'scope',
-            status: surveyData.scopeStatus,
-        },
-        inventory: {
-            labelKey: 'mainNavInventory',
-            to: '/inventory',
-            icon: 'dns',
-            status: surveyData.hardwareInventoryStatus,
-        },
-        energy: {
-            labelKey: 'mainNavEnergy',
-            to: '/energy',
-            icon: 'bolt',
-            status: surveyData.energyConsumptionStatus,
-        },
-        results: {
-            labelKey: 'mainNavResults',
-            to: '/results',
-            icon: 'insights',
-            status: surveyData.resultsStatus,
-        },
-    };
-});
+/** True once every assessment block is complete; drives the Results lock. */
+const resultsUnlocked = computed<boolean>(() => surveyData.resultsStatus === 'complete');
 
-function completionLabelKey(status: BlockStatus): string {
-    switch (status) {
-        case 'complete':
-            return 'mainStatusComplete';
-        case 'partial':
-            return 'mainStatusPartial';
-        default:
-            return 'mainStatusNotStarted';
-    }
-}
+/** Energy badge: untouched usage shows "Not started", otherwise the datacenter count. */
+const energyBadgeLabel = computed<string>(() =>
+    surveyData.energyConsumptionStatus === 'not_started'
+        ? t('mainStatusNotStarted')
+        : t('mainNavDatacenters', { n: surveyData.datacenters.length }),
+);
 
 function formatEmbodiedTonnes(value: number): string {
     return `${(value / 1000).toFixed(1)} ${t('mainUnitTonnes')}`;
@@ -335,6 +404,7 @@ const savedText = computed<string>(() =>
               }).format(surveyData.savedAt),
           }),
 );
+
 const exportedText = computed<string | null>(() =>
     surveyData.exportedAt
         ? t('mainFooterExportedAt', { timeAgo: formatTimeAgo(surveyData.exportedAt) })
@@ -358,22 +428,9 @@ function formatTimeAgo(ts: number): string {
     gap: 4px 24px;
     padding-block: 8px;
 }
-
-.completion-dot {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    border: 2px solid #c2cbd6;
-}
-
-.completion-dot--partial {
-    border-color: #8a5a00;
-    background: linear-gradient(90deg, #8a5a00 50%, transparent 50%);
-}
-
-.completion-dot--complete {
-    border-color: #0b7a55;
-    background: #0b7a55;
+/* bage status */
+.nav-badge {
+    white-space: nowrap;
+    color: #6b7280;
 }
 </style>

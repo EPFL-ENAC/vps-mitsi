@@ -1,7 +1,7 @@
 name: 🐞 Bug
 description: Report a bug
-title: "Bug: [short description]"
 labels: [bug]
+type: Bug
 assignees: []
 body:
   - type: checkboxes

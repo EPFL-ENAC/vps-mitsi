@@ -1,10 +1,10 @@
 // Configuration for your app
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file
 
-import { defineConfig } from '#q-app/wrappers';
+import { defineConfig } from '#q-app';
 import { fileURLToPath } from 'node:url';
 
-export default defineConfig(() => {
+export default defineConfig((ctx) => {
   return {
     // app boot file (/src/boot)
     // --> boot files are part of "main.js"
@@ -31,6 +31,13 @@ export default defineConfig(() => {
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#build
     build: {
+      // Preserve the aliases used by application imports and the Node test loader.
+      alias: {
+        src: ctx.appPaths.srcDir,
+        layouts: ctx.appPaths.resolve.src('layouts'),
+        pages: ctx.appPaths.resolve.src('pages'),
+      },
+
       target: {
         browser: ['es2022', 'firefox115', 'chrome115', 'safari14'],
         node: 'node20',

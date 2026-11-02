@@ -8,8 +8,8 @@ import {
     MITSI_SCHEMA_VERSION,
     type MitsiState,
     MitsiStateDraftSchema,
-    MitsiStateSchema,
 } from 'src/models/MitsiState/schema';
+import { isStateEmpty, PersistedAssessmentSchema } from 'src/models/MitsiState/utils';
 import type { BlockStatus } from 'src/types/ui';
 import {
     type DatacenterDraft,
@@ -30,10 +30,12 @@ import {
     ScopeSchema,
     ScopeDraftSchema,
 } from 'src/models/Scope/schema';
+import { ResourceTypeSchema } from 'src/models/FunctionalUnit/schema';
 import {
     type UnderlyingService,
     UnderlyingServiceSchema,
 } from 'src/models/UnderlyingService/schema';
+import type { ExportMetadataInput } from 'src/models/ExportMetadata/schema';
 
 /** Storage key used for browser persistence. */
 export const MITSI_STORAGE_KEY = 'mitsi-assessment';
@@ -44,11 +46,6 @@ export type RemoveDatacenterResult =
     | { removed: true }
     | { removed: false; reason: 'not_found' }
     | { removed: false; reason: 'in_use'; usage: DatacenterDeletionBlock };
-
-/** Loaded assessments must declare their version instead of receiving a creation default. */
-const PersistedAssessmentSchema = MitsiStateDraftSchema.extend({
-    schemaVersion: MitsiStateSchema.shape.schemaVersion,
-});
 
 /** Browser persistence metadata stays separate from the exported assessment. */
 const StoredDraftSchema = z.object({
@@ -79,21 +76,21 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
     const isScopeValid = computed<boolean>(
         () =>
             ScopeSchema.safeParse(scope.value).success &&
+            isFunctionalUnitValid.value &&
             datacenters.value.length > 0 &&
             datacenters.value.every(
                 (dc) => DatacenterGeneralInfoSchema.safeParse(dc.generalInfo).success,
             ),
     );
 
-    /** True when the draft holds nothing worth warning about */
-    const isStoreEmpty = computed<boolean>(
-        () =>
-            scope.value.organizationName === '' &&
-            scope.value.serviceName === '' &&
-            scope.value.function === '' &&
-            hardware.value.length === 0 &&
-            datacenters.value.length === 0,
-    );
+    const isFunctionalUnitValid = computed<boolean>(() => {
+        const fu = scope.value.functionalUnit;
+        return (
+            ScopeSchema.shape.functionalUnit.safeParse(fu).success &&
+            (fu.resourceType !== ResourceTypeSchema.enum.Other ||
+                (Boolean(fu.resourceTypeOther?.trim()) && fu.manualFleetCount != null))
+        );
+    });
 
     /** True when a hardware row carries every field needed for the totals. */
     const hardwareRowValid = (h: HardwareItem): boolean => HardwareItemSchema.safeParse(h).success;
@@ -163,6 +160,26 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
             datacenters.value.every((dc) => DatacenterEnergySchema.safeParse(dc.energy).success),
     );
 
+    // ── Scope progress ("x/3") ───────────────────────────
+    const scopeCompletedStepCount = computed<number>(() => {
+        const step1 = ScopeSchema.pick({
+            organizationName: true,
+            assessors: true,
+            serviceName: true,
+            function: true,
+        }).safeParse(scope.value).success;
+
+        const step2 = isFunctionalUnitValid.value;
+
+        const step3 =
+            datacenters.value.length > 0 &&
+            datacenters.value.every(
+                (dc) => DatacenterGeneralInfoSchema.safeParse(dc.generalInfo).success,
+            );
+
+        return [step1, step2, step3].filter(Boolean).length;
+    });
+
     const scopeStatus = computed(() => statusFor(isScopeValid.value, scopeHasUserInput.value));
     const hardwareInventoryStatus = computed(() =>
         statusFor(isScopeValid.value && hardwareRowsComplete.value, hardwareHasUserInput.value),
@@ -186,11 +203,11 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
     // ── Persistence (client-side, Quasar LocalStorage) ───────────────────────
     function loadFromStorage(): void {
         const raw: unknown = LocalStorage.getItem(MITSI_STORAGE_KEY);
-        const draft = StoredDraftSchema.safeParse(raw);
-        const state = parseState(draft.success ? draft.data.assessment : raw);
-        if (!state) return;
-        applyState(state);
-        savedAt.value = draft.success ? draft.data.savedAt : null;
+        const parsed = StoredDraftSchema.safeParse(raw);
+        if (!parsed.success) return;
+
+        applyState(parsed.data.assessment);
+        savedAt.value = parsed.data.savedAt;
     }
 
     function persistDraft(assessment: MitsiState): void {
@@ -221,8 +238,14 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
     }
 
     // ── Import / export (versioned JSON) ─────────────────────────────────────
-    function exportJson(): string {
-        const state = MitsiStateDraftSchema.parse(buildState());
+    function exportJson(metadata: ExportMetadataInput): string {
+        const state = MitsiStateDraftSchema.parse({
+            metadata: {
+                ...metadata,
+                exportedAt: new Date().toISOString(),
+            },
+            ...buildState(),
+        });
         const json = JSON.stringify(state, null, 2);
         exportedAt.value = Date.now();
         return json;
@@ -230,15 +253,17 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
 
     function importJson(json: string): boolean {
         try {
-            const state = parseState(JSON.parse(json) as unknown);
-            if (!state) return false;
-            persistDraft(state);
-            applyState(state);
+            const parsed = PersistedAssessmentSchema.safeParse(JSON.parse(json));
+            if (!parsed.success) return false;
+            persistDraft(parsed.data);
+            applyState(parsed.data);
             return true;
         } catch {
             return false;
         }
     }
+    /** True when the current draft holds no survey data; delegates to the pure model helper. */
+    const isEmpty = computed<boolean>(() => isStateEmpty(buildState()));
 
     // ── Datacenter lifecycle ─────────────────────────────────────────────────
     function getDatacenterDeletionBlock(id: string): DatacenterDeletionBlock | null {
@@ -293,21 +318,7 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
         };
     }
 
-    function parseState(raw: unknown): MitsiState | null {
-        const parsed = PersistedAssessmentSchema.safeParse(raw);
-        if (!parsed.success) return null;
-        const state = parsed.data;
-        const dcIds = new Set(state.datacenters.map((dc) => dc.id));
-        // An empty reference is an unfinished draft. Only filter real orphans,
-        // and only when loading: saving must not silently remove edited rows.
-        return {
-            ...state,
-            hardware: state.hardware.filter(
-                (row) => row.datacenterId === '' || dcIds.has(row.datacenterId),
-            ),
-        };
-    }
-
+    /** Applies a validated assessment to the editable refs. */
     function applyState(state: MitsiState): void {
         scope.value = state.scope;
         hardware.value = state.hardware;
@@ -329,8 +340,8 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
         savedAt,
         exportedAt,
         isScopeValid,
-        isStoreEmpty,
         missingMandatoryHardware,
+        scopeCompletedStepCount,
         scopeStatus,
         hardwareInventoryStatus,
         energyConsumptionStatus,
@@ -346,5 +357,6 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
         addDatacenter,
         addBoundaryItem,
         addHardwareItem,
+        isEmpty,
     };
 });

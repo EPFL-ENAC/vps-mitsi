@@ -47,11 +47,16 @@ export function buildFunctionalUnitSentence(
     t: (key: string, params?: Record<string, unknown>) => string,
     fu: Scope['functionalUnit'],
 ): string {
+    // A custom resource shows the user's own noun, falling back to the generic label.
+    const type =
+        fu.resourceType === 'Other'
+            ? fu.resourceTypeOther?.trim() || t('scopeResourceType.Other')
+            : fu.resourceType;
     return t('scopeFuSentence', {
         duration: fu.usageDuration ?? '—',
         unit: t('scopeTimeUnit_' + normalizeKey(fu.timeUnit)),
         count: fu.resourceCount ?? '—',
-        type: fu.resourceType,
+        type,
     });
 }
 
