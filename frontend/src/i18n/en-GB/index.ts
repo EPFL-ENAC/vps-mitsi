@@ -36,7 +36,7 @@ export default {
     exportDialogCommentPlaceholder: 'Anything worth noting about this export',
     exportDialogCancel: 'Cancel',
     exportDialogConfirm: 'Export',
-    mainImport: 'Import',
+    mainImport: 'IMPORT',
     mainImportWarningTitle: 'Import will replace the draft',
     mainImportWarning:
         'Your current assessment will be deleted. Use Export first if you want to keep it.',
@@ -59,7 +59,6 @@ export default {
     mainNavResults: 'Results',
     mainNavResultsLockedHint: 'Unlocks when assessments completed',
     mainNavLocked: 'Locked',
-    mainStatusRead: 'Read',
     mainStatusComplete: 'Complete',
     mainStatusPartial: 'In progress',
     mainStatusNotStarted: 'Not started',

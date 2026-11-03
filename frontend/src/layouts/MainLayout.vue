@@ -1,6 +1,6 @@
 <template>
     <q-layout view="hHh LpR lFf">
-        <q-header elevated class="bg-white text-dark">
+        <q-header bordered class="bg-white text-dark">
             <q-toolbar>
                 <q-btn
                     flat
@@ -12,17 +12,23 @@
                 />
                 <q-toolbar-title class="header-brand text-weight-medium">
                     <img :src="epflLogoUrl" alt="EPFL" class="header-brand__logo" />
-                    <span>MITSI</span>
+                    <span class="text-weight-bold">MITSI</span>
                 </q-toolbar-title>
                 <q-space />
                 <span class="text-caption text-grey-7 q-mr-sm gt-xs">
                     {{ $t('mainTagline') }}
                 </span>
-                <q-btn unelevated color="primary" :label="$t('mainSave')" @click="saveAssessment" />
                 <q-btn
                     unelevated
-                    color="primary"
-                    class="q-ml-sm"
+                    class="text-white q-mr-sm"
+                    style="background-color: #00a79f"
+                    :label="$t('mainSave')"
+                    @click="saveAssessment"
+                />
+                <q-btn
+                    unelevated
+                    class="text-white"
+                    style="background-color: #007480"
                     :label="$t('mainExport')"
                     @click="exportAssessment"
                 />
@@ -31,7 +37,9 @@
                     accept=".json,application/json"
                     dense
                     outlined
-                    class="q-ml-sm"
+                    color="white"
+                    label-color="white"
+                    class="q-ml-sm header-import text-white"
                     :label="$t('mainImport')"
                     @update:model-value="onFilePicked"
                 />
@@ -48,9 +56,6 @@
                         <q-icon name="home" />
                     </q-item-section>
                     <q-item-section>{{ $t('mainNavWelcome') }}</q-item-section>
-                    <q-item-section side class="nav-badge text-caption text-grey-7">
-                        {{ $t('mainStatusRead') }}
-                    </q-item-section>
                 </q-item>
 
                 <!-- Assessment Dropdown -->

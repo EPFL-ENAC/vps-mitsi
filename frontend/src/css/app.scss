@@ -35,6 +35,16 @@ body {
     padding-right: 0.8em;
 }
 
+.header-import .q-field__control {
+    background-color: #007480;
+    border-radius: 6px;
+}
+
+.header-import .q-field__native,
+.header-import .q-field__label {
+    text-align: center;
+    width: 100%;
+}
 // ─── Left Drawer Navigation ──────────────────────────────────────────────────
 .q-drawer {
     // Remove pseudo-element dividers between list items

@@ -8,7 +8,7 @@
         <q-banner
             v-if="!surveyData.isScopeValid"
             inline-actions
-            class="bg-warning text-white q-mb-md"
+            class="bg-amber-1 text-brown-9 q-mb-md rounded-borders"
         >
             {{ $t('scopeBlockFirstHint') }}
         </q-banner>
