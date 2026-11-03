@@ -26,6 +26,8 @@ export default {
     mainExport: 'Export',
     mainExportSuccess: 'File successfully downloaded.',
     mainExportFailed: 'Browser blocked the download.',
+    mainExportInvalidData: 'Could not export the assessment. Correct invalid fields and try again.',
+    mainExportError: 'Could not export the assessment. Please try again.',
     // --- Export metadata dialog (see src/components/ExportAssessmentDialog.vue) ---
     exportDialogTitle: 'Export assessment',
     exportDialogHint:

@@ -36,6 +36,7 @@ import {
     QItem,
     QIcon,
     QFile,
+    QForm,
     QBtnToggle,
     Ripple,
 } from 'quasar';
@@ -51,6 +52,7 @@ export async function renderTables(
 ) {
     const instances = [];
     const dialogs = [];
+    const notifications = [];
     const app = createSSRApp({ render: () => h(component, props) });
     const context = { req: { headers: {} } };
     const pinia = createPinia();
@@ -106,6 +108,7 @@ export async function renderTables(
                 QItem,
                 QIcon,
                 QFile,
+                QForm,
                 QBtnToggle,
             },
             directives: { Ripple },
@@ -121,6 +124,7 @@ export async function renderTables(
             },
         };
     };
+    app.config.globalProperties.$q.notify = (options) => notifications.push(options);
     app.use(createI18n({ legacy: false, locale: 'en', messages: { en: messages } }));
     const html = await renderToString(app, context);
     return {
@@ -129,6 +133,10 @@ export async function renderTables(
         router,
         results,
         dialogs,
+        notifications,
+        exportDialogs: instances.filter(
+            (instance) => instance.$options.__name === 'ExportAssessmentDialog',
+        ),
         modalDialogs: instances.filter((instance) => instance.$options.name === 'QDialog'),
         tables: instances.filter((instance) => instance.$options.name === 'QTable'),
         datacenterCharts: instances.filter(
