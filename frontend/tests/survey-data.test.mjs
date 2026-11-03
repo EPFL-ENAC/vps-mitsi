@@ -30,6 +30,26 @@ beforeEach(() => {
 });
 afterEach(() => mock.restoreAll());
 
+test('save and export omit stale capacity totals while preserving source measurements', () => {
+    const store = useSurveyDataStore();
+    const hardware = {
+        ...validHardware(),
+        memoryQuantity: 4,
+        memorySizeGb: 16,
+        storageQuantity: 2,
+        storageSize: 1000,
+    };
+    store.hardware.push({ ...hardware, memoryTotalGb: 999, storageTotal: 999 });
+
+    assert.equal(store.saveToStorage(), true);
+    const saved = JSON.parse(stored.get(MITSI_STORAGE_KEY)).assessment;
+    const exported = JSON.parse(store.exportJson(defaultExportMetadata()));
+    for (const assessment of [saved, exported]) {
+        assert.equal(assessment.schemaVersion, MITSI_SCHEMA_VERSION);
+        assert.deepEqual(assessment.hardware, [hardware]);
+    }
+});
+
 test('blank and partially edited assessments survive save and reload, including unassigned rows', () => {
     const store = useSurveyDataStore();
     assert.equal(store.saveToStorage(), true);

@@ -14,6 +14,8 @@ test('advanced inventory covers all display fields exactly once', async () => {
         [
             ...Object.keys(HardwareItemSchema.shape).filter((field) => field !== 'id'),
             'subtotal',
+            'memoryTotalGb',
+            'storageTotal',
         ].toSorted(),
     );
     for (const column of columns) {
@@ -144,8 +146,22 @@ test('derived columns calculate from inputs and subtotal sorts by calculated val
                 .replace(/<!--[\s\S]*?-->|<[^>]+>/g, '')
                 .trim(),
         ),
-        ['36.00', '64.00', '2,000.00'],
+        ['36.00', '64 GB', '2,000 GB'],
     );
+});
+
+test('derived memory and storage cells preserve explicit zero capacities', async () => {
+    const { html } = await renderInventoryTable({
+        hardware: [
+            HardwareItemDraftSchema.parse({
+                memoryQuantity: 0,
+                memorySizeGb: 16,
+                storageQuantity: 2,
+                storageSize: 0,
+            }),
+        ],
+    });
+    assert.equal((html.match(/>0 GB</g) ?? []).length, 2);
 });
 
 test('derived cells and excluded impact display missing values without formatting result objects', async () => {

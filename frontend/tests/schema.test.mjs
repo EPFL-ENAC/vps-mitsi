@@ -27,9 +27,25 @@ import { MonitoringPeriodDraftSchema } from '../src/models/MonitoringPeriod/sche
 import { UnderlyingServiceDraftSchema } from '../src/models/UnderlyingService/schema.ts';
 import { PersistedAssessmentSchema } from '../src/models/MitsiState/utils.ts';
 import { nullableNumber } from '../src/models/shared/schema.ts';
-import { validEnergy } from './helpers/survey-fixtures.mjs';
+import { validEnergy, validHardware } from './helpers/survey-fixtures.mjs';
 
 const jsonRoundTrip = (value) => JSON.parse(JSON.stringify(value));
+
+test('canonical and draft hardware schemas strip derived capacity totals', () => {
+    const hardware = {
+        ...validHardware(),
+        memoryQuantity: 4,
+        memorySizeGb: 16,
+        storageQuantity: 2,
+        storageSize: 1000,
+    };
+    for (const schema of [HardwareItemSchema, HardwareItemDraftSchema]) {
+        assert.deepEqual(
+            schema.parse({ ...hardware, memoryTotalGb: 999, storageTotal: 999 }),
+            hardware,
+        );
+    }
+});
 
 test('blank assessment and entity defaults retain their persisted shape', () => {
     assert.deepEqual(MitsiStateDraftSchema.parse({}), {
