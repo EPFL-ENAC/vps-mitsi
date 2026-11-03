@@ -1,9 +1,7 @@
 import type { Datacenter, EnergyMeasurements } from 'src/models/Datacenter/schema';
 
 export type PueInclusion =
-    | { status: 'unavailable' }
-    | { status: 'omitted' }
-    | { status: 'included'; value: number };
+    { status: 'unavailable' } | { status: 'omitted' } | { status: 'included'; value: number };
 
 export type DatacenterOperationalResult = {
     datacenter: Datacenter;
