@@ -16,18 +16,18 @@ export const DatacenterGeneralInfoDraftSchema = DatacenterGeneralInfoSchema.exte
 
 /** Energy information owned by a datacenter. */
 export const DatacenterEnergySchema = z.object({
-    comment: z.string().trim().min(1),
-    location: z.string().trim().min(1),
-    locationComment: z.string().trim().min(1),
+    comment: z.string().trim(),
+    location: z.string().trim(),
+    locationComment: z.string().trim(),
     /** Carbon intensity of the grid mix (gCO₂/kWh). */
     carbonIntensity: z.number().min(0),
-    carbonIntensityComment: z.string().trim().min(1),
+    carbonIntensityComment: z.string().trim(),
     /** Optional; the report must note whether PUE was included. */
     pue: nullableNumber(z.number().min(0)),
     pueComment: z.string().optional().default(''),
     /** Grid electricity consumed (kWh over the monitoring period). */
     energyConsumption: z.number().min(0),
-    energyComment: z.string().trim().min(1),
+    energyComment: z.string().trim(),
 });
 
 export const DatacenterEnergyDraftSchema = DatacenterEnergySchema.extend({

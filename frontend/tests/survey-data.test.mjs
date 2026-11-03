@@ -57,8 +57,6 @@ test('blank and partially edited assessments survive save and reload, including 
     store.addBoundaryItem('included');
     store.addHardwareItem();
     store.scope.organizationName = 'EPFL';
-    // A datacenter must carry its mandatory energy strings to be persistable.
-    Object.assign(store.datacenters[0].energy, validEnergy());
     assert.equal(store.saveToStorage(), true);
     const snapshot = store.exportJson(defaultExportMetadata());
     setActivePinia(createPinia());
@@ -77,6 +75,54 @@ test('blank and partially edited assessments survive save and reload, including 
     assert.equal(restored.datacenters.length, 1);
     assert.equal(restored.scope.includedItems.length, 1);
     assert.equal(restored.isScopeValid, false);
+});
+
+test('imported missing or blank energy text survives saving, export and reload', () => {
+    for (const field of [
+        'comment',
+        'location',
+        'locationComment',
+        'carbonIntensityComment',
+        'energyComment',
+    ]) {
+        for (const value of [undefined, '', '   ']) {
+            const store = useSurveyDataStore(createPinia());
+            setupScope(store);
+            store.hardware.push(validHardware());
+            Object.assign(store.datacenters[0].energy, validEnergy());
+            const assessment = JSON.parse(store.exportJson(defaultExportMetadata()));
+            assessment.datacenters[0].energy[field] = value;
+
+            assert.equal(store.importJson(JSON.stringify(assessment)), true, field);
+            const importedSavedAt = store.savedAt;
+            const restored = useSurveyDataStore(createPinia());
+            restored.loadFromStorage();
+            assert.equal(restored.scope.serviceName, 'Service');
+            assert.equal(restored.hardware.length, 1);
+            assert.equal(restored.datacenters[0].energy[field], '');
+            assert.equal(restored.savedAt, importedSavedAt);
+            assert.equal(restored.saveToStorage(), true);
+            assert.deepEqual(
+                withoutMetadata(JSON.parse(restored.exportJson(defaultExportMetadata()))),
+                withoutMetadata(JSON.parse(store.exportJson(defaultExportMetadata()))),
+            );
+        }
+    }
+});
+
+test('energy completion accepts blank text while still requiring measurements', () => {
+    const store = useSurveyDataStore();
+    setupScope(store);
+    store.hardware.push(validHardware());
+    Object.assign(store.datacenters[0].energy, {
+        carbonIntensity: 0,
+        energyConsumption: 0,
+    });
+    assert.equal(store.energyConsumptionStatus, 'complete');
+    assert.equal(store.resultsStatus, 'complete');
+    store.datacenters[0].energy.energyConsumption = null;
+    assert.equal(store.energyConsumptionStatus, 'partial');
+    assert.equal(store.resultsStatus, 'partial');
 });
 
 test('save timestamps survive reload and only advance on successful persistence', () => {
@@ -204,8 +250,6 @@ test('save and export normalize cleared numerics without turning invalid values 
     store.scope.lifespanYears = '';
     store.hardware.push({ ...validHardware(), quantity: null });
     store.addDatacenter();
-    // Mandatory energy strings stay filled so the cleared numerics remain persistable.
-    Object.assign(store.datacenters[0].energy, validEnergy());
     store.datacenters[0].energy.pue = '';
     store.datacenters[0].energy.energyConsumption = '';
     assert.equal(store.saveToStorage(), true);
@@ -242,8 +286,6 @@ test('imports reject invalid values and future versions without changing state o
 test('load and import keep every hardware row, including unknown and unassigned references', () => {
     const store = useSurveyDataStore();
     setupScope(store);
-    // The scope datacenter needs its mandatory energy strings to stay persistable.
-    Object.assign(store.datacenters[0].energy, validEnergy());
     store.hardware.push(
         validHardware(),
         HardwareItemDraftSchema.parse({ id: 'blank' }),
@@ -534,8 +576,6 @@ test('every cleared numeric field stays empty through export, import, and storag
         for (const field of fields) row[field] = empty;
         row.rackUnit = empty;
         data.addDatacenter();
-        // Mandatory energy strings stay filled; only the numeric fields are cleared here.
-        Object.assign(data.datacenters[0].energy, validEnergy());
         for (const field of ['pue', 'carbonIntensity', 'energyConsumption'])
             data.datacenters[0].energy[field] = empty;
         data.underlyingServices = [UnderlyingServiceDraftSchema.parse({})];
