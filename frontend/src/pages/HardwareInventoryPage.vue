@@ -8,18 +8,27 @@
             </p>
         </div>
 
-        <!-- Scope gating hint -->
+        <!-- Scope gating hint (informational) -->
         <q-banner
             v-if="!surveyData.isScopeValid"
             inline-actions
-            class="bg-warning text-white q-mb-md"
+            class="bg-blue-1 text-blue-9 q-mb-md rounded-borders"
         >
+            <template #avatar>
+                <q-icon name="info" />
+            </template>
             {{ $t('inventoryNoScopeHint') }}
         </q-banner>
 
         <!-- Toolbar (one line): mode toggle left, Add row rightmost -->
         <div class="row items-center q-gutter-x-md q-mb-sm inventory-toolbar">
-            <q-btn-toggle v-model="mode" toggle-color="primary" :options="modeOptions" />
+            <q-btn-toggle
+                v-model="mode"
+                toggle-color="primary"
+                unelevated
+                no-caps
+                :options="modeOptions"
+            />
             <q-btn
                 unelevated
                 color="primary"

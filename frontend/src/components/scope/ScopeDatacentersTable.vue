@@ -1,5 +1,13 @@
 <template>
-    <q-btn flat color="primary" class="q-mb-sm" :label="t('scopeDcAdd')" @click="addDatacenter" />
+    <q-btn
+        flat
+        dense
+        no-caps
+        size="sm"
+        class="q-mb-sm text-caption text-weight-medium text-grey-8"
+        :label="`+ ${t('scopeDcAdd')}`"
+        @click="addDatacenter"
+    />
     <q-table
         :rows="surveyData.datacenters"
         :columns="columns"

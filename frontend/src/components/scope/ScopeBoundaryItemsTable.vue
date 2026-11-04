@@ -6,10 +6,7 @@
                 :key="item.id"
                 class="boundary-row row items-baseline q-gutter-sm q-mb-sm"
             >
-                <span
-                    class="boundary-prefix"
-                    :class="{ 'boundary-prefix--included': kind === 'included' }"
-                >
+                <span class="boundary-prefix">
                     {{ t(`scopeBoundary.${kind}.prefix`) }}
                 </span>
 
@@ -61,8 +58,9 @@
         <q-btn
             flat
             dense
-            class="boundary-add-btn text-weight-bold"
-            :class="kind === 'included' ? 'text-primary' : 'text-dark'"
+            no-caps
+            size="sm"
+            class="boundary-add-btn text-caption text-weight-medium text-grey-8"
             :label="`+ ${t(`scopeBoundary.${kind}.add`)}`"
             @click="addItem"
         />
@@ -103,10 +101,6 @@ function removeItem(id: string): void {
     white-space: nowrap;
     min-width: 140px;
     color: #1d1d1d;
-
-    &--included {
-        color: #0b6b66;
-    }
 }
 
 .boundary-separator {
@@ -124,7 +118,6 @@ function removeItem(id: string): void {
 }
 
 .boundary-add-btn {
-    letter-spacing: 0.5px;
     padding-left: 0;
 }
 </style>

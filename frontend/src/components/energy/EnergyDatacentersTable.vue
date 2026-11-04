@@ -152,5 +152,9 @@ function clearEnergy(dc: DatacenterDraft): void {
 
 .energy-table {
     @include table-cells.cells;
+
+    .q-td {
+        vertical-align: middle;
+    }
 }
 </style>

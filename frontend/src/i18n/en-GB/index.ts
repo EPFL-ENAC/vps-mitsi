@@ -89,9 +89,8 @@ export default {
     },
     // --- Scope page ---
     scopePageTitle: 'Scope of the assessment',
-    scopePageHint:
+    scopeBlockFirstHint:
         'Complete this block first — it defines the datacenters and the functional unit the rest of the assessment refers to.',
-    scopeBlockFirstHint: 'Complete this block first',
     // General (report-only zone)
     scopeGeneralTitle: 'General',
     scopeOrganizationLabel: 'Name of the organization',
@@ -140,7 +139,7 @@ export default {
     },
     scopeDcColumnsTooltip:
         'Identify each datacenter of the service boundary — abbreviation, full name, comment. Lines can be added, edited and deleted; deletion is blocked while hardware references the datacenter.',
-    scopeDcAdd: '+ Add',
+    scopeDcAdd: 'Add',
     scopeDcDelete: 'Delete',
     scopeDcUsedByNone: '—',
     scopeDcInvRows: '1 inventory row | {n} inventory rows',
@@ -154,11 +153,11 @@ export default {
     scopeBoundary: {
         included: {
             prefix: 'The service counts',
-            add: 'ADD SOMETHING THE SERVICE COUNTS',
+            add: 'Add something the service counts',
         },
         excluded: {
             prefix: 'It leaves out',
-            add: 'ADD SOMETHING IT LEAVES OUT',
+            add: 'Add something it leaves out',
         },
         separators: {
             usedFor: 'used for',
@@ -182,8 +181,7 @@ export default {
     inventoryPageTitle: 'Embodied emissions — hardware inventory',
     inventoryPageHint:
         'List every IT element of the service: compute servers, storage bays, network devices and spare parts. Three editing modes control which columns are shown.',
-    inventoryNoScopeHint:
-        'Complete the “Scope of the assessment” block first to unlock the fields.',
+    inventoryNoScopeHint: 'Complete the “Scope” block first to unlock the fields.',
     inventoryStats: '{rows} items · {elements} elements · {total} kgCO₂e',
     inventoryWarningBar:
         '⚠ {n} rows are missing a mandatory value. Missing measurements are shown as unavailable; affected totals remain unavailable until the required values are supplied.',

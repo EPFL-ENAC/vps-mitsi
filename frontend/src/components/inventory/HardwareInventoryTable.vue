@@ -427,6 +427,10 @@ function confirmDeleteRow(row: HardwareItem): void {
 
 .inventory-table {
     @include table-cells.cells;
+
+    .q-td {
+        vertical-align: middle;
+    }
 }
 
 .inventory-group-row .q-th {

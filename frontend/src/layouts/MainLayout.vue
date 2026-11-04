@@ -32,15 +32,21 @@
                     :label="$t('mainExport')"
                     @click="exportAssessment"
                 />
+                <!-- import button-->
+                <q-btn
+                    unelevated
+                    class="text-white q-ml-sm"
+                    style="background-color: #007480"
+                    :label="$t('mainImport')"
+                    @click="fileInputRef?.pickFiles()"
+                />
+
+                <!-- hidden q-file for file selection -->
                 <q-file
+                    ref="fileInputRef"
                     :model-value="null"
                     accept=".json,application/json"
-                    dense
-                    outlined
-                    color="white"
-                    label-color="white"
-                    class="q-ml-sm header-import text-white"
-                    :label="$t('mainImport')"
+                    class="hidden"
                     @update:model-value="onFilePicked"
                 />
             </q-toolbar>
@@ -147,7 +153,7 @@
             </q-list>
         </q-drawer>
 
-        <q-page-container>
+        <q-page-container class="bg-grey-1">
             <router-view />
         </q-page-container>
 
@@ -241,6 +247,9 @@ import { isImportEmpty } from 'src/models/MitsiState/utils';
 import { formatDatacenterName, formatResult } from 'src/utils/format';
 import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
 import ExportAssessmentDialog from 'src/components/ExportAssessmentDialog.vue';
+import type { QFile } from 'quasar';
+
+const fileInputRef = ref<QFile | null>(null);
 
 const surveyData = useSurveyDataStore();
 const surveyResults = useSurveyResultsStore();

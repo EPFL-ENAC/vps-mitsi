@@ -1,15 +1,16 @@
 <template>
     <div class="q-pa-md scope-page">
         <div class="text-h4 q-mb-sm">{{ $t('scopePageTitle') }}</div>
-        <p class="text-grey-7">
-            {{ $t('scopePageHint') }}
-        </p>
 
+        <!-- Scope gating hint (informational) -->
         <q-banner
             v-if="!surveyData.isScopeValid"
             inline-actions
-            class="bg-amber-1 text-brown-9 q-mb-md rounded-borders"
+            class="bg-blue-1 text-blue-9 q-mb-md rounded-borders"
         >
+            <template #avatar>
+                <q-icon name="info" />
+            </template>
             {{ $t('scopeBlockFirstHint') }}
         </q-banner>
 
