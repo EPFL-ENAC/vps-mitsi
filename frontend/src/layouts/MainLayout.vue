@@ -73,7 +73,8 @@
                     header-class="text-weight-bold"
                     :label="$t('mainNavAssessment')"
                 >
-                    <q-item v-ripple clickable to="/scope" class="q-pl-lg">
+                    <!-- Scope -->
+                    <q-item v-ripple clickable to="/scope">
                         <q-item-section avatar>
                             <q-icon name="my_location" />
                         </q-item-section>
@@ -84,16 +85,25 @@
                             </q-item-label>
                         </q-item-section>
                         <q-item-section side top class="nav-badge text-caption text-grey-7">
-                            {{
-                                $t('mainNavScopeSteps', {
-                                    done: surveyData.scopeCompletedStepCount,
-                                    total: 3,
-                                })
-                            }}
+                            <span class="row items-center no-wrap">
+                                <q-badge
+                                    v-if="surveyData.scopeStatus === 'partial'"
+                                    rounded
+                                    color="warning"
+                                    class="q-mr-xs"
+                                />
+                                {{
+                                    $t('mainNavScopeSteps', {
+                                        done: surveyData.scopeCompletedStepCount,
+                                        total: 3,
+                                    })
+                                }}
+                            </span>
                         </q-item-section>
                     </q-item>
 
-                    <q-item v-ripple clickable to="/inventory" class="q-pl-lg">
+                    <!-- Hardware -->
+                    <q-item v-ripple clickable to="/inventory">
                         <q-item-section avatar>
                             <q-icon name="memory" />
                         </q-item-section>
@@ -104,11 +114,20 @@
                             </q-item-label>
                         </q-item-section>
                         <q-item-section side top class="nav-badge text-caption text-grey-7">
-                            {{ $t('mainNavHardwareRows', { n: surveyData.hardware.length }) }}
+                            <span class="row items-center no-wrap">
+                                <q-badge
+                                    v-if="surveyData.missingMandatoryHardware > 0"
+                                    rounded
+                                    color="warning"
+                                    class="q-mr-xs"
+                                />
+                                {{ $t('mainNavHardwareRows', { n: surveyData.hardware.length }) }}
+                            </span>
                         </q-item-section>
                     </q-item>
 
-                    <q-item v-ripple clickable to="/energy" class="q-pl-lg">
+                    <!-- Energy -->
+                    <q-item v-ripple clickable to="/energy">
                         <q-item-section avatar>
                             <q-icon name="bolt" />
                         </q-item-section>
@@ -119,11 +138,18 @@
                             </q-item-label>
                         </q-item-section>
                         <q-item-section side top class="nav-badge text-caption text-grey-7">
-                            {{ energyBadgeLabel }}
+                            <span class="row items-center no-wrap">
+                                <q-badge
+                                    v-if="surveyData.hasIncompleteEnergy"
+                                    rounded
+                                    color="warning"
+                                    class="q-mr-xs"
+                                />
+                                {{ energyBadgeLabel }}
+                            </span>
                         </q-item-section>
                     </q-item>
                 </q-expansion-item>
-
                 <q-separator spaced />
 
                 <!-- Results -->
@@ -156,7 +182,6 @@
         <q-page-container class="bg-grey-1">
             <router-view />
         </q-page-container>
-
         <q-footer bordered class="bg-white text-dark">
             <q-toolbar class="assessment-summary q-px-md">
                 <span class="text-caption text-grey-7">{{ savedText }}</span>

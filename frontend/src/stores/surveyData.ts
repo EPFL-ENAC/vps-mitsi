@@ -27,6 +27,7 @@ import { type MonitoringPeriod, MonitoringPeriodSchema } from 'src/models/Monito
 import {
     type Scope,
     BoundaryItemDraftSchema,
+    BoundaryItemSchema,
     ScopeSchema,
     ScopeDraftSchema,
 } from 'src/models/Scope/schema';
@@ -144,9 +145,19 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
 
     const energyInputsValid = computed(
         () =>
-            isScopeValid.value &&
             MonitoringPeriodSchema.safeParse(monitoringPeriod.value).success &&
+            datacenters.value.length > 0 &&
             datacenters.value.every((dc) => DatacenterEnergySchema.safeParse(dc.energy).success),
+    );
+
+    /** True when energy has been started or has datacenters, but some inputs are still missing */
+    const hasIncompleteEnergy = computed<boolean>(
+        () =>
+            datacenters.value.length > 0 &&
+            (!MonitoringPeriodSchema.safeParse(monitoringPeriod.value).success ||
+                datacenters.value.some(
+                    (dc) => !DatacenterEnergySchema.safeParse(dc.energy).success,
+                )),
     );
 
     // ── Scope progress ("x/3") ───────────────────────────
@@ -166,6 +177,9 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
             datacenters.value.length > 0 &&
             datacenters.value.every(
                 (dc) => DatacenterGeneralInfoSchema.safeParse(dc.generalInfo).success,
+            ) &&
+            [...scope.value.includedItems, ...scope.value.excludedItems].every(
+                (item) => BoundaryItemSchema.safeParse(item).success,
             );
 
         return [step1, step2, step3].filter((x) => x === true).length;
@@ -336,6 +350,7 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
         scopeStatus,
         hardwareInventoryStatus,
         energyConsumptionStatus,
+        hasIncompleteEnergy,
         resultsStatus,
         loadFromStorage,
         saveToStorage,
