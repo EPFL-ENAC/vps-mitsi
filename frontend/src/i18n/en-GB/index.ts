@@ -197,8 +197,7 @@ export default {
     inventoryDeleteConfirmMessage:
         'Delete {name}? This removes the hardware row from the inventory.',
     inventoryNotCounted: 'not counted',
-    inventoryNoDatacentersHint:
-        'No datacenters defined yet — add them in the “Scope of the assessment” block first.',
+    inventoryNoDatacentersHint: 'No datacenters defined yet — add them in the “Scope” block first.',
     inventoryGroups: {
         general: 'General',
         impact: 'Impact (∑)',
@@ -269,9 +268,8 @@ export default {
     energyPageTitle: 'Operational emissions — energy consumption',
     energyPageHint:
         'Describe how the IT service consumes electricity: the usage monitoring period and, per datacenter, the grid carbon intensity and the power consumed during that period. These figures drive the operational emissions.',
-    energyNoScopeHint: 'Complete the “Scope of the assessment” block first to unlock the fields.',
-    energyNoDatacentersHint:
-        'No datacenters defined yet — add them in the “Scope of the assessment” block first.',
+    energyNoScopeHint: 'Complete the “Scope” block first to unlock the fields.',
+    energyNoDatacentersHint: 'No datacenters defined yet — add them in the “Scope” block first.',
     // Usage monitoring period
     energyMonitorTitle: 'Usage monitoring period',
     energyMonitorUnitLabel: 'Unit',
@@ -303,7 +301,7 @@ export default {
         'Clear all energy information for {name}? The datacenter will remain in the table.',
     // --- Results page ---
     resultsPageTitle: 'Results',
-    resultsNoScopeHint: 'Complete the “Scope of the assessment” block first to unlock the results.',
+    resultsNoScopeHint: 'Complete the “Scope” block first to unlock the results.',
     resultsSummaryTitle: 'Summary',
     resultsSummaryServiceName: 'Name of the IT service',
     resultsSummaryFunction: 'Function',
@@ -408,5 +406,17 @@ export default {
         too_big: {
             number: 'Must be no more than {maximum}.',
         },
+    },
+    // --- Error summary panel & deep linking ---
+    errorPanel: {
+        triggerBtn: '{count} issue | {count} issues',
+        title: 'Issues preventing full calculation ({count})',
+        subtitle: 'Click an issue to navigate to the field and fix it.',
+        noIssues: 'All inputs are valid.',
+        closeAriaLabel: 'Close error panel',
+        goToField: 'Go to field',
+        scopeGeneralEntity: 'General',
+        scopeFuEntity: 'Functional unit',
+        hardwareRowEntity: 'Row #{index}',
     },
 };

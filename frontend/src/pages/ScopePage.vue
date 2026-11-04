@@ -22,6 +22,7 @@
                         v-model="surveyData.scope.organizationName"
                         :label="$t('scopeOrganizationLabel')"
                         :schema="ScopeSchema.shape.organizationName"
+                        data-field="organizationName"
                         dense
                         outlined
                     />
@@ -31,6 +32,7 @@
                         v-model="surveyData.scope.assessors"
                         :label="$t('scopeAssessorsLabel')"
                         :schema="ScopeSchema.shape.assessors"
+                        data-field="assessors"
                         dense
                         outlined
                     />
@@ -40,6 +42,7 @@
                         v-model="surveyData.scope.serviceName"
                         :label="$t('scopeServiceNameLabel')"
                         :schema="ScopeSchema.shape.serviceName"
+                        data-field="serviceName"
                         dense
                         outlined
                     >
@@ -62,6 +65,7 @@
                         type="textarea"
                         :label="$t('scopeFunctionLabel')"
                         :schema="ScopeSchema.shape.function"
+                        data-field="function"
                         outlined
                     >
                         <q-tooltip>{{ $t('scopeFunctionTooltip') }}</q-tooltip>
@@ -80,6 +84,7 @@
                             v-model="surveyData.scope.functionalUnit.usageDuration"
                             class="scope-fu-input"
                             :schema="FunctionalUnitSchema.shape.usageDuration"
+                            data-field="usageDuration"
                             dense
                             outlined
                             hide-bottom-space
@@ -91,6 +96,7 @@
                             class="scope-fu-select"
                             :options="timeUnitOptions"
                             :schema="FunctionalUnitSchema.shape.timeUnit"
+                            data-field="timeUnit"
                             emit-value
                             map-options
                             dense
@@ -106,6 +112,7 @@
                             v-model="surveyData.scope.functionalUnit.resourceCount"
                             class="scope-fu-input"
                             :schema="FunctionalUnitSchema.shape.resourceCount"
+                            data-field="resourceCount"
                             dense
                             outlined
                             hide-bottom-space
@@ -117,6 +124,7 @@
                             class="scope-fu-select scope-fu-select--grow"
                             :options="resourceTypeOptions"
                             :schema="FunctionalUnitSchema.shape.resourceType"
+                            data-field="resourceType"
                             emit-value
                             map-options
                             dense
@@ -132,6 +140,7 @@
                             v-model="surveyData.scope.functionalUnit.resourceTypeOther"
                             class="scope-fu-text"
                             :schema="FunctionalUnitSchema.shape.resourceTypeOther"
+                            data-field="resourceTypeOther"
                             :placeholder="$t('scopeFuResourceTypeOtherPlaceholder')"
                             dense
                             outlined
@@ -146,6 +155,7 @@
                             v-model="surveyData.scope.functionalUnit.manualFleetCount"
                             class="scope-fu-input"
                             :schema="FunctionalUnitSchema.shape.manualFleetCount"
+                            data-field="manualFleetCount"
                             dense
                             outlined
                             hide-bottom-space
@@ -188,6 +198,7 @@
                 :label="$t('scopeLifespanLabel')"
                 :suffix="$t('scopeLifespanYears')"
                 :schema="ScopeSchema.shape.lifespanYears"
+                data-field="lifespanYears"
                 dense
                 outlined
             />

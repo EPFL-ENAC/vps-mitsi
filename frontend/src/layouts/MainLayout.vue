@@ -183,7 +183,7 @@
             <router-view />
         </q-page-container>
         <q-footer bordered class="bg-white text-dark">
-            <q-toolbar class="assessment-summary q-px-md">
+            <q-toolbar class="assessment-summary q-px-md items-center">
                 <span class="text-caption text-grey-7">{{ savedText }}</span>
                 <span v-if="exportedText" class="text-caption text-grey-6 q-ml-sm">
                     · {{ exportedText }}
@@ -254,6 +254,12 @@
                         />
                     </template>
                 </i18n-t>
+
+                <!-- Pushes error summary button to the right end -->
+                <q-space />
+
+                <!-- Error summary trigger and bottom-sheet panel -->
+                <ErrorSummaryPanel />
             </q-toolbar>
         </q-footer>
     </q-layout>
@@ -272,6 +278,7 @@ import { isImportEmpty } from 'src/models/MitsiState/utils';
 import { formatDatacenterName, formatResult } from 'src/utils/format';
 import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
 import ExportAssessmentDialog from 'src/components/ExportAssessmentDialog.vue';
+import ErrorSummaryPanel from 'src/components/ErrorSummaryPanel.vue';
 import type { QFile } from 'quasar';
 
 const fileInputRef = ref<QFile | null>(null);

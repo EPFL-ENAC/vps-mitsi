@@ -124,3 +124,23 @@ body {
     color: var(--q-negative, #c1001a);
     font-weight: 800;
 }
+
+// ─── Field Deep-Link Focus Pulse ────────────────────────────────────────────
+@keyframes field-pulse-amber {
+    0% {
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+        border-color: #f59e0b;
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(245, 158, 11, 0.2);
+        border-color: #f59e0b;
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+    }
+}
+
+.field-highlight-pulse {
+    animation: field-pulse-amber 1.5s ease-out;
+    border-radius: 4px;
+}

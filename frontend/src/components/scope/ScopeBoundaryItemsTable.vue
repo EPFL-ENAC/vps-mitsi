@@ -14,6 +14,8 @@
                     v-model="item.type"
                     :schema="BoundaryItemSchema.shape.type"
                     :placeholder="t('scopeBoundary.placeholders.type')"
+                    :data-row-id="item.id"
+                    data-field="type"
                     dense
                     outlined
                     hide-bottom-space
@@ -26,6 +28,8 @@
                     v-model="item.purpose"
                     :schema="BoundaryItemSchema.shape.purpose"
                     :placeholder="t('scopeBoundary.placeholders.purpose')"
+                    :data-row-id="item.id"
+                    data-field="purpose"
                     dense
                     outlined
                     hide-bottom-space
@@ -38,6 +42,8 @@
                     v-model="item.reason"
                     :schema="BoundaryItemSchema.shape.reason"
                     :placeholder="t(`scopeBoundary.placeholders.${kind}Reason`)"
+                    :data-row-id="item.id"
+                    data-field="reason"
                     dense
                     outlined
                     hide-bottom-space

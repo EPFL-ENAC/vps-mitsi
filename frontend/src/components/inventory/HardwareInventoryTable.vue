@@ -84,6 +84,8 @@
                             v-else-if="col.zod"
                             v-model="slotProps.row.impactManufacturingDistributionEol"
                             :schema="col.zod"
+                            :data-row-id="slotProps.row.id"
+                            :data-field="col.name"
                             dense
                             outlined
                             hide-bottom-space
@@ -108,6 +110,8 @@
                             v-model="slotProps.row.datacenterId"
                             :schema="col.zod"
                             :options="col.options"
+                            :data-row-id="slotProps.row.id"
+                            :data-field="col.name"
                             emit-value
                             map-options
                             dense
@@ -122,6 +126,8 @@
                             v-model="slotProps.row[col.field]"
                             :schema="col.zod"
                             :options="col.options"
+                            :data-row-id="slotProps.row.id"
+                            :data-field="col.name"
                             emit-value
                             map-options
                             dense
@@ -140,6 +146,8 @@
                         <ZodValidatedNumberInput
                             v-model="slotProps.row[col.field]"
                             :schema="col.zod"
+                            :data-row-id="slotProps.row.id"
+                            :data-field="col.name"
                             dense
                             outlined
                             hide-bottom-space
@@ -151,6 +159,8 @@
                         <ZodValidatedTextInput
                             v-model="slotProps.row[col.field]"
                             :schema="col.zod"
+                            :data-row-id="slotProps.row.id"
+                            :data-field="col.name"
                             dense
                             outlined
                             hide-bottom-space
