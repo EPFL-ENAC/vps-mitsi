@@ -145,8 +145,8 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
 
     const energyInputsValid = computed(
         () =>
+            isScopeValid.value &&
             MonitoringPeriodSchema.safeParse(monitoringPeriod.value).success &&
-            datacenters.value.length > 0 &&
             datacenters.value.every((dc) => DatacenterEnergySchema.safeParse(dc.energy).success),
     );
 
