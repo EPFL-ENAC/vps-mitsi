@@ -108,9 +108,4 @@ const operationalResultOptions = computed(() => ({
     @include table-cells.cells;
     overflow: visible !important;
 }
-
-.results-total td {
-    border-top: 2px solid rgba(0, 0, 0, 0.2);
-    font-weight: 700;
-}
 </style>

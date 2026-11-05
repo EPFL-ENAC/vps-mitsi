@@ -299,9 +299,4 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
     font-style: italic;
     color: rgba(0, 0, 0, 0.5);
 }
-
-.results-total td {
-    border-top: 2px solid rgba(0, 0, 0, 0.2);
-    font-weight: 700;
-}
 </style>

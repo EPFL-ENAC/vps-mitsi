@@ -161,7 +161,7 @@ const chartOption = computed<ECOption>(() => ({
             label: {
                 show: true,
                 position: 'insideTopLeft',
-                color: '#141920',
+                color: '#ffffff',
                 fontSize: 13,
                 fontWeight: 'bold',
                 lineHeight: 18,

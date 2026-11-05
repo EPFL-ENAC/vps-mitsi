@@ -144,3 +144,24 @@ body {
     animation: field-pulse-amber 1.5s ease-out;
     border-radius: 4px;
 }
+
+// ─── Results Tables Common Styling ───────────────────────────────────────────
+.results-table {
+    table {
+        border-collapse: collapse !important;
+    }
+
+    .results-total td,
+    .results-total th {
+        border-top: 2px solid rgba(0, 0, 0, 0.25) !important;
+        font-weight: 700;
+    }
+}
+
+.results-total-table {
+    border-top: 2px solid rgba(0, 0, 0, 0.25) !important;
+
+    .results-total td {
+        border-top: none !important;
+    }
+}

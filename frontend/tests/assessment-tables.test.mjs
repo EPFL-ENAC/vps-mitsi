@@ -240,7 +240,7 @@ test('results preserve translated report headers, excluded totals and missing op
         result.html,
         /data-kind="number"[^>]*>[\s\S]*?class="computation-result-display">[\s\S]*?—/,
     );
-    assert.match(result.html, /<th scope="row"/);
+    assert.match(result.html, /<td class="results-key/);
     assert.equal(result.results.totalEmbodiedEmissionsKg.result, 0);
 });
 
