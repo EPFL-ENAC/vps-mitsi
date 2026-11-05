@@ -45,15 +45,11 @@ export const HardwareItemSchema = z.object({
     // Memory
     memoryQuantity: z.number().int().min(0),
     memorySizeGb: z.number().int().min(0),
-    // computed in store (quantity × size); not authoritative in exported JSON.
-    memoryTotalGb: optionalNumber(),
 
     // Storage
     storageType: StorageTypeSchema.optional(),
     storageQuantity: z.number().int().min(0),
     storageSize: z.number().int().min(0),
-    // computed in store (quantity × size); not authoritative in exported JSON.
-    storageTotal: optionalNumber(),
     storageTechnology: StorageTechnologySchema.optional(),
     storageCasing: StorageCasingSchema.optional(),
 

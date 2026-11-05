@@ -162,7 +162,7 @@
                         <ComputationResultDisplay
                             v-if="col.derived"
                             :computation="col.derived(slotProps.row)"
-                            :format-value="formatKg"
+                            :format-value="formatGb"
                         />
                     </template>
                 </q-td>
@@ -202,7 +202,7 @@ import {
     StorageTypeSchema,
 } from 'src/models/HardwareItem/schema';
 import type { VisibilityMode } from 'src/types/ui';
-import { formatDatacenterName, formatKg, normalizeKey } from 'src/utils/format';
+import { formatDatacenterName, formatGb, formatKg, normalizeKey } from 'src/utils/format';
 import { createSchemaColumn } from 'src/utils/tables';
 
 import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
@@ -214,8 +214,11 @@ const surveyResults = useSurveyResultsStore();
 const GROUPS = ['general', 'impact', 'cpu', 'memory', 'storage', 'gpu', 'network'] as const;
 type GroupKey = (typeof GROUPS)[number];
 
-interface InventoryColumn extends QTableColumn<HardwareItem, keyof HardwareItem | 'subtotal'> {
-    field: keyof HardwareItem | 'subtotal';
+type DerivedField = 'subtotal' | 'memoryTotalGb' | 'storageTotal';
+type InventoryField = keyof HardwareItem | DerivedField;
+
+interface InventoryColumn extends QTableColumn<HardwareItem, InventoryField> {
+    field: InventoryField;
     group: GroupKey;
     mode: VisibilityMode;
     kind: 'enum' | 'datacenter' | 'text' | 'number' | 'toggle' | 'derived';
@@ -248,8 +251,6 @@ const datacenterOptions = computed<{ label: string; value: string }[]>(() =>
 
 type ColumnSpec = Omit<InventoryColumn, 'name' | 'label' | 'field' | 'zod'> & {
     field: keyof HardwareItem;
-    /** Derived schema fields opt out of validation; they are never edited. */
-    zod?: undefined;
 };
 
 const schemaColumn = createSchemaColumn(HardwareItemSchema.shape, (field) =>
@@ -340,14 +341,17 @@ const columns = computed<InventoryColumn[]>(() => [
 
     column({ field: 'memoryQuantity', group: 'memory', mode: 'simple', kind: 'number' }),
     column({ field: 'memorySizeGb', group: 'memory', mode: 'simple', kind: 'number' }),
-    column({
+    {
+        name: 'memoryTotalGb',
         field: 'memoryTotalGb',
+        align: 'left',
+        label: t('inventoryColumns.memoryTotalGb'),
         group: 'memory',
         mode: 'advanced',
         kind: 'derived',
         zod: undefined,
         derived: surveyResults.hardwareMemoryPerUnitGb,
-    }),
+    },
 
     column({
         field: 'storageType',
@@ -358,14 +362,17 @@ const columns = computed<InventoryColumn[]>(() => [
     }),
     column({ field: 'storageQuantity', group: 'storage', mode: 'simple', kind: 'number' }),
     column({ field: 'storageSize', group: 'storage', mode: 'simple', kind: 'number' }),
-    column({
+    {
+        name: 'storageTotal',
         field: 'storageTotal',
+        align: 'left',
+        label: t('inventoryColumns.storageTotal'),
         group: 'storage',
         mode: 'advanced',
         kind: 'derived',
         zod: undefined,
         derived: surveyResults.hardwareStorageCapacityPerUnit,
-    }),
+    },
     column({
         field: 'storageTechnology',
         group: 'storage',

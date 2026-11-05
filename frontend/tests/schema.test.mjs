@@ -27,9 +27,25 @@ import { MonitoringPeriodDraftSchema } from '../src/models/MonitoringPeriod/sche
 import { UnderlyingServiceDraftSchema } from '../src/models/UnderlyingService/schema.ts';
 import { PersistedAssessmentSchema } from '../src/models/MitsiState/utils.ts';
 import { nullableNumber } from '../src/models/shared/schema.ts';
-import { validEnergy } from './helpers/survey-fixtures.mjs';
+import { validEnergy, validHardware } from './helpers/survey-fixtures.mjs';
 
 const jsonRoundTrip = (value) => JSON.parse(JSON.stringify(value));
+
+test('canonical and draft hardware schemas strip derived capacity totals', () => {
+    const hardware = {
+        ...validHardware(),
+        memoryQuantity: 4,
+        memorySizeGb: 16,
+        storageQuantity: 2,
+        storageSize: 1000,
+    };
+    for (const schema of [HardwareItemSchema, HardwareItemDraftSchema]) {
+        assert.deepEqual(
+            schema.parse({ ...hardware, memoryTotalGb: 999, storageTotal: 999 }),
+            hardware,
+        );
+    }
+});
 
 test('blank assessment and entity defaults retain their persisted shape', () => {
     assert.deepEqual(MitsiStateDraftSchema.parse({}), {
@@ -97,6 +113,7 @@ test('every draft can parse its own defaults after JSON serialization', () => {
     for (const schema of [
         FunctionalUnitDraftSchema,
         DatacenterGeneralInfoDraftSchema,
+        DatacenterEnergyDraftSchema,
         BoundaryItemDraftSchema,
         ScopeDraftSchema,
         HardwareItemDraftSchema,
@@ -107,17 +124,6 @@ test('every draft can parse its own defaults after JSON serialization', () => {
         const blank = schema.parse({});
         assert.deepEqual(jsonRoundTrip(schema.parse(jsonRoundTrip(blank))), jsonRoundTrip(blank));
     }
-
-    // Datacenter energy is the exception: its draft defaults are blank strings, but the
-    // canonical schema requires non-empty comments, so a blank draft no longer round-trips.
-    const blankEnergy = DatacenterEnergyDraftSchema.parse({});
-    assert.equal(blankEnergy.location, '');
-    assert.equal(DatacenterEnergyDraftSchema.safeParse(jsonRoundTrip(blankEnergy)).success, false);
-    const filledEnergy = DatacenterEnergyDraftSchema.parse(validEnergy());
-    assert.deepEqual(
-        jsonRoundTrip(DatacenterEnergyDraftSchema.parse(jsonRoundTrip(filledEnergy))),
-        jsonRoundTrip(filledEnergy),
-    );
 });
 
 test('partial drafts retain blank required strings and empty numeric fields', () => {
@@ -131,15 +137,13 @@ test('partial drafts retain blank required strings and empty numeric fields', ()
     });
     assert.equal(partial.datacenters[0].energy.location, '');
     assert.equal(partial.datacenters[0].energy.carbonIntensity, null);
-    // Blank energy strings are outside the canonical schema, so a whole-state draft whose
-    // datacenter energy is still empty cannot be re-parsed as a persisted assessment.
-    assert.equal(MitsiStateDraftSchema.safeParse(jsonRoundTrip(partial)).success, false);
-    assert.equal(PersistedAssessmentSchema.safeParse(partial).success, false);
+    assert.deepEqual(MitsiStateDraftSchema.parse(jsonRoundTrip(partial)), partial);
+    assert.deepEqual(PersistedAssessmentSchema.parse(jsonRoundTrip(partial)), partial);
     assert.equal(MitsiStateSchema.safeParse(partial).success, false);
     assert.equal(HardwareItemSchema.safeParse(partial.hardware[0]).success, false);
     assert.equal(DatacenterEnergySchema.safeParse(partial.datacenters[0].energy).success, false);
 
-    // Once the energy block is filled in, the same state round-trips unchanged.
+    // Filled energy also round-trips unchanged.
     const filled = MitsiStateDraftSchema.parse({
         ...partial,
         datacenters: [{ ...partial.datacenters[0], energy: validEnergy() }],
@@ -249,11 +253,9 @@ test('datacenters require IDs and own independent, round-trippable nested drafts
     assert.equal(DatacenterGeneralInfoSchema.safeParse(first.generalInfo).success, true);
     assert.equal(DatacenterEnergySchema.safeParse(first.energy).success, false);
 
-    // A datacenter whose energy block is still blank cannot round-trip: the canonical
-    // schema requires non-empty energy comments, so re-parsing the draft throws.
-    assert.equal(DatacenterDraftSchema.safeParse(jsonRoundTrip(first)).success, false);
+    assert.deepEqual(DatacenterDraftSchema.parse(jsonRoundTrip(first)), first);
 
-    // Filling in the energy block restores round-trip stability.
+    // Completed energy validates against the canonical schema as well.
     first.energy = DatacenterEnergyDraftSchema.parse(validEnergy());
     assert.deepEqual(DatacenterDraftSchema.parse(jsonRoundTrip(first)), first);
     assert.equal(DatacenterEnergySchema.safeParse(first.energy).success, true);
@@ -285,7 +287,7 @@ test('nullable numbers preserve bounds and distinguish missing values from zero'
     assert.equal(DatacenterEnergySchema.safeParse(energy).success, true);
     assert.equal(DatacenterEnergyDraftSchema.safeParse({ carbonIntensity: 0 }).success, true);
 
-    // The mandatory energy strings are non-empty; the numeric fields alone are not enough.
+    // Canonical energy still requires string properties, even though they may be empty.
     assert.equal(
         DatacenterEnergySchema.safeParse({ carbonIntensity: 100, energyConsumption: 0 }).success,
         false,
@@ -299,9 +301,8 @@ test('nullable numbers preserve bounds and distinguish missing values from zero'
     ]) {
         for (const blank of ['', '   ']) {
             assert.equal(
-                DatacenterEnergySchema.safeParse({ ...validEnergy(), [field]: blank }).success,
-                false,
-                `${field} must reject ${JSON.stringify(blank)}`,
+                DatacenterEnergySchema.parse({ ...validEnergy(), [field]: blank })[field],
+                '',
             );
         }
         assert.equal(
