@@ -89,15 +89,13 @@ export function useErrorNavigation() {
                     continue;
                 }
                 const field = String(issue.path[issue.path.length - 1] ?? '');
-                const isFu = pathStr.startsWith('functionalUnit');
-
                 list.push({
                     id: `scope-${pathStr}`,
                     section: 'scope',
                     route: '/scope',
                     sectionIcon: 'my_location',
                     sectionLabel: t('mainNavScope'),
-                    entityName: isFu
+                    entityName: pathStr.startsWith('functionalUnit')
                         ? t('errorPanel.scopeFuEntity')
                         : t('errorPanel.scopeGeneralEntity'),
                     fieldLabel: resolveFieldLabel('scope', field),
@@ -142,7 +140,6 @@ export function useErrorNavigation() {
             { kind: 'included' as const, items: surveyData.scope.includedItems },
             { kind: 'excluded' as const, items: surveyData.scope.excludedItems },
         ];
-
         for (const { kind, items } of boundaryGroups) {
             items.forEach((item) => {
                 list.push(
@@ -161,18 +158,17 @@ export function useErrorNavigation() {
         }
 
         // ── 2. Hardware Inventory ────────────────────────────────────────────
-        surveyData.hardware.forEach((row, index) => {
-            const entityName =
-                row.name.trim() || t('errorPanel.hardwareRowEntity', { index: index + 1 });
+        surveyData.hardware.forEach((item, index) => {
             list.push(
-                ...collectIssues(HardwareItemSchema, row, {
+                ...collectIssues(HardwareItemSchema, item, {
                     section: 'inventory',
                     route: '/inventory',
                     sectionIcon: 'memory',
                     sectionLabel: t('mainNavInventory'),
-                    entityName,
+                    entityName:
+                        item.name.trim() || t('errorPanel.hardwareRowEntity', { index: index + 1 }),
                     labelPrefix: 'inventoryColumns',
-                    rowId: row.id,
+                    rowId: item.id,
                     idPrefix: 'hw',
                 }),
             );
@@ -218,27 +214,25 @@ export function useErrorNavigation() {
         },
     };
 
-    /** Expands parent QExpansionItem if the target element is collapsed */
-    function expandEnclosingSection(element: HTMLElement): void {
-        const collapsed = element.closest('.q-expansion-item--collapsed');
-        if (collapsed) {
-            const header = collapsed.querySelector<HTMLElement>('.q-expansion-item__header');
-            header?.click();
-        }
+    function expandEnclosingSection(element: HTMLElement): boolean {
+        const closed = element.closest<HTMLElement>('.q-expansion-item--collapsed');
+        if (!closed) return false;
+        closed.querySelector<HTMLElement>('.q-item--clickable')?.click();
+        return true;
     }
 
-    /** Triggers smooth scrolling, pulse animation, and input focus */
     function focusElement(element: HTMLElement): void {
-        expandEnclosingSection(element);
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const wasClosed = expandEnclosingSection(element);
+        const delay = wasClosed ? 260 : 0;
 
-        element.classList.add('field-highlight-pulse');
         window.setTimeout(() => {
-            element.classList.remove('field-highlight-pulse');
-        }, 2000);
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element.classList.add('field-highlight-pulse');
+            window.setTimeout(() => element.classList.remove('field-highlight-pulse'), 2000);
 
-        const control = element.querySelector<HTMLElement>('input, textarea, select');
-        (control ?? element).focus();
+            const control = element.querySelector<HTMLElement>('input, textarea, select');
+            (control ?? element).focus({ preventScroll: true });
+        }, delay);
     }
 
     /** Navigates across routes, prepares target container, and triggers field focus */
@@ -257,29 +251,17 @@ export function useErrorNavigation() {
                 ? `[data-row-id="${CSS.escape(issue.rowId)}"][data-field="${CSS.escape(issue.field)}"]`
                 : `[data-field="${CSS.escape(issue.field)}"]`;
 
-            let element = document.querySelector<HTMLElement>(selector);
-
-            // Fallback to row element if specific field cell is omitted
-            if (!element && issue.rowId) {
-                element = document.querySelector<HTMLElement>(
-                    `[data-row-id="${CSS.escape(issue.rowId)}"]`,
-                );
-            }
-
+            const element = document.querySelector<HTMLElement>(selector);
             if (element) {
                 focusElement(element);
             }
         }, 120);
     }
 
-    function navigateToIssue(issue: DiagnosticIssue): void {
-        void executeScrollAndPulse(issue);
-    }
-
     return {
         issues,
         issueCount: computed(() => issues.value.length),
         hasIssues: computed(() => issues.value.length > 0),
-        navigateToIssue,
+        navigateToIssue: (issue: DiagnosticIssue) => void executeScrollAndPulse(issue),
     };
 }

@@ -51,6 +51,8 @@
                         v-model="props.row.generalInfo[col.name]"
                         :schema="col.zod"
                         :aria-label="col.label"
+                        :data-row-id="props.row.id"
+                        :data-field="col.name"
                         dense
                         outlined
                         hide-bottom-space
