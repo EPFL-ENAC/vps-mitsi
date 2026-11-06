@@ -4,7 +4,6 @@ import ScopeDatacentersTable from '../src/components/scope/ScopeDatacentersTable
 import ScopeBoundaryItemsTable from '../src/components/scope/ScopeBoundaryItemsTable.vue';
 import EnergyDatacentersTable from '../src/components/energy/EnergyDatacentersTable.vue';
 import EnergyMonitoringPeriodForm from '../src/components/energy/EnergyMonitoringPeriodForm.vue';
-import HardwareInventoryTable from '../src/components/inventory/HardwareInventoryTable.vue';
 import ResultsPage from '../src/pages/ResultsPage.vue';
 import ResultsEmbodiedSection from '../src/components/results/ResultsEmbodiedSection.vue';
 import ResultsTotalSection from '../src/components/results/ResultsTotalSection.vue';
@@ -20,7 +19,7 @@ import {
 import { HardwareItemDraftSchema } from '../src/models/HardwareItem/schema.ts';
 import { ResourceTypeSchema } from '../src/models/FunctionalUnit/schema.ts';
 import en from '../src/i18n/en-GB/index.ts';
-import { renderTables } from './helpers/render-tables.mjs';
+import { renderTables, renderInventoryDialog } from './helpers/render-tables.mjs';
 import { setupScope, validEnergy, validHardware } from './helpers/survey-fixtures.mjs';
 
 const text = (html) => html.replace(/<[^>]*>/g, '');
@@ -275,18 +274,15 @@ test('embodied results render the available partial total while retaining unfini
 });
 
 test('select and toggle edits write through to the store', async () => {
-    const inventory = await renderTables(HardwareInventoryTable, {
-        props: { mode: 'simple' },
-        setupStore(store) {
-            store.datacenters = [datacenter()];
-            store.hardware = [HardwareItemDraftSchema.parse({ id: 'h1' })];
-        },
+    const row = HardwareItemDraftSchema.parse({ id: 'h1' });
+    const inventory = await renderInventoryDialog({
+        row,
+        datacenters: [datacenter()],
     });
     const [category, datacenterSelect] = inventory.selects;
     category.$emit('update:modelValue', 'storage_bay');
     datacenterSelect.$emit('update:modelValue', 'dc-1');
     inventory.toggles[0].$emit('update:modelValue', true);
-    const row = inventory.store.hardware[0];
     assert.deepEqual(
         [row.category, row.datacenterId, row.isSecondHand],
         ['storage_bay', 'dc-1', true],

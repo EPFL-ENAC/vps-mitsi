@@ -3,13 +3,13 @@ import { test } from 'node:test';
 import { createSSRApp, h } from 'vue';
 import { renderToString } from 'vue/server-renderer';
 import HardwareInventoryPage from '../src/pages/HardwareInventoryPage.vue';
-import HardwareInventoryTable from '../src/components/inventory/HardwareInventoryTable.vue';
 import ResultsEmbodiedSection from '../src/components/results/ResultsEmbodiedSection.vue';
 import ResultsOperationalSection from '../src/components/results/ResultsOperationalSection.vue';
 import ResultsFunctionalUnitSection from '../src/components/results/ResultsFunctionalUnitSection.vue';
 import MainLayout from '../src/layouts/MainLayout.vue';
 import { DatacenterDraftSchema } from '../src/models/Datacenter/schema.ts';
-import { renderTables } from './helpers/render-tables.mjs';
+import { HardwareItemDraftSchema } from '../src/models/HardwareItem/schema.ts';
+import { renderTables, renderInventoryDialog } from './helpers/render-tables.mjs';
 import { setupScope, validEnergy, validHardware } from './helpers/survey-fixtures.mjs';
 import en from '../src/i18n/en-GB/index.ts';
 
@@ -66,30 +66,30 @@ test('inventory statistics use rich translations and identify ignored hardware b
     assert.doesNotMatch(repaired, /indicator--partial/);
 });
 
-test('derived inventory cells diagnose failures in every mode without treating exclusion as failure', async () => {
-    for (const mode of ['simple', 'normal', 'advanced']) {
-        const result = await renderTables(HardwareInventoryTable, {
-            props: { mode },
-            setupStore(store) {
-                store.hardware = [
-                    { ...validHardware(), quantity: null, memoryQuantity: null, storageSize: null },
-                ];
-            },
-        });
-        assert.equal(result.computations.length, mode === 'advanced' ? 3 : 1);
-        assert.ok(
-            result.computations.every((display) => display.computation.success === 'failure'),
-        );
-        assert.match(await tooltipText(result.tooltips[0]), /quantity: Must be a number/);
-        assert.doesNotMatch(result.html, /indicator--partial/);
-    }
-    const excluded = await renderTables(HardwareInventoryTable, {
-        props: { mode: 'simple' },
-        setupStore(store) {
-            store.hardware = [{ ...validHardware(), isSecondHand: true }];
-        },
+test('derived inventory diagnostics surface in the detail form without treating exclusion as failure', async () => {
+    const incomplete = await renderInventoryDialog({
+        row: HardwareItemDraftSchema.parse({
+            ...validHardware(),
+            quantity: null,
+            memoryQuantity: null,
+            storageQuantity: null,
+        }),
     });
-    assert.match(text(excluded.html), /not counted/);
+    assert.equal(incomplete.computations.length, 3);
+    assert.deepEqual(
+        incomplete.computations.map((display) => display.computation.success),
+        ['failure', 'failure', 'failure'],
+    );
+    assert.match(await tooltipText(incomplete.tooltips[0]), /quantity: Must be a number/);
+    assert.doesNotMatch(incomplete.html, /indicator--partial/);
+
+    // Second-hand rows are excluded from the embodied subtotal, not reported as failures.
+    const excluded = await renderInventoryDialog({
+        row: HardwareItemDraftSchema.parse({ ...validHardware(), isSecondHand: true }),
+    });
+    const embodied = excluded.computations[0].computation;
+    assert.equal(embodied.success, 'success');
+    assert.equal(embodied.result, 0);
     assert.doesNotMatch(excluded.html, /indicator--failure|indicator--partial/);
 });
 

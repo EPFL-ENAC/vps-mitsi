@@ -20,15 +20,8 @@
             {{ $t('inventoryNoScopeHint') }}
         </q-banner>
 
-        <!-- Toolbar (one line): mode toggle left, Add row rightmost -->
-        <div class="row items-center q-gutter-x-md q-mb-sm inventory-toolbar">
-            <q-btn-toggle
-                v-model="mode"
-                toggle-color="primary"
-                unelevated
-                no-caps
-                :options="modeOptions"
-            />
+        <!-- Toolbar: Add row -->
+        <div class="row items-center justify-end q-mb-sm inventory-toolbar">
             <q-btn
                 unelevated
                 color="primary"
@@ -60,9 +53,6 @@
                     </ComputationResultDisplay>
                 </template>
             </i18n-t>
-            <div class="text-grey-7 inventory-mode-hint">
-                {{ $t('inventoryModeHint') }}
-            </div>
         </div>
 
         <!-- Warning bar -->
@@ -76,7 +66,7 @@
 
         <!-- No datacenters hint -->
         <q-banner
-            v-if="surveyData.datacenters.length === 0"
+            v-if="!surveyData.datacenters.length"
             inline-actions
             class="bg-grey-3 text-grey-8 q-mb-md"
         >
@@ -84,7 +74,7 @@
         </q-banner>
 
         <!-- Inventory table -->
-        <HardwareInventoryTable :mode="mode" />
+        <HardwareInventoryTable />
 
         <!-- Footer -->
         <div class="row items-center q-mt-md inventory-footer">
@@ -107,35 +97,17 @@
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useSurveyResultsStore } from 'src/stores/surveyResults';
 
-import { ref } from 'vue';
-import { useI18n } from 'vue-i18n';
-
 import HardwareInventoryTable from 'src/components/inventory/HardwareInventoryTable.vue';
 import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
-import type { VisibilityMode } from 'src/types/ui';
 import { formatKg } from 'src/utils/format';
 
 const surveyData = useSurveyDataStore();
 const surveyResults = useSurveyResultsStore();
-
-const { t } = useI18n();
-
-// ── Local UI state (never persisted) ─────────────────────────────────────────
-const mode = ref<VisibilityMode>('normal');
-const modeOptions = [
-    { label: t('inventoryModeSimple'), value: 'simple' },
-    { label: t('inventoryModeNormal'), value: 'normal' },
-    { label: t('inventoryModeAdvanced'), value: 'advanced' },
-];
 </script>
 
 <style scoped>
 .inventory-toolbar {
     flex-wrap: nowrap;
-}
-
-.inventory-mode-hint {
-    font-size: 13px;
 }
 
 .inventory-footer {

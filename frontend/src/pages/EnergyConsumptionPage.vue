@@ -22,7 +22,7 @@
         <q-banner
             v-if="!surveyData.datacenters.length"
             inline-actions
-            class="bg-info text-white q-mb-md"
+            class="bg-grey-3 text-grey-8 q-mb-md"
         >
             {{ $t('energyNoDatacentersHint') }}
         </q-banner>

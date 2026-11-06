@@ -1,175 +1,170 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { renderInventoryTable } from './helpers/render-tables.mjs';
+import {
+    renderInventoryTable,
+    renderInventoryDialog,
+    renderInventoryDialogShell,
+    renderDialogContent,
+} from './helpers/render-tables.mjs';
 import { DatacenterDraftSchema } from '../src/models/Datacenter/schema.ts';
 import { HardwareItemDraftSchema, HardwareItemSchema } from '../src/models/HardwareItem/schema.ts';
 import en from '../src/i18n/en-GB/index.ts';
 
-test('advanced inventory covers all display fields exactly once', async () => {
-    const { columns } = await renderInventoryTable();
-    const fields = columns.map((column) => column.field);
-    assert.equal(new Set(fields).size, fields.length);
-    assert.deepEqual(
-        fields.toSorted(),
-        [
-            ...Object.keys(HardwareItemSchema.shape).filter((field) => field !== 'id'),
-            'subtotal',
-        ].toSorted(),
-    );
-    for (const column of columns) {
-        assert.equal(column.name, column.field);
-        assert.equal(column.label, en.inventoryColumns[column.field]);
-    }
-});
-
-test('visibility modes are cumulative and group spans match rendered columns', async () => {
-    const groups = [
-        'General',
-        'Impact (∑)',
-        'CPU',
-        'Memory',
-        'Storage',
-        'GPU',
-        'Network &amp; PSU',
-    ];
-    const expectedSpans = {
-        simple: [5, 2, 1, 2, 2, 1],
-        normal: [6, 4, 2, 2, 2, 3, 1],
-        advanced: [7, 4, 5, 3, 6, 5, 3],
-    };
-    let previous = [];
-    for (const mode of ['simple', 'normal', 'advanced']) {
-        const { html, columns } = await renderInventoryTable({
-            mode,
-            hardware: [HardwareItemDraftSchema.parse({})],
-        });
-        const names = columns.map((column) => column.name);
-        assert.deepEqual(
-            names.filter((name) => previous.includes(name)),
-            previous,
-        );
-        const groupRow = html.match(/<tr[^>]*inventory-group-row[^>]*>(.*?)<\/tr>/s)?.[1];
-        assert.ok(groupRow);
-        const headers = [...groupRow.matchAll(/<th[^>]*colspan="(\d+)"[^>]*>(.*?)<\/th>/gs)];
-        assert.deepEqual(
-            headers.map((header) => Number(header[1])),
-            expectedSpans[mode],
-        );
-        assert.deepEqual(
-            headers.map((header) => header[2].trim()),
-            groups.slice(0, headers.length),
-        );
-        assert.equal(
-            expectedSpans[mode].reduce((sum, span) => sum + span, 0),
-            columns.length,
-        );
-        for (const tag of ['th', 'td']) {
-            const kinds = [...html.matchAll(new RegExp(`<${tag}\\b[^>]*data-kind="([^"]+)"`, 'g'))];
-            assert.deepEqual(
-                kinds.map((cell) => cell[1]),
-                columns.map((column) => column.kind),
-            );
-        }
-        previous = names;
-    }
-});
-
-test('column labels, enum options and datacenter choices use their current sources', async () => {
-    const datacenter = DatacenterDraftSchema.parse({
+const datacenter = (overrides = {}) =>
+    DatacenterDraftSchema.parse({
         id: 'dc-1',
         generalInfo: { name: 'Main datacenter', abbreviation: 'DC' },
+        ...overrides,
     });
-    const { columns, html } = await renderInventoryTable({
-        datacenters: [datacenter],
+
+test('summary table exposes exactly the five master-detail columns', async () => {
+    const { columns } = await renderInventoryTable();
+    assert.deepEqual(
+        columns.map((column) => column.name),
+        ['category', 'name', 'quantity', 'datacenterId', 'actions'],
+    );
+    assert.equal(columns.at(-1).align, 'right');
+    assert.deepEqual(
+        columns.map((column) => column.label),
+        [
+            en.inventoryColumns.category,
+            en.inventoryColumns.name,
+            en.inventoryColumns.quantity,
+            en.inventoryColumns.datacenterId,
+            '',
+        ],
+    );
+});
+
+test('summary rows render translated category, name fallback, quantity and datacenter', async () => {
+    const row = HardwareItemDraftSchema.parse({
+        id: 'h1',
+        category: 'storage_bay',
+        quantity: 4,
+        datacenterId: 'dc-1',
+    });
+    const { html } = await renderInventoryTable({ hardware: [row], datacenters: [datacenter()] });
+    assert.ok(html.includes(en.inventoryCategory_storage_bay));
+    assert.ok(html.includes(en.inventoryColumns.name));
+    assert.ok(html.includes('>4<'));
+    assert.ok(html.includes('DC — Main datacenter'));
+
+    const hidden = await renderInventoryTable({ hardware: [row] });
+    assert.ok(hidden.html.includes('>—<'));
+});
+
+test('view, edit and delete actions are rendered per row', async () => {
+    const row = HardwareItemDraftSchema.parse({ id: 'h1' });
+    const { buttons } = await renderInventoryTable({ hardware: [row] });
+    const labels = buttons.map((control) => control.$attrs['aria-label']);
+    assert.ok(labels.includes(en.inventoryViewRow));
+    assert.ok(labels.includes(en.inventoryEditRow));
+    assert.ok(labels.includes(en.inventoryDeleteRow));
+});
+
+test('delete action confirms and removes the row', async () => {
+    const row = HardwareItemDraftSchema.parse({ id: 'h1', name: 'Router' });
+    const result = await renderInventoryTable({ hardware: [row] });
+    const remove = result.buttons.find(
+        (control) => control.$attrs['aria-label'] === en.inventoryDeleteRow,
+    );
+    remove.$emit('click');
+    assert.equal(result.dialogs.length, 1);
+    assert.equal(
+        result.dialogs[0].options.message,
+        en.inventoryDeleteConfirmMessage.replace('{name}', 'Router'),
+    );
+    result.dialogs[0].confirm();
+    assert.equal(result.store.hardware.length, 0);
+});
+
+test('detail dialog shell exposes the back button, title context and mode badge', async () => {
+    const row = HardwareItemDraftSchema.parse({ id: 'h1', name: 'Server' });
+    const readShell = await renderInventoryDialogShell({ row, readonly: true });
+    const readHtml = await renderDialogContent(readShell);
+    assert.ok(readHtml.includes('arrow_back'));
+    assert.ok(readHtml.includes('Server'));
+    assert.ok(readHtml.includes(en.inventoryCategory_server));
+    assert.ok(readHtml.includes(en.inventoryModeReadonly));
+
+    const editShell = await renderInventoryDialogShell({ row });
+    const editHtml = await renderDialogContent(editShell);
+    assert.ok(editHtml.includes(en.inventoryModeEditing));
+
+    const untitled = await renderInventoryDialogShell({
+        row: HardwareItemDraftSchema.parse({ id: 'h2' }),
+    });
+    const untitledHtml = await renderDialogContent(untitled);
+    assert.ok(untitledHtml.includes('Untitled'));
+});
+
+test('detail form renders every group and field with deep-link attributes', async () => {
+    const row = HardwareItemDraftSchema.parse({ id: 'h1', name: 'Server' });
+    const { html, inputs, selects, toggles } = await renderInventoryDialog({
+        row,
+        datacenters: [datacenter()],
+    });
+
+    for (const group of Object.values(en.inventoryGroups)) {
+        const escaped = group.replaceAll('&', '&amp;');
+        assert.ok(html.includes(escaped), `missing group ${group}`);
+    }
+
+    const fields = new Set([
+        ...inputs.map((control) => control.$attrs['data-field']),
+        ...selects.map((control) => control.$attrs['data-field']),
+        ...toggles.map((control) => control.$attrs['data-field']),
+    ]);
+    assert.deepEqual(
+        [...fields].toSorted(),
+        Object.keys(HardwareItemSchema.shape)
+            .filter(
+                (field) => field !== 'id' && field !== 'memoryTotalGb' && field !== 'storageTotal',
+            )
+            .toSorted(),
+    );
+    for (const control of [...inputs, ...selects, ...toggles]) {
+        assert.equal(control.$attrs['data-row-id'], 'h1');
+    }
+});
+
+test('readonly mode renders text details without editable inputs', async () => {
+    const row = HardwareItemDraftSchema.parse({ id: 'h1', name: 'Server A' });
+    const { html, inputs, selects, toggles } = await renderInventoryDialog({ row, readonly: true });
+    assert.equal(inputs.length, 0);
+    assert.equal(selects.length, 0);
+    assert.equal(toggles.length, 0);
+    assert.ok(html.includes('Server A'));
+    assert.ok(html.includes(en.inventoryColumns.memoryTotalGb));
+});
+
+test('edit mode keeps controls enabled', async () => {
+    const row = HardwareItemDraftSchema.parse({ id: 'h1' });
+    const { inputs, selects, toggles } = await renderInventoryDialog({ row });
+    for (const control of [...inputs, ...selects, ...toggles]) {
+        assert.equal(control.$props.disable, false);
+    }
+});
+
+test('enum and datacenter options come from the schema and the store', async () => {
+    const row = HardwareItemDraftSchema.parse({ id: 'h1' });
+    const { selects } = await renderInventoryDialog({
+        row,
+        datacenters: [datacenter()],
         messages: {
             ...en,
-            inventoryColumns: { ...en.inventoryColumns, name: 'Equipment name' },
             inventoryCategory_server: 'Translated server',
-            inventoryGroups: { ...en.inventoryGroups, general: 'Translated general' },
         },
     });
-    assert.equal(columns.find((column) => column.name === 'name').label, 'Equipment name');
-    assert.match(html, /Translated general<\/th>/);
-    assert.deepEqual(columns.find((column) => column.name === 'datacenterId').options, [
-        { label: 'DC — Main datacenter', value: 'dc-1' },
-    ]);
+    const category = selects.find((control) => control.$attrs['data-field'] === 'category');
     assert.equal(
-        columns
-            .find((column) => column.name === 'category')
-            .options.find((option) => option.value === 'server').label,
+        category.$props.options.find((option) => option.value === 'server').label,
         'Translated server',
     );
-    const empty = await renderInventoryTable();
-    assert.deepEqual(empty.columns.find((column) => column.name === 'datacenterId').options, []);
-});
-
-test('derived columns calculate from inputs and subtotal sorts by calculated value', async () => {
-    const row = HardwareItemDraftSchema.parse({
-        quantity: 3,
-        impactManufacturingDistributionEol: 12,
-        memoryQuantity: 4,
-        memorySizeGb: 16,
-        storageQuantity: 2,
-        storageSize: 1000,
-        memoryTotalGb: 999,
-        storageTotal: 999,
-    });
-    const { columns, html } = await renderInventoryTable({ hardware: [row] });
-    const byName = Object.fromEntries(columns.map((column) => [column.name, column]));
-    assert.equal(byName.memoryTotalGb.derived(row).result, 64);
-    assert.equal(byName.storageTotal.derived(row).result, 2000);
-    assert.equal(byName.subtotal.derived(row).result, 36);
-    assert.equal(byName.subtotal.sort(undefined, undefined, row, { ...row, quantity: 1 }), 24);
-    const missingSubtotal = { ...row, quantity: null };
-    assert.equal(byName.subtotal.sort(undefined, undefined, missingSubtotal, row), 1);
-    assert.equal(byName.subtotal.sort(undefined, undefined, row, missingSubtotal), -1);
-    assert.equal(byName.subtotal.sort(undefined, undefined, missingSubtotal, missingSubtotal), 0);
-    const missingMemory = byName.memoryTotalGb.derived({ ...row, memoryQuantity: null });
-    const missingStorage = byName.storageTotal.derived({ ...row, storageSize: undefined });
-    assert.equal(missingMemory.result, null);
-    assert.equal(missingStorage.result, null);
-    assert.deepEqual(
-        missingMemory.inputErrors[0].issues.map((issue) => issue.path),
-        [['memoryQuantity']],
+    const datacenterSelect = selects.find(
+        (control) => control.$attrs['data-field'] === 'datacenterId',
     );
-    assert.deepEqual(
-        missingStorage.inputErrors[0].issues.map((issue) => issue.path),
-        [['storageSize']],
-    );
-    const derivedCells = [...html.matchAll(/<td[^>]*data-kind="derived"[^>]*>(.*?)<\/td>/gs)];
-    assert.deepEqual(
-        derivedCells.map((cell) =>
-            cell[1]
-                .replace(/<button\b[\s\S]*?<\/button>/g, '')
-                .replace(/<!--[\s\S]*?-->|<[^>]+>/g, '')
-                .trim(),
-        ),
-        ['36.00', '64.00', '2,000.00'],
-    );
-});
-
-test('derived cells and excluded impact display missing values without formatting result objects', async () => {
-    const row = HardwareItemDraftSchema.parse({ id: 'unfinished' });
-    const { html } = await renderInventoryTable({ hardware: [row] });
-    const derivedCells = [...html.matchAll(/<td[^>]*data-kind="derived"[^>]*>(.*?)<\/td>/gs)];
-    assert.deepEqual(
-        derivedCells.map((cell) =>
-            cell[1]
-                .replace(/<button\b[\s\S]*?<\/button>/g, '')
-                .replace(/<!--[\s\S]*?-->|<[^>]+>/g, '')
-                .trim(),
-        ),
-        ['—', '—', '—'],
-    );
-
-    const excluded = await renderInventoryTable({
-        hardware: [{ ...row, isSecondHand: true, impactManufacturingDistributionEol: 12 }],
-    });
-    assert.match(excluded.html, /inventory-strike[^>]*>12\.00<\/span>/);
-    assert.ok(excluded.html.includes(en.inventoryNotCounted));
-
-    const excludedMissing = await renderInventoryTable({
-        hardware: [{ ...row, isSecondHand: true }],
-    });
-    assert.match(excludedMissing.html, /inventory-strike[^>]*>—<\/span>/);
+    assert.deepEqual(datacenterSelect.$props.options, [
+        { label: 'DC — Main datacenter', value: 'dc-1' },
+    ]);
 });

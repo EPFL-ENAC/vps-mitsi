@@ -1,4 +1,8 @@
 export default {
+    // --- Shared labels ---
+    commonBack: 'Back',
+    commonYes: 'Yes',
+    commonNo: 'No',
     // --- Welcome page ---
     welcomeEyebrow: 'Assessment workflow · LCA of an IT service',
     welcomeTitle: 'Assess the carbon footprint of your IT service',
@@ -59,8 +63,6 @@ export default {
     mainNavResults: 'Results',
     mainNavResultsLockedHint: 'Unlocks when assessments completed',
     mainNavLocked: 'Locked',
-    mainStatusComplete: 'Complete',
-    mainStatusPartial: 'In progress',
     mainStatusNotStarted: 'Not started',
     mainFooterEmbodied: 'Embodied {value}',
     mainFooterOperational: 'Operational {value}',
@@ -104,8 +106,6 @@ export default {
     scopeFunctionalUnitLabel: 'Functional unit',
     scopeFuBefore: 'Usage of',
     scopeFuMiddle: 'of the service with',
-    scopeFuDuration: 'Usage duration',
-    scopeFuResourceCount: 'Number of resources',
     scopeFuSentence: 'Usage of {duration} {unit} of the service with {count} {type}',
     scopeTimeUnit_second: 'second',
     scopeTimeUnit_minute: 'minute',
@@ -186,18 +186,19 @@ export default {
     inventoryWarningBar:
         '⚠ {n} rows are missing a mandatory value. Missing measurements are shown as unavailable; affected totals remain unavailable until the required values are supplied.',
     inventoryFooter: 'Total embodied — {n} second-hand element(s) excluded',
-    inventoryModeSimple: 'Simple',
-    inventoryModeNormal: 'Normal',
-    inventoryModeAdvanced: 'Advanced',
-    inventoryModeHint:
-        'Switching modes only hides or shows columns — it never deletes data. Hidden values stay in the file and in the report.',
     inventoryAddRow: '+ Add row',
     inventoryDeleteRow: 'Delete',
+    inventoryViewRow: 'View',
+    inventoryEditRow: 'Edit',
     inventoryDeleteConfirmTitle: 'Delete row',
     inventoryDeleteConfirmMessage:
         'Delete {name}? This removes the hardware row from the inventory.',
     inventoryNotCounted: 'not counted',
     inventoryNoDatacentersHint: 'No datacenters defined yet — add them in the “Scope” block first.',
+    // Full-screen detail dialog
+    inventoryModeReadonly: 'Read-only',
+    inventoryModeEditing: 'Editing',
+    inventoryDialogUntitledItem: 'Untitled {category}',
     inventoryGroups: {
         general: 'General',
         impact: 'Impact (∑)',
