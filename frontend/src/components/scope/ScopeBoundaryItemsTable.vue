@@ -65,8 +65,7 @@
             flat
             dense
             no-caps
-            size="sm"
-            class="boundary-add-btn text-caption text-weight-medium text-grey-8"
+            class="q-mb-xs text-body2 text-weight-medium text-grey-9"
             :label="`+ ${t(`scopeBoundary.${kind}.add`)}`"
             @click="addItem"
         />
@@ -121,9 +120,5 @@ function removeItem(id: string): void {
     &--grow {
         flex: 1.5 1 260px;
     }
-}
-
-.boundary-add-btn {
-    padding-left: 0;
 }
 </style>

@@ -11,11 +11,12 @@
         <!-- Scope gating hint (informational) -->
         <q-banner
             v-if="!surveyData.isScopeValid"
+            dense
             inline-actions
             class="bg-blue-1 text-blue-9 q-mb-md rounded-borders"
         >
             <template #avatar>
-                <q-icon name="info" />
+                <q-icon name="sym_r_info" size="sm" />
             </template>
             {{ $t('inventoryNoScopeHint') }}
         </q-banner>

@@ -3,8 +3,7 @@
         flat
         dense
         no-caps
-        size="sm"
-        class="q-mb-sm text-caption text-weight-medium text-grey-8"
+        class="q-mb-xs text-body2 text-weight-medium text-grey-9"
         :label="`+ ${t('scopeDcAdd')}`"
         @click="addDatacenter"
     />

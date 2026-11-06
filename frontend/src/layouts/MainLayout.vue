@@ -86,10 +86,10 @@
                         </q-item-section>
                         <q-item-section side top class="nav-badge text-caption text-grey-7">
                             <span class="row items-center no-wrap">
-                                <q-badge
+                                <q-icon
                                     v-if="surveyData.scopeStatus === 'partial'"
-                                    rounded
-                                    color="warning"
+                                    name="warning"
+                                    size="14px"
                                     class="q-mr-xs"
                                 />
                                 {{
@@ -115,10 +115,10 @@
                         </q-item-section>
                         <q-item-section side top class="nav-badge text-caption text-grey-7">
                             <span class="row items-center no-wrap">
-                                <q-badge
+                                <q-icon
                                     v-if="surveyData.missingMandatoryHardware > 0"
-                                    rounded
-                                    color="warning"
+                                    name="warning"
+                                    size="14px"
                                     class="q-mr-xs"
                                 />
                                 {{ $t('mainNavHardwareRows', { n: surveyData.hardware.length }) }}
@@ -139,10 +139,10 @@
                         </q-item-section>
                         <q-item-section side top class="nav-badge text-caption text-grey-7">
                             <span class="row items-center no-wrap">
-                                <q-badge
+                                <q-icon
                                     v-if="surveyData.hasIncompleteEnergy"
-                                    rounded
-                                    color="warning"
+                                    name="warning"
+                                    size="14px"
                                     class="q-mr-xs"
                                 />
                                 {{ energyBadgeLabel }}
@@ -453,5 +453,9 @@ function formatTimeAgo(ts: number): string {
 .nav-badge {
     white-space: nowrap;
     color: #6b7280;
+}
+
+.q-item .nav-badge .q-icon {
+    color: #f59e0b !important;
 }
 </style>
