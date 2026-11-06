@@ -37,7 +37,7 @@
                                 icon="visibility"
                                 text-color="dark"
                                 :aria-label="$t('inventoryViewRow')"
-                                @click="openDialog(slotProps.row, 'view')"
+                                @click="open(slotProps.row, 'view')"
                             >
                                 <q-tooltip>{{ $t('inventoryViewRow') }}</q-tooltip>
                             </q-btn>
@@ -49,7 +49,7 @@
                                 icon="edit"
                                 text-color="dark"
                                 :aria-label="$t('inventoryEditRow')"
-                                @click="openDialog(slotProps.row, 'edit')"
+                                @click="open(slotProps.row, 'edit')"
                             >
                                 <q-tooltip>{{ $t('inventoryEditRow') }}</q-tooltip>
                             </q-btn>
@@ -75,13 +75,13 @@
             v-if="selectedRow"
             v-model:open="dialogOpen"
             v-model:row="selectedRow"
-            :readonly="mode === 'view'"
+            :readonly="dialogMode === 'view'"
         />
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useQuasar, type QTableColumn } from 'quasar';
 import type { z } from 'zod';
@@ -90,12 +90,12 @@ import HardwareDetailDialog from 'src/components/inventory/HardwareDetailDialog.
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useSurveyResultsStore } from 'src/stores/surveyResults';
 import { HardwareItemSchema, type HardwareItem } from 'src/models/HardwareItem/schema';
+import { useHardwareDialog } from 'src/composables/useHardwareDialog';
 import { formatDatacenterName } from 'src/utils/format';
-
-type DialogMode = 'view' | 'edit';
 
 const surveyData = useSurveyDataStore();
 const surveyResults = useSurveyResultsStore();
+const { dialogOpen, dialogMode, selectedRow, open, close } = useHardwareDialog();
 
 const { t } = useI18n();
 const $q = useQuasar();
@@ -147,10 +147,6 @@ const columns = computed<InventoryColumn[]>(() => [
     },
 ]);
 
-const dialogOpen = ref(false);
-const mode = ref<DialogMode>('view');
-const selectedRow = ref<HardwareItem | null>(null);
-
 function categoryLabel(row: HardwareItem): string {
     return t(`inventoryCategory_${row.category}`);
 }
@@ -164,12 +160,6 @@ function datacenterLabel(row: HardwareItem): string {
     return dc ? formatDatacenterName(dc) : '—';
 }
 
-function openDialog(row: HardwareItem, nextMode: DialogMode): void {
-    selectedRow.value = row;
-    mode.value = nextMode;
-    dialogOpen.value = true;
-}
-
 function confirmDeleteRow(row: HardwareItem): void {
     $q.dialog({
         title: t('inventoryDeleteConfirmTitle'),
@@ -180,13 +170,12 @@ function confirmDeleteRow(row: HardwareItem): void {
         const i = surveyData.hardware.findIndex((h) => h.id === row.id);
         if (i >= 0) surveyData.hardware.splice(i, 1);
         if (selectedRow.value?.id === row.id) {
-            selectedRow.value = null;
-            dialogOpen.value = false;
+            close();
         }
     });
 }
 
-defineExpose({ openDialog });
+defineExpose({ openDialog: open });
 </script>
 
 <style scoped lang="scss">

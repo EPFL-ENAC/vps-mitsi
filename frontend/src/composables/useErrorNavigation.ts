@@ -5,6 +5,7 @@ import type { ZodType } from 'zod';
 
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useValidation } from 'src/composables/useValidation';
+import { useHardwareDialog } from 'src/composables/useHardwareDialog';
 import { ScopeSchema, BoundaryItemSchema } from 'src/models/Scope/schema';
 import { DatacenterGeneralInfoSchema, DatacenterEnergySchema } from 'src/models/Datacenter/schema';
 import { HardwareItemSchema } from 'src/models/HardwareItem/schema';
@@ -42,6 +43,7 @@ export function useErrorNavigation() {
     const { t } = useI18n();
     const { formatIssue } = useValidation();
     const surveyData = useSurveyDataStore();
+    const { open: openHardwareDialog } = useHardwareDialog();
 
     function resolveFieldLabel(prefix: string, field: string): string {
         const fullKey = `${prefix}.${field}`;
@@ -207,6 +209,15 @@ export function useErrorNavigation() {
         return list;
     });
 
+    /** Handlers for sections requiring modal or drawer activation before focus */
+    const sectionOpeners: Partial<Record<SectionId, (issue: DiagnosticIssue) => void>> = {
+        inventory: (issue) => {
+            if (!issue.rowId) return;
+            const item = surveyData.hardware.find((row) => row.id === issue.rowId);
+            if (item) openHardwareDialog(item, 'edit');
+        },
+    };
+
     /** Expands parent QExpansionItem if the target element is collapsed */
     function expandEnclosingSection(element: HTMLElement): void {
         const collapsed = element.closest('.q-expansion-item--collapsed');
@@ -230,12 +241,16 @@ export function useErrorNavigation() {
         (control ?? element).focus();
     }
 
-    /** Navigates across routes, locates the field by attributes, and triggers focus */
+    /** Navigates across routes, prepares target container, and triggers field focus */
     async function executeScrollAndPulse(issue: DiagnosticIssue): Promise<void> {
         if (router.currentRoute.value.path !== issue.route) {
             await router.push(issue.route);
             await nextTick();
         }
+
+        // Run section-specific preparation (e.g. opening edit modal) if registered
+        sectionOpeners[issue.section]?.(issue);
+        await nextTick();
 
         window.setTimeout(() => {
             const selector = issue.rowId
@@ -244,7 +259,7 @@ export function useErrorNavigation() {
 
             let element = document.querySelector<HTMLElement>(selector);
 
-            // Fallback to row element if the specific table column is hidden by visibility mode
+            // Fallback to row element if specific field cell is omitted
             if (!element && issue.rowId) {
                 element = document.querySelector<HTMLElement>(
                     `[data-row-id="${CSS.escape(issue.rowId)}"]`,
