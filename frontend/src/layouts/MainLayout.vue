@@ -272,6 +272,7 @@ import { useSurveyResultsStore } from 'src/stores/surveyResults';
 import { computed, ref } from 'vue';
 import { useQuasar, date, exportFile } from 'quasar';
 import { useI18n } from 'vue-i18n';
+import { z } from 'zod';
 
 import type { ExportMetadataInput } from 'src/models/ExportMetadata/schema';
 import { isImportEmpty } from 'src/models/MitsiState/utils';
@@ -364,15 +365,22 @@ function exportAssessment(): void {
 
 /** Runs once the export dialog collected and validated its metadata. */
 function onExportConfirmed(metadata: ExportMetadataInput): void {
-    const status = exportFile(
-        `mitsi-assessment-${date.formatDate(new Date(), 'YYYY-MM-DD_HH-mm-ss')}.json`,
-        surveyData.exportJson(metadata),
-        { mimeType: 'application/json' },
-    );
-    if (status === true) {
-        $q.notify({ type: 'positive', message: t('mainExportSuccess') });
-    } else {
-        $q.notify({ type: 'negative', message: t('mainExportFailed') });
+    try {
+        const status = exportFile(
+            `mitsi-assessment-${date.formatDate(new Date(), 'YYYY-MM-DD_HH-mm-ss')}.json`,
+            surveyData.exportJson(metadata),
+            { mimeType: 'application/json' },
+        );
+        if (status === true) {
+            $q.notify({ type: 'positive', message: t('mainExportSuccess') });
+        } else {
+            $q.notify({ type: 'negative', message: t('mainExportFailed') });
+        }
+    } catch (error) {
+        $q.notify({
+            type: 'negative',
+            message: t(error instanceof z.ZodError ? 'mainExportInvalidData' : 'mainExportError'),
+        });
     }
 }
 

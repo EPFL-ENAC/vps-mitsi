@@ -16,7 +16,8 @@ import { draftField } from 'src/models/shared/schema';
 /** Bumped whenever the persisted/exported JSON shape changes. */
 // v5: unanswered numeric drafts are empty instead of numeric placeholders.
 // v6: functional units may carry a custom resource name and manual fleet count.
-export const MITSI_SCHEMA_VERSION = 6;
+// v7: memory and storage totals are display-only calculations, not persisted fields.
+export const MITSI_SCHEMA_VERSION = 7;
 
 /** Canonical whole-assessment validation; no default values or data filtering. */
 export const MitsiStateSchema = z.object({

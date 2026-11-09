@@ -17,6 +17,13 @@ export function formatKg(n: number | null): string {
     }).format(n);
 }
 
+/** Integer capacity in GB, with comma thousands separators. */
+export function formatGb(value: number): string {
+    return `${new Intl.NumberFormat('en-US', {
+        maximumFractionDigits: 0,
+    }).format(value)} GB`;
+}
+
 /** Format a result with caller-provided missing and partial-result labels. */
 export function formatResult(
     value: number | null,

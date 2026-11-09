@@ -17,7 +17,8 @@ export function isSchemaRequired(schema?: z.ZodType): boolean {
     if (!schema) return false;
     const allowsUndefined = schema.safeParse(undefined).success;
     const allowsNull = schema.safeParse(null).success;
-    return !allowsUndefined && !allowsNull;
+    const allowsEmptyString = schema.safeParse('').success;
+    return !allowsUndefined && !allowsNull && !allowsEmptyString;
 }
 
 export function useValidation() {
@@ -47,14 +48,15 @@ export function useValidation() {
     /**
      * Wrap a strict field schema as a Quasar ValidationRule. An absent schema
      * (no rule attached) always passes. Quasar text/number inputs hand an empty
-     * field back as '' or null — treat those as undefined so `optional()`
-     * schemas (e.g. PUE) stay valid while required fields report "required"
-     * instead of a confusing type error.
+     * field back as '' or null — preserve an empty string when the schema accepts
+     * it, otherwise treat it as undefined so optional fields stay valid and
+     * required fields report the appropriate missing-value error.
      */
     function toValidationRule(schema?: z.ZodType): ValidationRule {
         if (!schema) return () => true;
+        const emptyValue = schema.safeParse('').success ? '' : undefined;
         return (value: unknown) => {
-            const v = value === '' || value === null ? undefined : value;
+            const v = value === '' || value === null ? emptyValue : value;
             const r = schema.safeParse(v);
             return r.success ? true : r.error.issues.map(formatIssue).join(', ');
         };

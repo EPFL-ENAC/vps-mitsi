@@ -274,19 +274,13 @@ test('operational collection preserves valid rows, ignored datacenter identity, 
     assert.equal(partial.ignoredInputs[1], badPue);
     assert.equal(partial.inputErrors.length, 2);
     assert.ok(partial.inputErrors.every((error) => error instanceof z.ZodError));
-    // An unfilled datacenter reports every mandatory energy field, including the
-    // non-empty comment strings; the malformed PUE reports only its own field.
+    // Blank text is valid; missing measurements and malformed PUE remain errors.
     assert.deepEqual(
         partial.inputErrors.map((error) => error.issues.map((issue) => issue.path)),
         [
             [
-                ['energy', 'comment'],
-                ['energy', 'location'],
-                ['energy', 'locationComment'],
                 ['energy', 'carbonIntensity'],
-                ['energy', 'carbonIntensityComment'],
                 ['energy', 'energyConsumption'],
-                ['energy', 'energyComment'],
             ],
             [['energy', 'pue']],
         ],
@@ -491,8 +485,6 @@ test('cleared nested energy survives persistence and reset restores fresh assess
     Object.assign(store.datacenters[0].energy, validEnergy());
     store.datacenters[0].energy.energyConsumption = 12;
     store.clearDatacenterEnergy('dc1');
-    // Clearing resets the whole energy block, so refill the mandatory strings before saving.
-    Object.assign(store.datacenters[0].energy, validEnergy({ energyConsumption: null }));
     const json = store.exportJson(defaultExportMetadata());
     const state = JSON.parse(json);
     assert.equal('energy' in state, false);
@@ -509,8 +501,6 @@ test('cleared nested energy survives persistence and reset restores fresh assess
         store.addBoundaryItem('excluded');
         store.addHardwareItem();
         store.addDatacenter();
-        // Added datacenters start blank; fill the mandatory energy strings so saves succeed.
-        Object.assign(store.datacenters.at(-1).energy, validEnergy());
         store.monitoringPeriod.value = 7;
         store.includeSecondHandEmbodied = true;
         store.includeUnderlyingServices = true;
