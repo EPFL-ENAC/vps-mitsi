@@ -31,7 +31,7 @@
                                 {{ $t(`inventoryColumns.${field.field}`) }}
                             </div>
 
-                            <!-- Calculs readonly -->
+                            <!-- Calculations readonly (subtotal in kg, capacities in GB) -->
                             <div
                                 v-if="field.kind === 'derived'"
                                 class="text-body2 text-weight-bold text-dark"
@@ -39,7 +39,7 @@
                                 <ComputationResultDisplay
                                     v-if="field.derived"
                                     :computation="field.derived(row)"
-                                    :format-value="formatKg"
+                                    :format-value="field.formatValue!"
                                 />
                             </div>
 
@@ -71,7 +71,7 @@
                                     <ComputationResultDisplay
                                         v-if="field.derived"
                                         :computation="field.derived(row)"
-                                        :format-value="formatKg"
+                                        :format-value="field.formatValue!"
                                     />
                                 </div>
                             </div>
@@ -167,20 +167,22 @@ import {
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useSurveyResultsStore } from 'src/stores/surveyResults';
 import type { ComputationResult } from 'src/utils/computation';
-import { formatDatacenterName, formatKg, normalizeKey } from 'src/utils/format';
+import { formatDatacenterName, formatGb, formatKg, normalizeKey } from 'src/utils/format';
 
 const GROUPS = ['general', 'impact', 'cpu', 'memory', 'storage', 'gpu', 'network'] as const;
 type GroupKey = (typeof GROUPS)[number];
 
 type FieldKind = 'enum' | 'datacenter' | 'text' | 'number' | 'toggle' | 'derived';
+type InventoryField = keyof HardwareItem | 'subtotal' | 'memoryTotalGb' | 'storageTotal';
 
 interface FormFieldSpec {
-    field: keyof HardwareItem | 'subtotal';
+    field: InventoryField;
     group: GroupKey;
     kind: FieldKind;
     schema?: z.ZodType;
     options?: { label: string; value: string }[];
     derived?: (row: HardwareItem) => ComputationResult<number>;
+    formatValue?: (val: number) => string;
 }
 
 const row = defineModel<HardwareItem>('row', { required: true });
@@ -206,8 +208,8 @@ const datacenterOptions = computed<{ label: string; value: string }[]>(() =>
 
 /** Read value readonly */
 function formatReadonlyValue(field: FormFieldSpec): string {
-    if (field.field === 'subtotal') return '—';
-    const val = row.value[field.field];
+    if (field.kind === 'derived') return '—';
+    const val = row.value[field.field as keyof HardwareItem];
     if (val === null || val === undefined || val === '') return '—';
 
     if (field.kind === 'datacenter') {
@@ -258,6 +260,7 @@ const fields = computed<FormFieldSpec[]>(() => {
             group: 'impact',
             kind: 'derived',
             derived: surveyResults.hardwareRowEmbodiedEmissionsKg,
+            formatValue: formatKg,
         },
 
         // CPU
@@ -275,6 +278,7 @@ const fields = computed<FormFieldSpec[]>(() => {
             group: 'memory',
             kind: 'derived',
             derived: surveyResults.hardwareMemoryPerUnitGb,
+            formatValue: formatGb,
         },
 
         // Storage
@@ -297,6 +301,7 @@ const fields = computed<FormFieldSpec[]>(() => {
             group: 'storage',
             kind: 'derived',
             derived: surveyResults.hardwareStorageCapacityPerUnit,
+            formatValue: formatGb,
         },
         {
             field: 'storageTechnology',
