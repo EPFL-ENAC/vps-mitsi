@@ -146,33 +146,55 @@ test('boundary rows render sentence inputs and edit selected collection only', a
     }
 });
 
-test('energy inputs retain canonical validation and nested updates; clear requires confirmation', async () => {
+test('energy summary table is a compact 5-column master list; clear requires confirmation', async () => {
     const result = await renderTables(EnergyDatacentersTable, {
         setupStore(store) {
-            store.datacenters = [datacenter()];
+            store.datacenters = [
+                DatacenterDraftSchema.parse({
+                    id: 'dc-1',
+                    generalInfo: { abbreviation: 'DC', name: 'Test datacenter' },
+                    energy: validEnergy({
+                        location: 'Lausanne',
+                        carbonIntensity: 125,
+                        energyConsumption: 100,
+                        comment: 'Energy note',
+                    }),
+                }),
+            ];
         },
     });
-    assertCellKinds(result);
+
+    // Same five-column master-detail contract as the hardware inventory table.
     assert.deepEqual(
         result.tables[0].columns.map((c) => c.name),
-        ['datacenter', ...Object.keys(DatacenterEnergySchema.shape)],
+        ['datacenter', 'location', 'carbonIntensity', 'energyConsumption', 'actions'],
     );
+    assert.equal(result.tables[0].columns.at(-1).align, 'right');
+    assert.equal(result.tables[0].columns.at(-1).label, '');
+    // Editable columns carry their canonical schema, mirroring the inventory table.
     for (const column of result.tables[0].columns.filter((c) => c.zod)) {
         assert.equal(column.zod, DatacenterEnergySchema.shape[column.name]);
     }
-    const intensity = input(result, en.energyColumns.carbonIntensity);
-    assert.equal(intensity.rules[0](0), true);
-    intensity.$emit('update:modelValue', 125);
-    input(result, en.energyColumns.comment).$emit('update:modelValue', 'Energy note');
-    input(result, en.energyColumns.pue).$emit('update:modelValue', null);
-    assert.equal(result.store.datacenters[0].energy.carbonIntensity, 125);
-    assert.equal(result.store.datacenters[0].energy.comment, 'Energy note');
-    assert.equal(result.store.datacenters[0].energy.pue, null);
-    assert.equal(result.store.datacenters[0].generalInfo.comment, '');
+    assert.equal(result.tables[0].columns[3].zod, DatacenterEnergySchema.shape.energyConsumption);
+    // No inline inputs: editing happens in the detail dialog.
+    assert.equal(result.inputs.length, 0);
+    // Calculation parameters render in the summary row.
+    assert.ok(result.html.includes('125 gCO₂/kWh'));
+    assert.ok(result.html.includes('100 kWh'));
+    // Comments stay in the detail form only.
+    assert.ok(!result.html.includes('Energy note'));
+
     button(result, en.energyDcClear).$emit('click');
+    // The confirmation is required before anything is reset.
     assert.equal(result.store.datacenters[0].energy.carbonIntensity, 125);
+    assert.equal(
+        result.dialogs[0].options.message,
+        en.energyClearConfirmMessage.replace('{name}', 'DC — Test datacenter'),
+    );
     result.dialogs[0].confirm();
+    // Both calculation parameters are cleared together.
     assert.equal(result.store.datacenters[0].energy.carbonIntensity, null);
+    assert.equal(result.store.datacenters[0].energy.energyConsumption, null);
     assert.equal(result.store.datacenters[0].energy.comment, '');
     assert.equal(result.store.datacenters[0].generalInfo.name, 'Test datacenter');
 });

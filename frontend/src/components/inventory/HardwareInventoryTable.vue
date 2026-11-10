@@ -90,7 +90,7 @@ import HardwareDetailDialog from 'src/components/inventory/HardwareDetailDialog.
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useSurveyResultsStore } from 'src/stores/surveyResults';
 import { HardwareItemSchema, type HardwareItem } from 'src/models/HardwareItem/schema';
-import { useHardwareDialog } from 'src/composables/useHardwareDialog';
+import { useHardwareDialog } from 'src/composables/useDetailDialog';
 import { formatDatacenterName } from 'src/utils/format';
 
 const surveyData = useSurveyDataStore();

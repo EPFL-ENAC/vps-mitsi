@@ -45,8 +45,12 @@ import {
 import HardwareInventoryTable from '../../src/components/inventory/HardwareInventoryTable.vue';
 import HardwareDetailDialog from '../../src/components/inventory/HardwareDetailDialog.vue';
 import HardwareDetailForm from '../../src/components/inventory/HardwareDetailForm.vue';
+import EnergyDatacentersTable from '../../src/components/energy/EnergyDatacentersTable.vue';
+import EnergyDatacenterDetailDialog from '../../src/components/energy/EnergyDatacenterDetailDialog.vue';
+import EnergyDatacenterDetailForm from '../../src/components/energy/EnergyDatacenterDetailForm.vue';
 import { useSurveyDataStore } from '../../src/stores/surveyData.ts';
 import { useSurveyResultsStore } from '../../src/stores/surveyResults.ts';
+import { useEnergyDialog } from '../../src/composables/useDetailDialog.ts';
 import en from '../../src/i18n/en-GB/index.ts';
 
 /** Exercise real Quasar controls and inspect their public props/events in SSR. */
@@ -134,6 +138,7 @@ export async function renderTables(
     const html = await renderToString(app, context);
     return {
         html,
+        instances,
         store,
         router,
         results,
@@ -214,6 +219,45 @@ export async function renderInventoryDialog({
 /** Render the full-screen dialog shell (used to assert header/badge markup). */
 export async function renderInventoryDialogShell({ row, readonly = false, messages } = {}) {
     return renderTables(HardwareDetailDialog, {
+        props: { row, readonly, open: true },
+        messages,
+    });
+}
+
+/** Inspect the energy summary columns and the rendered master rows. */
+export async function renderEnergyTable({ datacenters = [], messages } = {}) {
+    // The energy dialog state is module-scoped (shared with error navigation),
+    // so reset it to keep test cases independent of each other.
+    useEnergyDialog().close();
+    const result = await renderTables(EnergyDatacentersTable, {
+        setupStore(store) {
+            store.datacenters = datacenters;
+        },
+        messages,
+    });
+    useEnergyDialog().close();
+    const table = result.instances.find(
+        (instance) => instance.$options.__name === 'EnergyDatacentersTable',
+    );
+    return {
+        ...result,
+        columns: result.tables[0].columns,
+        /** The public surface published through `defineExpose` (as a parent sees it). */
+        tableExposed: table?.$.exposed ?? {},
+    };
+}
+
+/** Render the energy detail form body for a single datacenter. */
+export async function renderEnergyDialog({ row, readonly = false, messages } = {}) {
+    return renderTables(EnergyDatacenterDetailForm, {
+        props: { row, readonly },
+        messages,
+    });
+}
+
+/** Render the energy dialog shell (used to assert header/badge markup). */
+export async function renderEnergyDialogShell({ row, readonly = false, messages } = {}) {
+    return renderTables(EnergyDatacenterDetailDialog, {
         props: { row, readonly, open: true },
         messages,
     });

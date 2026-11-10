@@ -298,6 +298,16 @@ export default {
         energyConsumption: 'Energy (kWh)',
         energyComment: 'Energy comment',
     },
+    energyViewRow: 'View',
+    energyEditRow: 'Edit',
+    // Detail dialog groups
+    energyGroups: {
+        location: 'Location',
+        carbonIntensity: 'Carbon intensity',
+        pue: 'PUE',
+        energyConsumption: 'Energy consumption',
+        general: 'General comment',
+    },
     energyDcClear: 'Clear energy information',
     energyClearConfirmTitle: 'Clear energy information',
     energyClearConfirmMessage:

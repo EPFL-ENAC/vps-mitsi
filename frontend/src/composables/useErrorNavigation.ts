@@ -5,7 +5,7 @@ import type { ZodType } from 'zod';
 
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useValidation } from 'src/composables/useValidation';
-import { useHardwareDialog } from 'src/composables/useHardwareDialog';
+import { useHardwareDialog, useEnergyDialog } from 'src/composables/useDetailDialog';
 import { ScopeSchema, BoundaryItemSchema } from 'src/models/Scope/schema';
 import { DatacenterGeneralInfoSchema, DatacenterEnergySchema } from 'src/models/Datacenter/schema';
 import { HardwareItemSchema } from 'src/models/HardwareItem/schema';
@@ -44,6 +44,7 @@ export function useErrorNavigation() {
     const { formatIssue } = useValidation();
     const surveyData = useSurveyDataStore();
     const { open: openHardwareDialog } = useHardwareDialog();
+    const { open: openEnergyDialog } = useEnergyDialog();
 
     function resolveFieldLabel(prefix: string, field: string): string {
         const fullKey = `${prefix}.${field}`;
@@ -211,6 +212,11 @@ export function useErrorNavigation() {
             if (!issue.rowId) return;
             const item = surveyData.hardware.find((row) => row.id === issue.rowId);
             if (item) openHardwareDialog(item, 'edit');
+        },
+        energy: (issue) => {
+            if (!issue.rowId) return;
+            const dc = surveyData.datacenters.find((row) => row.id === issue.rowId);
+            if (dc) openEnergyDialog(dc, 'edit');
         },
     };
 
