@@ -100,12 +100,41 @@
                                 dense
                             />
 
-                            <!-- Enum select -->
+                            <!-- Enum select (the category cell swaps in place for a custom name) -->
+                            <ZodValidatedTextInput
+                                v-if="field.field === 'category' && row.category === 'other'"
+                                v-model="row.categoryOther"
+                                :schema="HardwareItemSchema.shape.categoryOther"
+                                :label="$t('inventoryColumns.categoryOther')"
+                                :data-row-id="row.id"
+                                data-field="categoryOther"
+                                outlined
+                                dense
+                            >
+                                <template #prepend>
+                                    <q-btn
+                                        flat
+                                        round
+                                        dense
+                                        size="sm"
+                                        icon="arrow_back"
+                                        :aria-label="$t('commonBack')"
+                                        @click="resetCustomCategory"
+                                    >
+                                        <q-tooltip>{{ $t('commonBack') }}</q-tooltip>
+                                    </q-btn>
+                                </template>
+                            </ZodValidatedTextInput>
+
                             <ZodValidatedSelect
                                 v-else-if="field.kind === 'enum'"
                                 v-model="(row as Record<string, any>)[field.field]"
                                 :schema="field.schema!"
-                                :options="field.options ?? []"
+                                :options="
+                                    field.field === 'category'
+                                        ? categoryOptions
+                                        : (field.options ?? [])
+                                "
                                 :label="$t(`inventoryColumns.${field.field}`)"
                                 :data-row-id="row.id"
                                 :data-field="field.field"
@@ -167,7 +196,13 @@ import {
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useSurveyResultsStore } from 'src/stores/surveyResults';
 import type { ComputationResult } from 'src/utils/computation';
-import { formatDatacenterName, formatGb, formatKg, normalizeKey } from 'src/utils/format';
+import {
+    formatCategoryName,
+    formatDatacenterName,
+    formatGb,
+    formatKg,
+    normalizeKey,
+} from 'src/utils/format';
 
 const GROUPS = ['general', 'impact', 'cpu', 'memory', 'storage', 'gpu', 'network'] as const;
 type GroupKey = (typeof GROUPS)[number];
@@ -206,9 +241,27 @@ const datacenterOptions = computed<{ label: string; value: string }[]>(() =>
     })),
 );
 
+/** Standard categories plus the "+ Add other" entry that swaps the cell for a free-text input. */
+const categoryOptions = computed<{ label: string; value: string }[]>(() => [
+    ...enumOptions(
+        HardwareCategorySchema.options.filter((c) => c !== 'other'),
+        'inventoryCategory_',
+    ),
+    { label: `+ ${t('inventoryCategoryAddOther')}`, value: 'other' },
+]);
+
+/** Leave the custom category and return to the standard select in the same grid cell. */
+function resetCustomCategory(): void {
+    row.value.category = 'server';
+    row.value.categoryOther = '';
+}
+
 /** Read value readonly */
 function formatReadonlyValue(field: FormFieldSpec): string {
     if (field.kind === 'derived') return '—';
+    if (field.field === 'category') {
+        return formatCategoryName(row.value.category, row.value.categoryOther, t);
+    }
     const val = row.value[field.field as keyof HardwareItem];
     if (val === null || val === undefined || val === '') return '—';
 
@@ -232,7 +285,7 @@ const fields = computed<FormFieldSpec[]>(() => {
             group: 'general',
             kind: 'enum',
             schema: shape.category,
-            options: enumOptions(HardwareCategorySchema.options, 'inventoryCategory_'),
+            // The select options are built in categoryOptions (standard values + "+ Add other").
         },
         { field: 'name', group: 'general', kind: 'text', schema: shape.name },
         { field: 'rackUnit', group: 'general', kind: 'number', schema: shape.rackUnit },

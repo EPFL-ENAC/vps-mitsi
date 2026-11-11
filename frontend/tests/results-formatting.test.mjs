@@ -5,6 +5,7 @@ import en from '../src/i18n/en-GB/index.ts';
 import { FunctionalUnitSchema } from '../src/models/FunctionalUnit/schema.ts';
 import {
     buildFunctionalUnitSentence,
+    formatCategoryName,
     formatPueInclusion,
     formatResult,
 } from '../src/utils/format.ts';
@@ -91,6 +92,22 @@ test('custom resources render the entered name and fall back to the generic labe
             JSON.stringify(resourceTypeOther),
         );
     }
+});
+
+test('category labels translate standard values and keep custom names as typed', () => {
+    const { t } = createI18n({ legacy: false, locale: 'en', messages: { en } }).global;
+
+    assert.equal(formatCategoryName('server', undefined, t), en.inventoryCategory_server);
+    assert.equal(formatCategoryName('other', 'Firewall', t), 'Firewall');
+    assert.equal(formatCategoryName('other', '', t), en.inventoryCategory_other);
+    // A custom name is spelled as typed, with no i18n key leaking through.
+    assert.equal(formatCategoryName('Firewall', undefined, t), 'Firewall');
+    // Surrounding spaces never reach the UI, and a blank custom name falls back to "Other".
+    assert.equal(formatCategoryName('other', '  Rack PDU  ', t), 'Rack PDU');
+    assert.equal(formatCategoryName('other', '   ', t), en.inventoryCategory_other);
+    // Without a translator the raw key is returned, including for standard values.
+    assert.equal(formatCategoryName('storage_bay'), 'storage_bay');
+    assert.equal(formatCategoryName('other', 'Firewall'), 'Firewall');
 });
 
 test('PUE labels trust the store result and preserve explicit zero', () => {

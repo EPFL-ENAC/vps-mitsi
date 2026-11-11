@@ -91,7 +91,7 @@ import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useSurveyResultsStore } from 'src/stores/surveyResults';
 import { HardwareItemSchema, type HardwareItem } from 'src/models/HardwareItem/schema';
 import { useHardwareDialog } from 'src/composables/useDetailDialog';
-import { formatDatacenterName } from 'src/utils/format';
+import { formatCategoryName, formatDatacenterName } from 'src/utils/format';
 
 const surveyData = useSurveyDataStore();
 const surveyResults = useSurveyResultsStore();
@@ -148,7 +148,7 @@ const columns = computed<InventoryColumn[]>(() => [
 ]);
 
 function categoryLabel(row: HardwareItem): string {
-    return t(`inventoryCategory_${row.category}`);
+    return formatCategoryName(row.category, row.categoryOther, t);
 }
 
 function rowName(row: HardwareItem): string {

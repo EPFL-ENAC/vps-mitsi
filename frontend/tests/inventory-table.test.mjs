@@ -115,17 +115,102 @@ test('detail form renders every group and field with deep-link attributes', asyn
         ...selects.map((control) => control.$attrs['data-field']),
         ...toggles.map((control) => control.$attrs['data-field']),
     ]);
+    // The custom category name is not a grid field: it swaps into the category cell instead.
+    assert.equal(fields.has('categoryOther'), false);
     assert.deepEqual(
         [...fields].toSorted(),
         Object.keys(HardwareItemSchema.shape)
             .filter(
-                (field) => field !== 'id' && field !== 'memoryTotalGb' && field !== 'storageTotal',
+                (field) =>
+                    field !== 'id' &&
+                    field !== 'categoryOther' &&
+                    field !== 'memoryTotalGb' &&
+                    field !== 'storageTotal',
             )
             .toSorted(),
     );
     for (const control of [...inputs, ...selects, ...toggles]) {
         assert.equal(control.$attrs['data-row-id'], 'h1');
     }
+});
+
+test('the category cell swaps in place for a validated custom name', async () => {
+    const row = HardwareItemDraftSchema.parse({ id: 'h1', category: 'other' });
+    row.categoryOther = 'Rack PDU';
+    const { html, inputs, selects, zodInputs, buttons } = await renderInventoryDialog({
+        row,
+        datacenters: [datacenter()],
+    });
+
+    // The same grid slot renders a text input instead of the select; no extra field appears.
+    const customName = inputs.find((control) => control.$attrs['data-field'] === 'categoryOther');
+    assert.ok(customName, 'missing the custom category input');
+    assert.equal(customName.$props.label, en.inventoryColumns.categoryOther);
+    assert.equal(customName.$attrs['data-row-id'], 'h1');
+    assert.equal(customName.$props.modelValue, 'Rack PDU');
+    assert.equal(
+        selects.some((control) => control.$attrs['data-field'] === 'category'),
+        false,
+    );
+    assert.equal(
+        zodInputs.find((control) => control.$attrs['data-field'] === 'categoryOther').$props.schema,
+        HardwareItemSchema.shape.categoryOther,
+    );
+
+    // The back button leaves the custom mode and clears the name.
+    const back = buttons.find((control) => control.$attrs['aria-label'] === en.commonBack);
+    assert.ok(back, 'missing the back button');
+    assert.equal(back.$props.icon, 'arrow_back');
+    assert.equal(html.includes('arrow_back'), true);
+    back.$emit('click');
+    assert.equal(row.category, 'server');
+    assert.equal(row.categoryOther, '');
+});
+
+test('the standard category select ends with the "add other" option', async () => {
+    const row = HardwareItemDraftSchema.parse({ id: 'h1', name: 'Server A' });
+    const { selects } = await renderInventoryDialog({
+        row,
+        datacenters: [datacenter()],
+        messages: {
+            ...en,
+            inventoryCategory_server: 'Translated server',
+        },
+    });
+    const category = selects.find((control) => control.$attrs['data-field'] === 'category');
+    const options = category.$props.options;
+
+    // Selecting "+ Add other category" flips the row into the custom name input.
+    category.$emit('update:modelValue', options.at(-1).value);
+    assert.equal(row.category, 'other');
+    assert.deepEqual(options.at(-1), {
+        label: `+ ${en.inventoryCategoryAddOther}`,
+        value: 'other',
+    });
+    assert.deepEqual(
+        options.map((option) => option.value),
+        ['server', 'compute_server', 'storage_bay', 'network_device', 'spare_part', 'other'],
+    );
+    assert.equal(options[0].label, 'Translated server');
+    assert.equal(options.at(-1).label.includes(en.inventoryCategoryAddOther), true);
+});
+
+test('summary rows show the custom category name instead of a category key', async () => {
+    const custom = HardwareItemDraftSchema.parse({
+        id: 'h1',
+        category: 'other',
+        categoryOther: 'Rack PDU',
+        quantity: 2,
+        datacenterId: 'dc-1',
+    });
+    const unnamed = HardwareItemDraftSchema.parse({ id: 'h2', category: 'other', quantity: 1 });
+    const { html } = await renderInventoryTable({
+        hardware: [custom, unnamed],
+        datacenters: [datacenter()],
+    });
+    assert.ok(html.includes('Rack PDU'));
+    assert.equal(html.includes('inventoryCategory_'), false);
+    assert.ok(html.includes(en.inventoryCategory_other));
 });
 
 test('readonly mode renders text details without editable inputs', async () => {

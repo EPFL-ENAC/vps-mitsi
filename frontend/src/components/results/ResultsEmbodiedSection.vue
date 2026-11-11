@@ -15,13 +15,13 @@
         >
             <component
                 :is="interactive ? QExpansionItem : 'div'"
-                :label="t('inventoryCategory_' + normalizeKey(g.category))"
+                :label="groupLabel(g)"
                 default-opened
                 dense
                 class="results-category"
             >
                 <div v-if="!interactive" class="text-subtitle2 text-weight-bold q-mb-xs">
-                    {{ t('inventoryCategory_' + normalizeKey(g.category)) }}
+                    {{ groupLabel(g) }}
                 </div>
 
                 <q-table
@@ -183,12 +183,12 @@
 
 <script setup lang="ts">
 import { useSurveyDataStore } from 'src/stores/surveyData';
-import { useSurveyResultsStore } from 'src/stores/surveyResults';
+import { useSurveyResultsStore, type EmbodiedGroup } from 'src/stores/surveyResults';
 
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { QExpansionItem, type QTableColumn } from 'quasar';
-import { formatKg, normalizeKey } from 'src/utils/format';
+import { formatCategoryName, formatKg } from 'src/utils/format';
 import EmbodiedTreemapChart from 'src/components/results/EmbodiedTreemapChart.vue';
 import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
 import type { ComputationResult } from 'src/utils/computation';
@@ -211,6 +211,11 @@ withDefaults(
 );
 
 const { t } = useI18n();
+
+/** Custom categories display the user-typed name, standard ones their translation. */
+function groupLabel(group: EmbodiedGroup): string {
+    return formatCategoryName(group.category, group.categoryName, t);
+}
 
 type EmbodiedRow = (typeof surveyResults.embodiedEmissionsByCategory)[number]['rows'][number];
 

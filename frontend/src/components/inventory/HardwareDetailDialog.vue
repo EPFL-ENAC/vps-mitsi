@@ -42,6 +42,7 @@ import { useI18n } from 'vue-i18n';
 
 import HardwareDetailForm from 'src/components/inventory/HardwareDetailForm.vue';
 import type { HardwareItem } from 'src/models/HardwareItem/schema';
+import { formatCategoryName } from 'src/utils/format';
 
 const open = defineModel<boolean>('open', { required: true });
 const row = defineModel<HardwareItem>('row', { required: true });
@@ -52,7 +53,9 @@ defineProps<{
 
 const { t } = useI18n();
 
-const categoryLabel = computed(() => t(`inventoryCategory_${row.value.category}`));
+const categoryLabel = computed(() =>
+    formatCategoryName(row.value.category, row.value.categoryOther, t),
+);
 const itemTitle = computed(
     () =>
         row.value.name.trim() ||

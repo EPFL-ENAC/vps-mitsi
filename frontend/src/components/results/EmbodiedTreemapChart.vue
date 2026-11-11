@@ -28,8 +28,8 @@ import {
     type TooltipComponentOption,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
-import { BLUE_SCALE } from 'src/utils/charts';
-import { formatKg } from 'src/utils/format';
+import { getCategoryColor } from 'src/utils/charts';
+import { formatCategoryName, formatKg } from 'src/utils/format';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 
 echarts.use([TreemapChart, TooltipComponent, AriaComponent, CanvasRenderer]);
@@ -50,15 +50,16 @@ const props = withDefaults(
 const { t } = useI18n();
 const userPrefs = useUserPreferencesStore();
 
-function getCategoryColor(index: number): string {
-    return BLUE_SCALE[index % BLUE_SCALE.length] ?? BLUE_SCALE[0];
+/** Custom categories display the user-typed name, standard ones their translation. */
+function categoryLabel(group: EmbodiedGroup): string {
+    return formatCategoryName(group.category, group.categoryName, t);
 }
 
 /** Flat treemap (by element) */
 function toElementTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeriesOption['data']> {
     return groups.flatMap((g, categoryIdx) => {
         const categoryColor = getCategoryColor(categoryIdx);
-        const categoryLabel = t('inventoryCategory_' + g.category);
+        const groupLabel = categoryLabel(g);
 
         return g.rows.flatMap((row) => {
             const value = row.rowEmbodiedEmissionsKg.result;
@@ -67,7 +68,7 @@ function toElementTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSerie
                 : [
                       {
                           name: row.name,
-                          categoryLabel,
+                          categoryLabel: groupLabel,
                           value,
                           itemStyle: { color: categoryColor },
                       },
@@ -83,11 +84,11 @@ function toCategoryTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeri
             const total = g.totalEmbodiedEmissionsKg.result;
             if (total === null) return [];
             const categoryColor = getCategoryColor(i);
-            const categoryLabel = t('inventoryCategory_' + g.category);
+            const groupLabel = categoryLabel(g);
 
             return [
                 {
-                    name: categoryLabel,
+                    name: groupLabel,
                     value: total,
                     itemStyle: { color: categoryColor },
                     children: g.rows.flatMap((row) => {
@@ -97,7 +98,7 @@ function toCategoryTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeri
                             : [
                                   {
                                       name: row.name,
-                                      categoryLabel,
+                                      categoryLabel: groupLabel,
                                       value,
                                       itemStyle: { color: categoryColor },
                                   },
@@ -118,7 +119,7 @@ const legend = computed(() =>
                 r.rowEmbodiedEmissionsKg.result !== null &&
                 r.rowEmbodiedEmissionsKg.result > 0,
         )
-            ? [{ name: t('inventoryCategory_' + g.category), color: getCategoryColor(i) }]
+            ? [{ name: categoryLabel(g), color: getCategoryColor(i) }]
             : [],
     ),
 );

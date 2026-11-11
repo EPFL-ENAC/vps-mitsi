@@ -182,7 +182,7 @@ export default {
     // --- Hardware inventory page ---
     inventoryPageTitle: 'Embodied emissions — hardware inventory',
     inventoryPageHint:
-        'List every IT element of the service: compute servers, storage bays, network devices and spare parts. Three editing modes control which columns are shown.',
+        'List every IT element of the service: compute servers, storage bays, network devices and spare parts.',
     inventoryNoScopeHint: 'Complete the “Scope” block first to unlock the fields.',
     inventoryStats: '{rows} items · {elements} elements · {total} kgCO₂e',
     inventoryWarningBar:
@@ -213,6 +213,7 @@ export default {
     inventoryColumns: {
         // General columns
         category: 'Category',
+        categoryOther: 'Custom category name',
         name: 'Name',
         rackUnit: 'Rack unit (U)',
         quantity: 'Quantity',
@@ -258,6 +259,8 @@ export default {
     inventoryCategory_storage_bay: 'Storage bay',
     inventoryCategory_network_device: 'Network device',
     inventoryCategory_spare_part: 'Spare part',
+    inventoryCategory_other: 'Other',
+    inventoryCategoryAddOther: 'Add other category',
     // Enum labels — storage
     inventoryStorageType_HDD: 'HDD',
     inventoryStorageType_SSD: 'SSD',
