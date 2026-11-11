@@ -36,7 +36,7 @@
             <i18n-t
                 keypath="inventoryStats"
                 tag="div"
-                class="text-body1 text-weight-medium"
+                class="text-body2 text-grey-8"
                 scope="global"
             >
                 <template #rows>{{ surveyResults.hardwareRowCount }}</template>
@@ -79,16 +79,8 @@
 
         <!-- Footer -->
         <div class="row items-center q-mt-md inventory-footer">
-            <div class="text-body1">
+            <div class="text-body2 text-grey-7">
                 {{ $t('inventoryFooter', { n: surveyResults.excludedSecondHandRowCount }) }}
-            </div>
-            <div class="text-body1 text-weight-medium" style="margin-left: auto">
-                <ComputationResultDisplay
-                    :computation="surveyResults.totalEmbodiedEmissionsKg"
-                    :format-value="formatKg"
-                >
-                    <template #ignored-input="{ input }">{{ input.name || input.id }}</template>
-                </ComputationResultDisplay>
             </div>
         </div>
     </div>

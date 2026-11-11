@@ -166,10 +166,6 @@ defineExpose({ openDialog: open });
 @use 'src/css/table-cells';
 
 .energy-table {
-    @include table-cells.cells;
-
-    .q-td {
-        vertical-align: middle;
-    }
+    @include table-cells.master-detail-table;
 }
 </style>

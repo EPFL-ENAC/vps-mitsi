@@ -49,9 +49,11 @@ test('inventory statistics use rich translations and identify ignored hardware b
         messages: { ...en, inventoryStats: 'Total {total}; elements {elements}; rows {rows}' },
     });
     assert.match(text(result.html), /Total 10\.00; elements 1; rows 2/);
+    // The page-level partial displays are the header element count and the header total;
+    // table rows expose their own displays separately.
     assert.equal(
         result.computations.filter((display) => display.computation.success === 'partial').length,
-        3,
+        2,
     );
     const diagnostics = await Promise.all(result.tooltips.map(tooltipText));
     assert.ok(
