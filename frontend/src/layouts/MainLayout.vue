@@ -188,72 +188,75 @@
                 <span v-if="exportedText" class="text-caption text-grey-6 q-ml-sm">
                     · {{ exportedText }}
                 </span>
-                <i18n-t
-                    keypath="mainFooterEmbodied"
-                    tag="span"
-                    scope="global"
-                    class="text-caption text-grey-8"
-                >
-                    <template #value>
-                        <ComputationResultDisplay
-                            v-if="surveyData.isScopeValid"
-                            :computation="surveyResults.totalEmbodiedEmissionsKg"
-                            :format-value="formatEmbodiedTonnes"
-                        >
-                            <template #ignored-input="{ input }">{{
-                                input.name || input.id
-                            }}</template>
-                        </ComputationResultDisplay>
-                        <template v-else>{{ t('mainNotApplicable') }}</template>
-                    </template>
-                </i18n-t>
-                <i18n-t
-                    keypath="mainFooterOperational"
-                    tag="span"
-                    scope="global"
-                    class="text-caption text-grey-8"
-                >
-                    <template #value>
-                        <ComputationResultDisplay
-                            v-if="surveyData.isScopeValid"
-                            :computation="surveyResults.totalOperationalEmissionsKg"
-                            :format-value="formatOperationalTonnes"
-                        >
-                            <template #ignored-input="{ input }">{{
-                                formatDatacenterName(input)
-                            }}</template>
-                        </ComputationResultDisplay>
-                        <template v-else>{{ t('mainNotApplicable') }}</template>
-                    </template>
-                </i18n-t>
-                <i18n-t
-                    keypath="mainFooterTotal"
-                    tag="span"
-                    scope="global"
-                    class="text-caption text-grey-8"
-                >
-                    <template #value>
-                        <ComputationResultDisplay
-                            v-if="surveyData.isScopeValid"
-                            :computation="surveyResults.totalLifespanEmissionsKg"
-                            :format-value="formatTotalTonnes"
-                        />
-                        <template v-else>{{ t('mainNotApplicable') }}</template>
-                    </template>
-                </i18n-t>
-                <i18n-t
-                    keypath="mainFooterPerFu"
-                    tag="span"
-                    scope="global"
-                    class="text-caption text-grey-7"
-                >
-                    <template #value>
-                        <ComputationResultDisplay
-                            :computation="surveyResults.emissionsPerFunctionalUnitKg"
-                            :format-value="formatFunctionalUnitGrams"
-                        />
-                    </template>
-                </i18n-t>
+
+                <template v-if="resultsUnlocked">
+                    <i18n-t
+                        keypath="mainFooterEmbodied"
+                        tag="span"
+                        scope="global"
+                        class="text-caption text-grey-8"
+                    >
+                        <template #value>
+                            <ComputationResultDisplay
+                                v-if="surveyData.isScopeValid"
+                                :computation="surveyResults.totalEmbodiedEmissionsKg"
+                                :format-value="formatEmbodiedTonnes"
+                            >
+                                <template #ignored-input="{ input }">{{
+                                    input.name || input.id
+                                }}</template>
+                            </ComputationResultDisplay>
+                            <template v-else>{{ t('mainNotApplicable') }}</template>
+                        </template>
+                    </i18n-t>
+                    <i18n-t
+                        keypath="mainFooterOperational"
+                        tag="span"
+                        scope="global"
+                        class="text-caption text-grey-8"
+                    >
+                        <template #value>
+                            <ComputationResultDisplay
+                                v-if="surveyData.isScopeValid"
+                                :computation="surveyResults.totalOperationalEmissionsKg"
+                                :format-value="formatOperationalTonnes"
+                            >
+                                <template #ignored-input="{ input }">{{
+                                    formatDatacenterName(input)
+                                }}</template>
+                            </ComputationResultDisplay>
+                            <template v-else>{{ t('mainNotApplicable') }}</template>
+                        </template>
+                    </i18n-t>
+                    <i18n-t
+                        keypath="mainFooterTotal"
+                        tag="span"
+                        scope="global"
+                        class="text-caption text-grey-8"
+                    >
+                        <template #value>
+                            <ComputationResultDisplay
+                                v-if="surveyData.isScopeValid"
+                                :computation="surveyResults.totalLifespanEmissionsKg"
+                                :format-value="formatTotalTonnes"
+                            />
+                            <template v-else>{{ t('mainNotApplicable') }}</template>
+                        </template>
+                    </i18n-t>
+                    <i18n-t
+                        keypath="mainFooterPerFu"
+                        tag="span"
+                        scope="global"
+                        class="text-caption text-grey-7"
+                    >
+                        <template #value>
+                            <ComputationResultDisplay
+                                :computation="surveyResults.emissionsPerFunctionalUnitKg"
+                                :format-value="formatFunctionalUnitGrams"
+                            />
+                        </template>
+                    </i18n-t>
+                </template>
 
                 <!-- Pushes error summary button to the right end -->
                 <q-space />

@@ -183,39 +183,66 @@ test('functional-unit values preserve units and precision across complete, parti
 });
 
 test('footer summaries retain gating, translated word order and their own computation status', async () => {
-    const result = await renderTables(MainLayout, {
-        setupStore: setupReady,
-        messages: {
-            ...en,
-            mainFooterEmbodied: '{value} embodied',
-            mainFooterPerFu: '{value} per FU',
-        },
-    });
-    assert.equal(result.computations.length, 4);
-    assert.doesNotMatch(result.html, /computation-result-display__indicator/);
-    assert.match(text(result.html), /0\.0 t embodied/);
-    assert.match(text(result.html), /Operational 0\.1 t/);
-    assert.match(text(result.html), /Total, lifespan 0\.1 tCO₂e/);
-    assert.match(text(result.html), /110000\.00 gCO₂e per FU/);
+    const messages = {
+        ...en,
+        mainFooterEmbodied: '{value} embodied',
+        mainFooterPerFu: '{value} per FU',
+    };
+    const footerComputationDisplays = (html) =>
+        (html.match(/class="computation-result-display[ "]/g) ?? []).length;
 
-    result.store.hardware.push({
+    const footerText = (html) =>
+        text(html.match(/<footer[\s\S]*?<\/footer>/)?.[0] ?? '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+    // An empty survey unlock nothing: the footer keeps the save status only (Issue #90).
+    const empty = await renderTables(MainLayout, { messages });
+    assert.equal(empty.store.resultsStatus, 'not_started');
+    assert.equal(empty.computations.length, 0);
+    assert.equal(footerComputationDisplays(empty.html), 0);
+    assert.doesNotMatch(footerText(empty.html), /embodied|per FU|Total, lifespan/);
+    assert.match(footerText(empty.html), new RegExp(en.mainFooterNeverSaved.split('{')[0].trim()));
+
+    // Started but incomplete data keeps the footer gated as well.
+    const partial = await renderTables(MainLayout, {
+        setupStore(store) {
+            setupReady(store);
+            store.scope.assessors = '';
+        },
+        messages,
+    });
+    assert.equal(partial.store.resultsStatus, 'partial');
+    assert.equal(partial.computations.length, 0);
+    assert.equal(footerComputationDisplays(partial.html), 0);
+    assert.doesNotMatch(footerText(partial.html), /embodied|per FU|Total, lifespan/);
+
+    // Complete survey data unlocks the results, so the footer renders its computation displays.
+    const unlocked = await renderTables(MainLayout, {
+        setupStore: setupReady,
+        messages,
+    });
+    assert.equal(unlocked.store.resultsStatus, 'complete');
+    assert.equal(unlocked.computations.length, 4);
+    assert.equal(footerComputationDisplays(unlocked.html), 4);
+    assert.doesNotMatch(unlocked.html, /computation-result-display__indicator/);
+    assert.match(text(unlocked.html), /0\.0 t embodied/);
+    assert.match(text(unlocked.html), /Operational 0\.1 t/);
+    assert.match(text(unlocked.html), /Total, lifespan 0\.1 tCO₂e/);
+    assert.match(text(unlocked.html), /110000\.00 gCO₂e per FU/);
+
+    // A draft row makes the survey incomplete again, so the footer metrics disappear.
+    unlocked.store.hardware.push({
         ...validHardware(),
         id: 'draft',
         impactManufacturingDistributionEol: null,
         cpuQuantity: null,
     });
-    const failedRatio = await result.renderAgain();
-    assert.equal((failedRatio.match(/indicator--partial/g) ?? []).length, 2);
-    assert.equal((failedRatio.match(/indicator--failure/g) ?? []).length, 1);
-    assert.match(text(failedRatio), /— per FU/);
-    assert.match(text(failedRatio), /0\.1 tCO₂e \(Partial\)/);
-
-    result.store.scope.assessors = '';
-    const gated = await result.renderAgain();
-    assert.match(text(gated), /— embodied/);
-    assert.match(text(gated), /Operational —/);
-    assert.match(text(gated), /Total, lifespan —/);
-    assert.equal((gated.match(/class="computation-result-display__indicator /g) ?? []).length, 1);
+    const relocked = await unlocked.renderAgain();
+    assert.equal(unlocked.store.resultsStatus, 'partial');
+    assert.equal((relocked.match(/indicator--partial/g) ?? []).length, 0);
+    assert.equal(footerComputationDisplays(relocked), 0);
+    assert.doesNotMatch(footerText(relocked), /embodied|per FU|Total, lifespan/);
 });
 
 test('treemap data still contains only positive accounted values in both variants', async () => {
