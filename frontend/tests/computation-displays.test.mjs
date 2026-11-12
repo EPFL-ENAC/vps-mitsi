@@ -3,13 +3,13 @@ import { test } from 'node:test';
 import { createSSRApp, h } from 'vue';
 import { renderToString } from 'vue/server-renderer';
 import HardwareInventoryPage from '../src/pages/HardwareInventoryPage.vue';
-import HardwareInventoryTable from '../src/components/inventory/HardwareInventoryTable.vue';
 import ResultsEmbodiedSection from '../src/components/results/ResultsEmbodiedSection.vue';
 import ResultsOperationalSection from '../src/components/results/ResultsOperationalSection.vue';
 import ResultsFunctionalUnitSection from '../src/components/results/ResultsFunctionalUnitSection.vue';
 import MainLayout from '../src/layouts/MainLayout.vue';
 import { DatacenterDraftSchema } from '../src/models/Datacenter/schema.ts';
-import { renderTables } from './helpers/render-tables.mjs';
+import { HardwareItemDraftSchema } from '../src/models/HardwareItem/schema.ts';
+import { renderTables, renderInventoryDialog } from './helpers/render-tables.mjs';
 import { setupScope, validEnergy, validHardware } from './helpers/survey-fixtures.mjs';
 import en from '../src/i18n/en-GB/index.ts';
 
@@ -49,9 +49,11 @@ test('inventory statistics use rich translations and identify ignored hardware b
         messages: { ...en, inventoryStats: 'Total {total}; elements {elements}; rows {rows}' },
     });
     assert.match(text(result.html), /Total 10\.00; elements 1; rows 2/);
+    // The page-level partial displays are the header element count and the header total;
+    // table rows expose their own displays separately.
     assert.equal(
         result.computations.filter((display) => display.computation.success === 'partial').length,
-        3,
+        2,
     );
     const diagnostics = await Promise.all(result.tooltips.map(tooltipText));
     assert.ok(
@@ -66,30 +68,30 @@ test('inventory statistics use rich translations and identify ignored hardware b
     assert.doesNotMatch(repaired, /indicator--partial/);
 });
 
-test('derived inventory cells diagnose failures in every mode without treating exclusion as failure', async () => {
-    for (const mode of ['simple', 'normal', 'advanced']) {
-        const result = await renderTables(HardwareInventoryTable, {
-            props: { mode },
-            setupStore(store) {
-                store.hardware = [
-                    { ...validHardware(), quantity: null, memoryQuantity: null, storageSize: null },
-                ];
-            },
-        });
-        assert.equal(result.computations.length, mode === 'advanced' ? 3 : 1);
-        assert.ok(
-            result.computations.every((display) => display.computation.success === 'failure'),
-        );
-        assert.match(await tooltipText(result.tooltips[0]), /quantity: Must be a number/);
-        assert.doesNotMatch(result.html, /indicator--partial/);
-    }
-    const excluded = await renderTables(HardwareInventoryTable, {
-        props: { mode: 'simple' },
-        setupStore(store) {
-            store.hardware = [{ ...validHardware(), isSecondHand: true }];
-        },
+test('derived inventory diagnostics surface in the detail form without treating exclusion as failure', async () => {
+    const incomplete = await renderInventoryDialog({
+        row: HardwareItemDraftSchema.parse({
+            ...validHardware(),
+            quantity: null,
+            memoryQuantity: null,
+            storageQuantity: null,
+        }),
     });
-    assert.match(text(excluded.html), /not counted/);
+    assert.equal(incomplete.computations.length, 3);
+    assert.deepEqual(
+        incomplete.computations.map((display) => display.computation.success),
+        ['failure', 'failure', 'failure'],
+    );
+    assert.match(await tooltipText(incomplete.tooltips[0]), /quantity: Must be a number/);
+    assert.doesNotMatch(incomplete.html, /indicator--partial/);
+
+    // Second-hand rows are excluded from the embodied subtotal, not reported as failures.
+    const excluded = await renderInventoryDialog({
+        row: HardwareItemDraftSchema.parse({ ...validHardware(), isSecondHand: true }),
+    });
+    const embodied = excluded.computations[0].computation;
+    assert.equal(embodied.success, 'success');
+    assert.equal(embodied.result, 0);
     assert.doesNotMatch(excluded.html, /indicator--failure|indicator--partial/);
 });
 
@@ -183,39 +185,66 @@ test('functional-unit values preserve units and precision across complete, parti
 });
 
 test('footer summaries retain gating, translated word order and their own computation status', async () => {
-    const result = await renderTables(MainLayout, {
-        setupStore: setupReady,
-        messages: {
-            ...en,
-            mainFooterEmbodied: '{value} embodied',
-            mainFooterPerFu: '{value} per FU',
-        },
-    });
-    assert.equal(result.computations.length, 4);
-    assert.doesNotMatch(result.html, /computation-result-display__indicator/);
-    assert.match(text(result.html), /0\.0 t embodied/);
-    assert.match(text(result.html), /Operational 0\.1 t/);
-    assert.match(text(result.html), /Total, lifespan 0\.1 tCO₂e/);
-    assert.match(text(result.html), /110000\.00 gCO₂e per FU/);
+    const messages = {
+        ...en,
+        mainFooterEmbodied: '{value} embodied',
+        mainFooterPerFu: '{value} per FU',
+    };
+    const footerComputationDisplays = (html) =>
+        (html.match(/class="computation-result-display[ "]/g) ?? []).length;
 
-    result.store.hardware.push({
+    const footerText = (html) =>
+        text(html.match(/<footer[\s\S]*?<\/footer>/)?.[0] ?? '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+    // An empty survey unlock nothing: the footer keeps the save status only (Issue #90).
+    const empty = await renderTables(MainLayout, { messages });
+    assert.equal(empty.store.resultsStatus, 'not_started');
+    assert.equal(empty.computations.length, 0);
+    assert.equal(footerComputationDisplays(empty.html), 0);
+    assert.doesNotMatch(footerText(empty.html), /embodied|per FU|Total, lifespan/);
+    assert.match(footerText(empty.html), new RegExp(en.mainFooterNeverSaved.split('{')[0].trim()));
+
+    // Started but incomplete data keeps the footer gated as well.
+    const partial = await renderTables(MainLayout, {
+        setupStore(store) {
+            setupReady(store);
+            store.scope.assessors = '';
+        },
+        messages,
+    });
+    assert.equal(partial.store.resultsStatus, 'partial');
+    assert.equal(partial.computations.length, 0);
+    assert.equal(footerComputationDisplays(partial.html), 0);
+    assert.doesNotMatch(footerText(partial.html), /embodied|per FU|Total, lifespan/);
+
+    // Complete survey data unlocks the results, so the footer renders its computation displays.
+    const unlocked = await renderTables(MainLayout, {
+        setupStore: setupReady,
+        messages,
+    });
+    assert.equal(unlocked.store.resultsStatus, 'complete');
+    assert.equal(unlocked.computations.length, 4);
+    assert.equal(footerComputationDisplays(unlocked.html), 4);
+    assert.doesNotMatch(unlocked.html, /computation-result-display__indicator/);
+    assert.match(text(unlocked.html), /0\.0 t embodied/);
+    assert.match(text(unlocked.html), /Operational 0\.1 t/);
+    assert.match(text(unlocked.html), /Total, lifespan 0\.1 tCO₂e/);
+    assert.match(text(unlocked.html), /110000\.00 gCO₂e per FU/);
+
+    // A draft row makes the survey incomplete again, so the footer metrics disappear.
+    unlocked.store.hardware.push({
         ...validHardware(),
         id: 'draft',
         impactManufacturingDistributionEol: null,
         cpuQuantity: null,
     });
-    const failedRatio = await result.renderAgain();
-    assert.equal((failedRatio.match(/indicator--partial/g) ?? []).length, 2);
-    assert.equal((failedRatio.match(/indicator--failure/g) ?? []).length, 1);
-    assert.match(text(failedRatio), /— per FU/);
-    assert.match(text(failedRatio), /0\.1 tCO₂e \(Partial\)/);
-
-    result.store.scope.assessors = '';
-    const gated = await result.renderAgain();
-    assert.match(text(gated), /— embodied/);
-    assert.match(text(gated), /Operational —/);
-    assert.match(text(gated), /Total, lifespan —/);
-    assert.equal((gated.match(/class="computation-result-display__indicator /g) ?? []).length, 1);
+    const relocked = await unlocked.renderAgain();
+    assert.equal(unlocked.store.resultsStatus, 'partial');
+    assert.equal((relocked.match(/indicator--partial/g) ?? []).length, 0);
+    assert.equal(footerComputationDisplays(relocked), 0);
+    assert.doesNotMatch(footerText(relocked), /embodied|per FU|Total, lifespan/);
 });
 
 test('treemap data still contains only positive accounted values in both variants', async () => {

@@ -1,5 +1,12 @@
 <template>
-    <q-btn flat color="primary" class="q-mb-sm" :label="t('scopeDcAdd')" @click="addDatacenter" />
+    <q-btn
+        flat
+        dense
+        no-caps
+        class="q-mb-xs text-body2 text-weight-medium text-grey-9"
+        :label="`+ ${t('scopeDcAdd')}`"
+        @click="addDatacenter"
+    />
     <q-table
         :rows="surveyData.datacenters"
         :columns="columns"
@@ -43,6 +50,8 @@
                         v-model="props.row.generalInfo[col.name]"
                         :schema="col.zod"
                         :aria-label="col.label"
+                        :data-row-id="props.row.id"
+                        :data-field="col.name"
                         dense
                         outlined
                         hide-bottom-space

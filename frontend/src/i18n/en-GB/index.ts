@@ -1,4 +1,8 @@
 export default {
+    // --- Shared labels ---
+    commonBack: 'Back',
+    commonYes: 'Yes',
+    commonNo: 'No',
     // --- Welcome page ---
     welcomeEyebrow: 'Assessment workflow · LCA of an IT service',
     welcomeTitle: 'Assess the carbon footprint of your IT service',
@@ -38,7 +42,7 @@ export default {
     exportDialogCommentPlaceholder: 'Anything worth noting about this export',
     exportDialogCancel: 'Cancel',
     exportDialogConfirm: 'Export',
-    mainImport: 'Import',
+    mainImport: 'IMPORT',
     mainImportWarningTitle: 'Import will replace the draft',
     mainImportWarning:
         'Your current assessment will be deleted. Use Export first if you want to keep it.',
@@ -61,9 +65,6 @@ export default {
     mainNavResults: 'Results',
     mainNavResultsLockedHint: 'Unlocks when assessments completed',
     mainNavLocked: 'Locked',
-    mainStatusRead: 'Read',
-    mainStatusComplete: 'Complete',
-    mainStatusPartial: 'In progress',
     mainStatusNotStarted: 'Not started',
     mainFooterEmbodied: 'Embodied {value}',
     mainFooterOperational: 'Operational {value}',
@@ -92,9 +93,8 @@ export default {
     },
     // --- Scope page ---
     scopePageTitle: 'Scope of the assessment',
-    scopePageHint:
+    scopeBlockFirstHint:
         'Complete this block first — it defines the datacenters and the functional unit the rest of the assessment refers to.',
-    scopeBlockFirstHint: 'Complete this block first',
     // General (report-only zone)
     scopeGeneralTitle: 'General',
     scopeOrganizationLabel: 'Name of the organization',
@@ -108,8 +108,6 @@ export default {
     scopeFunctionalUnitLabel: 'Functional unit',
     scopeFuBefore: 'Usage of',
     scopeFuMiddle: 'of the service with',
-    scopeFuDuration: 'Usage duration',
-    scopeFuResourceCount: 'Number of resources',
     scopeFuSentence: 'Usage of {duration} {unit} of the service with {count} {type}',
     scopeTimeUnit_second: 'second',
     scopeTimeUnit_minute: 'minute',
@@ -143,7 +141,7 @@ export default {
     },
     scopeDcColumnsTooltip:
         'Identify each datacenter of the service boundary — abbreviation, full name, comment. Lines can be added, edited and deleted; deletion is blocked while hardware references the datacenter.',
-    scopeDcAdd: '+ Add',
+    scopeDcAdd: 'Add',
     scopeDcDelete: 'Delete',
     scopeDcUsedByNone: '—',
     scopeDcInvRows: '1 inventory row | {n} inventory rows',
@@ -157,11 +155,11 @@ export default {
     scopeBoundary: {
         included: {
             prefix: 'The service counts',
-            add: 'ADD SOMETHING THE SERVICE COUNTS',
+            add: 'Add something the service counts',
         },
         excluded: {
             prefix: 'It leaves out',
-            add: 'ADD SOMETHING IT LEAVES OUT',
+            add: 'Add something it leaves out',
         },
         separators: {
             usedFor: 'used for',
@@ -184,26 +182,25 @@ export default {
     // --- Hardware inventory page ---
     inventoryPageTitle: 'Embodied emissions — hardware inventory',
     inventoryPageHint:
-        'List every IT element of the service: compute servers, storage bays, network devices and spare parts. Three editing modes control which columns are shown.',
-    inventoryNoScopeHint:
-        'Complete the “Scope of the assessment” block first to unlock the fields.',
+        'List every IT element of the service: compute servers, storage bays, network devices and spare parts.',
+    inventoryNoScopeHint: 'Complete the “Scope” block first to unlock the fields.',
     inventoryStats: '{rows} items · {elements} elements · {total} kgCO₂e',
     inventoryWarningBar:
         '⚠ {n} rows are missing a mandatory value. Missing measurements are shown as unavailable; affected totals remain unavailable until the required values are supplied.',
     inventoryFooter: 'Total embodied — {n} second-hand element(s) excluded',
-    inventoryModeSimple: 'Simple',
-    inventoryModeNormal: 'Normal',
-    inventoryModeAdvanced: 'Advanced',
-    inventoryModeHint:
-        'Switching modes only hides or shows columns — it never deletes data. Hidden values stay in the file and in the report.',
     inventoryAddRow: '+ Add row',
     inventoryDeleteRow: 'Delete',
+    inventoryViewRow: 'View',
+    inventoryEditRow: 'Edit',
     inventoryDeleteConfirmTitle: 'Delete row',
     inventoryDeleteConfirmMessage:
         'Delete {name}? This removes the hardware row from the inventory.',
     inventoryNotCounted: 'not counted',
-    inventoryNoDatacentersHint:
-        'No datacenters defined yet — add them in the “Scope of the assessment” block first.',
+    inventoryNoDatacentersHint: 'No datacenters defined yet — add them in the “Scope” block first.',
+    // Full-screen detail dialog
+    inventoryModeReadonly: 'Read-only',
+    inventoryModeEditing: 'Editing',
+    inventoryDialogUntitledItem: 'Untitled {category}',
     inventoryGroups: {
         general: 'General',
         impact: 'Impact (∑)',
@@ -216,6 +213,7 @@ export default {
     inventoryColumns: {
         // General columns
         category: 'Category',
+        categoryOther: 'Custom category name',
         name: 'Name',
         rackUnit: 'Rack unit (U)',
         quantity: 'Quantity',
@@ -261,6 +259,8 @@ export default {
     inventoryCategory_storage_bay: 'Storage bay',
     inventoryCategory_network_device: 'Network device',
     inventoryCategory_spare_part: 'Spare part',
+    inventoryCategory_other: 'Other',
+    inventoryCategoryAddOther: 'Add other category',
     // Enum labels — storage
     inventoryStorageType_HDD: 'HDD',
     inventoryStorageType_SSD: 'SSD',
@@ -274,9 +274,8 @@ export default {
     energyPageTitle: 'Operational emissions — energy consumption',
     energyPageHint:
         'Describe how the IT service consumes electricity: the usage monitoring period and, per datacenter, the grid carbon intensity and the power consumed during that period. These figures drive the operational emissions.',
-    energyNoScopeHint: 'Complete the “Scope of the assessment” block first to unlock the fields.',
-    energyNoDatacentersHint:
-        'No datacenters defined yet — add them in the “Scope of the assessment” block first.',
+    energyNoScopeHint: 'Complete the “Scope” block first to unlock the fields.',
+    energyNoDatacentersHint: 'No datacenters defined yet — add them in the “Scope” block first.',
     // Usage monitoring period
     energyMonitorTitle: 'Usage monitoring period',
     energyMonitorUnitLabel: 'Unit',
@@ -302,13 +301,23 @@ export default {
         energyConsumption: 'Energy (kWh)',
         energyComment: 'Energy comment',
     },
+    energyViewRow: 'View',
+    energyEditRow: 'Edit',
+    // Detail dialog groups
+    energyGroups: {
+        location: 'Location',
+        carbonIntensity: 'Carbon intensity',
+        pue: 'PUE',
+        energyConsumption: 'Energy consumption',
+        general: 'General comment',
+    },
     energyDcClear: 'Clear energy information',
     energyClearConfirmTitle: 'Clear energy information',
     energyClearConfirmMessage:
         'Clear all energy information for {name}? The datacenter will remain in the table.',
     // --- Results page ---
     resultsPageTitle: 'Results',
-    resultsNoScopeHint: 'Complete the “Scope of the assessment” block first to unlock the results.',
+    resultsNoScopeHint: 'Complete the “Scope” block first to unlock the results.',
     resultsSummaryTitle: 'Summary',
     resultsSummaryServiceName: 'Name of the IT service',
     resultsSummaryFunction: 'Function',
@@ -413,5 +422,17 @@ export default {
         too_big: {
             number: 'Must be no more than {maximum}.',
         },
+    },
+    // --- Error summary panel & deep linking ---
+    errorPanel: {
+        triggerBtn: '{count} issue | {count} issues',
+        title: 'Issues preventing full calculation ({count})',
+        subtitle: 'Click an issue to navigate to the field and fix it.',
+        noIssues: 'All inputs are valid.',
+        closeAriaLabel: 'Close error panel',
+        goToField: 'Go to field',
+        scopeGeneralEntity: 'General',
+        scopeFuEntity: 'Functional unit',
+        hardwareRowEntity: 'Row #{index}',
     },
 };

@@ -14,7 +14,6 @@ import {
     HardwareGpuFleetMeasurementsSchema,
     HardwareDiskFleetMeasurementsSchema,
     HardwareRamFleetMeasurementsSchema,
-    type HardwareCategory,
 } from 'src/models/HardwareItem/schema';
 import {
     UnderlyingServiceSchema,
@@ -38,6 +37,7 @@ import {
 } from 'src/models/HardwareItem/computations';
 import { timeUnitsPerYear } from 'src/models/TimeUnit/utils';
 import { sum } from 'src/utils/math';
+import { formatCategoryName } from 'src/utils/format';
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import { ComputationResult } from 'src/utils/computation';
 
@@ -66,7 +66,10 @@ export interface EmbodiedRow {
 }
 
 export interface EmbodiedGroup {
-    category: HardwareCategory;
+    /** Grouping key: a standard category enum value, or the custom category name. */
+    category: string;
+    /** Display label for the group, already resolved for custom categories. */
+    categoryName: string;
     rows: EmbodiedRow[];
     totalEmbodiedEmissionsKg: ComputationResult<number, HardwareItem>;
 }
@@ -307,12 +310,13 @@ export const useSurveyResultsStore = defineStore('surveyResults', () => {
         return total.map((value) => value / uses);
     });
 
-    function hardwareByCategory(category: HardwareCategory): HardwareItem[] {
-        return data.hardware.filter((row) => row.category === category);
+    /** Standard categories keep their own group; custom ones group by their typed name. */
+    function categoryGroupKey(row: HardwareItem): string {
+        if (row.category !== HardwareCategorySchema.enum.other) return row.category;
+        return row.categoryOther?.trim() || HardwareCategorySchema.enum.other;
     }
 
-    function categoryToEmbodiedGroup(category: HardwareCategory): EmbodiedGroup {
-        const hardware = hardwareByCategory(category);
+    function categoryToEmbodiedGroup(category: string, hardware: HardwareItem[]): EmbodiedGroup {
         const rows = hardware.map((row) => ({
             id: row.id,
             name: row.name,
@@ -325,14 +329,33 @@ export const useSurveyResultsStore = defineStore('surveyResults', () => {
 
         return {
             category,
+            categoryName: formatCategoryName(category),
             rows,
             totalEmbodiedEmissionsKg: embodiedTotal(hardware),
         };
     }
 
     const embodiedEmissionsByCategory = computed<EmbodiedGroup[]>(() => {
-        return HardwareCategorySchema.options
-            .map(categoryToEmbodiedGroup)
+        // Declared standard categories first, then custom names in appearance order.
+        const standardCategories = HardwareCategorySchema.options.filter(
+            (category) => category !== HardwareCategorySchema.enum.other,
+        );
+        const orderedKeys: string[] = [...standardCategories];
+        const hardwareByKey = new Map<string, HardwareItem[]>(
+            standardCategories.map((category) => [category, []]),
+        );
+        for (const row of data.hardware) {
+            const key = categoryGroupKey(row);
+            const group = hardwareByKey.get(key);
+            if (group) {
+                group.push(row);
+            } else {
+                orderedKeys.push(key);
+                hardwareByKey.set(key, [row]);
+            }
+        }
+        return orderedKeys
+            .map((key) => categoryToEmbodiedGroup(key, hardwareByKey.get(key) ?? []))
             .filter((group) => group.rows.length > 0);
     });
 

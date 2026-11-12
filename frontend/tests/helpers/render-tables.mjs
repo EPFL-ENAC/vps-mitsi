@@ -38,11 +38,19 @@ import {
     QFile,
     QForm,
     QBtnToggle,
+    QChip,
+    ClosePopup,
     Ripple,
 } from 'quasar';
 import HardwareInventoryTable from '../../src/components/inventory/HardwareInventoryTable.vue';
+import HardwareDetailDialog from '../../src/components/inventory/HardwareDetailDialog.vue';
+import HardwareDetailForm from '../../src/components/inventory/HardwareDetailForm.vue';
+import EnergyDatacentersTable from '../../src/components/energy/EnergyDatacentersTable.vue';
+import EnergyDatacenterDetailDialog from '../../src/components/energy/EnergyDatacenterDetailDialog.vue';
+import EnergyDatacenterDetailForm from '../../src/components/energy/EnergyDatacenterDetailForm.vue';
 import { useSurveyDataStore } from '../../src/stores/surveyData.ts';
 import { useSurveyResultsStore } from '../../src/stores/surveyResults.ts';
+import { useEnergyDialog } from '../../src/composables/useDetailDialog.ts';
 import en from '../../src/i18n/en-GB/index.ts';
 
 /** Exercise real Quasar controls and inspect their public props/events in SSR. */
@@ -110,8 +118,9 @@ export async function renderTables(
                 QFile,
                 QForm,
                 QBtnToggle,
+                QChip,
             },
-            directives: { Ripple },
+            directives: { Ripple, ClosePopup },
         },
         context,
     );
@@ -129,6 +138,7 @@ export async function renderTables(
     const html = await renderToString(app, context);
     return {
         html,
+        instances,
         store,
         router,
         results,
@@ -153,6 +163,14 @@ export async function renderTables(
             (instance) => instance.$options.__name === 'ComputationResultDisplay',
         ),
         tooltips: instances.filter((instance) => instance.$options.name === 'QTooltip'),
+        /** ZodValidated* wrappers, which own the canonical `schema` prop. */
+        zodInputs: instances.filter((instance) =>
+            ['ZodValidatedNumberInput', 'ZodValidatedTextInput'].includes(instance.$options.__name),
+        ),
+        zodSelects: instances.filter(
+            (instance) => instance.$options.__name === 'ZodValidatedSelect',
+        ),
+
         charts: instances.filter((instance) => instance.$props.option !== undefined),
         renderAgain: async () =>
             (
@@ -167,20 +185,91 @@ export async function renderTables(
     };
 }
 
-/** Inspect the columns passed to the real QTable, in the widest mode by default. */
-export async function renderInventoryTable({
-    mode = 'advanced',
-    hardware = [],
-    datacenters = [],
-    messages,
-} = {}) {
-    const { html, tables } = await renderTables(HardwareInventoryTable, {
-        props: { mode },
+/** Inspect the columns passed to the real QTable and the rendered summary rows. */
+export async function renderInventoryTable({ hardware = [], datacenters = [], messages } = {}) {
+    const result = await renderTables(HardwareInventoryTable, {
         setupStore(store) {
             store.hardware = hardware;
             store.datacenters = datacenters;
         },
         messages,
     });
-    return { html, columns: tables[0].columns };
+    return { ...result, columns: result.tables[0].columns };
+}
+
+/**
+ * Render the detail form body (SSR-friendly, unlike the lazily-ported dialog)
+ * for a single hardware row.
+ */
+export async function renderInventoryDialog({
+    row,
+    readonly = false,
+    datacenters = [],
+    messages,
+} = {}) {
+    return renderTables(HardwareDetailForm, {
+        props: { row, readonly },
+        setupStore(store) {
+            store.datacenters = datacenters;
+        },
+        messages,
+    });
+}
+
+/** Render the full-screen dialog shell (used to assert header/badge markup). */
+export async function renderInventoryDialogShell({ row, readonly = false, messages } = {}) {
+    return renderTables(HardwareDetailDialog, {
+        props: { row, readonly, open: true },
+        messages,
+    });
+}
+
+/** Inspect the energy summary columns and the rendered master rows. */
+export async function renderEnergyTable({ datacenters = [], messages } = {}) {
+    // The energy dialog state is module-scoped (shared with error navigation),
+    // so reset it to keep test cases independent of each other.
+    useEnergyDialog().close();
+    const result = await renderTables(EnergyDatacentersTable, {
+        setupStore(store) {
+            store.datacenters = datacenters;
+        },
+        messages,
+    });
+    useEnergyDialog().close();
+    const table = result.instances.find(
+        (instance) => instance.$options.__name === 'EnergyDatacentersTable',
+    );
+    return {
+        ...result,
+        columns: result.tables[0].columns,
+        /** The public surface published through `defineExpose` (as a parent sees it). */
+        tableExposed: table?.$.exposed ?? {},
+    };
+}
+
+/** Render the energy detail form body for a single datacenter. */
+export async function renderEnergyDialog({ row, readonly = false, messages } = {}) {
+    return renderTables(EnergyDatacenterDetailForm, {
+        props: { row, readonly },
+        messages,
+    });
+}
+
+/** Render the energy dialog shell (used to assert header/badge markup). */
+export async function renderEnergyDialogShell({ row, readonly = false, messages } = {}) {
+    return renderTables(EnergyDatacenterDetailDialog, {
+        props: { row, readonly, open: true },
+        messages,
+    });
+}
+
+/**
+ * Dialog content is lazily ported, so SSR renders an empty comment for the
+ * `q-dialog`. Extract the first modal dialog's default slot and render it to
+ * obtain the real shell markup (toolbar, badge, back button, form).
+ */
+export async function renderDialogContent(result) {
+    const slot = result.modalDialogs[0].$slots.default();
+    const { html } = await renderTables({ render: () => h('div', slot) });
+    return html;
 }

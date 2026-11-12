@@ -4,7 +4,6 @@ import ScopeDatacentersTable from '../src/components/scope/ScopeDatacentersTable
 import ScopeBoundaryItemsTable from '../src/components/scope/ScopeBoundaryItemsTable.vue';
 import EnergyDatacentersTable from '../src/components/energy/EnergyDatacentersTable.vue';
 import EnergyMonitoringPeriodForm from '../src/components/energy/EnergyMonitoringPeriodForm.vue';
-import HardwareInventoryTable from '../src/components/inventory/HardwareInventoryTable.vue';
 import ResultsPage from '../src/pages/ResultsPage.vue';
 import ResultsEmbodiedSection from '../src/components/results/ResultsEmbodiedSection.vue';
 import ResultsTotalSection from '../src/components/results/ResultsTotalSection.vue';
@@ -20,7 +19,7 @@ import {
 import { HardwareItemDraftSchema } from '../src/models/HardwareItem/schema.ts';
 import { ResourceTypeSchema } from '../src/models/FunctionalUnit/schema.ts';
 import en from '../src/i18n/en-GB/index.ts';
-import { renderTables } from './helpers/render-tables.mjs';
+import { renderTables, renderInventoryDialog } from './helpers/render-tables.mjs';
 import { setupScope, validEnergy, validHardware } from './helpers/survey-fixtures.mjs';
 
 const text = (html) => html.replace(/<[^>]*>/g, '');
@@ -147,33 +146,55 @@ test('boundary rows render sentence inputs and edit selected collection only', a
     }
 });
 
-test('energy inputs retain canonical validation and nested updates; clear requires confirmation', async () => {
+test('energy summary table is a compact 5-column master list; clear requires confirmation', async () => {
     const result = await renderTables(EnergyDatacentersTable, {
         setupStore(store) {
-            store.datacenters = [datacenter()];
+            store.datacenters = [
+                DatacenterDraftSchema.parse({
+                    id: 'dc-1',
+                    generalInfo: { abbreviation: 'DC', name: 'Test datacenter' },
+                    energy: validEnergy({
+                        location: 'Lausanne',
+                        carbonIntensity: 125,
+                        energyConsumption: 100,
+                        comment: 'Energy note',
+                    }),
+                }),
+            ];
         },
     });
-    assertCellKinds(result);
+
+    // Same five-column master-detail contract as the hardware inventory table.
     assert.deepEqual(
         result.tables[0].columns.map((c) => c.name),
-        ['datacenter', ...Object.keys(DatacenterEnergySchema.shape)],
+        ['datacenter', 'location', 'carbonIntensity', 'energyConsumption', 'actions'],
     );
+    assert.equal(result.tables[0].columns.at(-1).align, 'right');
+    assert.equal(result.tables[0].columns.at(-1).label, '');
+    // Editable columns carry their canonical schema, mirroring the inventory table.
     for (const column of result.tables[0].columns.filter((c) => c.zod)) {
         assert.equal(column.zod, DatacenterEnergySchema.shape[column.name]);
     }
-    const intensity = input(result, en.energyColumns.carbonIntensity);
-    assert.equal(intensity.rules[0](0), true);
-    intensity.$emit('update:modelValue', 125);
-    input(result, en.energyColumns.comment).$emit('update:modelValue', 'Energy note');
-    input(result, en.energyColumns.pue).$emit('update:modelValue', null);
-    assert.equal(result.store.datacenters[0].energy.carbonIntensity, 125);
-    assert.equal(result.store.datacenters[0].energy.comment, 'Energy note');
-    assert.equal(result.store.datacenters[0].energy.pue, null);
-    assert.equal(result.store.datacenters[0].generalInfo.comment, '');
+    assert.equal(result.tables[0].columns[3].zod, DatacenterEnergySchema.shape.energyConsumption);
+    // No inline inputs: editing happens in the detail dialog.
+    assert.equal(result.inputs.length, 0);
+    // Calculation parameters render in the summary row.
+    assert.ok(result.html.includes('125 gCO₂/kWh'));
+    assert.ok(result.html.includes('100 kWh'));
+    // Comments stay in the detail form only.
+    assert.ok(!result.html.includes('Energy note'));
+
     button(result, en.energyDcClear).$emit('click');
+    // The confirmation is required before anything is reset.
     assert.equal(result.store.datacenters[0].energy.carbonIntensity, 125);
+    assert.equal(
+        result.dialogs[0].options.message,
+        en.energyClearConfirmMessage.replace('{name}', 'DC — Test datacenter'),
+    );
     result.dialogs[0].confirm();
+    // Both calculation parameters are cleared together.
     assert.equal(result.store.datacenters[0].energy.carbonIntensity, null);
+    assert.equal(result.store.datacenters[0].energy.energyConsumption, null);
     assert.equal(result.store.datacenters[0].energy.comment, '');
     assert.equal(result.store.datacenters[0].generalInfo.name, 'Test datacenter');
 });
@@ -240,7 +261,7 @@ test('results preserve translated report headers, excluded totals and missing op
         result.html,
         /data-kind="number"[^>]*>[\s\S]*?class="computation-result-display">[\s\S]*?—/,
     );
-    assert.match(result.html, /<th scope="row"/);
+    assert.match(result.html, /<td class="results-key/);
     assert.equal(result.results.totalEmbodiedEmissionsKg.result, 0);
 });
 
@@ -275,18 +296,15 @@ test('embodied results render the available partial total while retaining unfini
 });
 
 test('select and toggle edits write through to the store', async () => {
-    const inventory = await renderTables(HardwareInventoryTable, {
-        props: { mode: 'simple' },
-        setupStore(store) {
-            store.datacenters = [datacenter()];
-            store.hardware = [HardwareItemDraftSchema.parse({ id: 'h1' })];
-        },
+    const row = HardwareItemDraftSchema.parse({ id: 'h1' });
+    const inventory = await renderInventoryDialog({
+        row,
+        datacenters: [datacenter()],
     });
     const [category, datacenterSelect] = inventory.selects;
     category.$emit('update:modelValue', 'storage_bay');
     datacenterSelect.$emit('update:modelValue', 'dc-1');
     inventory.toggles[0].$emit('update:modelValue', true);
-    const row = inventory.store.hardware[0];
     assert.deepEqual(
         [row.category, row.datacenterId, row.isSecondHand],
         ['storage_bay', 'dc-1', true],

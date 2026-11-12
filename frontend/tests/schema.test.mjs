@@ -17,7 +17,11 @@ import {
     FunctionalUnitSchema,
     ResourceTypeSchema,
 } from '../src/models/FunctionalUnit/schema.ts';
-import { HardwareItemDraftSchema, HardwareItemSchema } from '../src/models/HardwareItem/schema.ts';
+import {
+    HardwareCategorySchema,
+    HardwareItemDraftSchema,
+    HardwareItemSchema,
+} from '../src/models/HardwareItem/schema.ts';
 import {
     MITSI_SCHEMA_VERSION,
     MitsiStateDraftSchema,
@@ -45,6 +49,46 @@ test('canonical and draft hardware schemas strip derived capacity totals', () =>
             hardware,
         );
     }
+});
+
+test('hardware categories declare the custom "other" option and keep its name optional', () => {
+    assert.deepEqual(HardwareCategorySchema.options, [
+        'server',
+        'compute_server',
+        'storage_bay',
+        'network_device',
+        'spare_part',
+        'other',
+    ]);
+    assert.equal(HardwareCategorySchema.safeParse('other').success, true);
+    assert.equal(HardwareCategorySchema.safeParse('racks').success, false);
+
+    const hardware = validHardware();
+
+    // Canonical rows accept both the absent and the supplied custom name.
+    const withoutName = { ...hardware };
+    delete withoutName.categoryOther;
+    const parsedWithoutName = HardwareItemSchema.parse({ ...withoutName, category: 'other' });
+    assert.equal(parsedWithoutName.category, 'other');
+    assert.equal(parsedWithoutName.categoryOther, undefined);
+    assert.equal(
+        HardwareItemSchema.parse({ ...hardware, category: 'other', categoryOther: 'Rack PDU' })
+            .categoryOther,
+        'Rack PDU',
+    );
+    assert.equal(HardwareItemSchema.safeParse({ ...hardware, categoryOther: 42 }).success, false);
+
+    // Drafts default the custom name to '' so a blank row stays round-trippable.
+    assert.equal(HardwareItemDraftSchema.parse({}).categoryOther, '');
+    assert.equal(
+        HardwareItemDraftSchema.parse({ category: 'other', categoryOther: '' }).categoryOther,
+        '',
+    );
+    assert.equal(
+        HardwareItemDraftSchema.parse({ category: 'other', categoryOther: 'Rack PDU' })
+            .categoryOther,
+        'Rack PDU',
+    );
 });
 
 test('blank assessment and entity defaults retain their persisted shape', () => {
@@ -77,6 +121,7 @@ test('blank assessment and entity defaults retain their persisted shape', () => 
     assert.deepEqual(jsonRoundTrip(HardwareItemDraftSchema.parse({})), {
         id: '',
         category: 'server',
+        categoryOther: '',
         name: '',
         quantity: null,
         datacenterId: '',

@@ -1,12 +1,5 @@
 <template>
     <div v-if="hasData">
-        <!-- Legend row -->
-        <ul class="embodied-legend">
-            <li v-for="entry in legend" :key="entry.name" class="embodied-legend__item">
-                <span class="embodied-legend__swatch" :style="{ backgroundColor: entry.color }" />
-                {{ entry.name }}
-            </li>
-        </ul>
         <v-chart class="embodied-treemap" :option="chartOption" autoresize />
     </div>
     <div v-else class="text-grey-6 text-center q-py-md">{{ t('mainNotApplicable') }}</div>
@@ -28,8 +21,8 @@ import {
     type TooltipComponentOption,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
-import { BLUE_SCALE } from 'src/utils/charts';
-import { formatKg } from 'src/utils/format';
+import { getCategoryColor } from 'src/utils/charts';
+import { formatCategoryName, formatKg } from 'src/utils/format';
 import { useUserPreferencesStore } from 'src/stores/userPreferences';
 
 echarts.use([TreemapChart, TooltipComponent, AriaComponent, CanvasRenderer]);
@@ -50,15 +43,16 @@ const props = withDefaults(
 const { t } = useI18n();
 const userPrefs = useUserPreferencesStore();
 
-function getCategoryColor(index: number): string {
-    return BLUE_SCALE[index % BLUE_SCALE.length] ?? BLUE_SCALE[0];
+/** Custom categories display the user-typed name, standard ones their translation. */
+function categoryLabel(group: EmbodiedGroup): string {
+    return formatCategoryName(group.category, group.categoryName, t);
 }
 
 /** Flat treemap (by element) */
 function toElementTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeriesOption['data']> {
     return groups.flatMap((g, categoryIdx) => {
         const categoryColor = getCategoryColor(categoryIdx);
-        const categoryLabel = t('inventoryCategory_' + g.category);
+        const groupLabel = categoryLabel(g);
 
         return g.rows.flatMap((row) => {
             const value = row.rowEmbodiedEmissionsKg.result;
@@ -67,7 +61,7 @@ function toElementTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSerie
                 : [
                       {
                           name: row.name,
-                          categoryLabel,
+                          categoryLabel: groupLabel,
                           value,
                           itemStyle: { color: categoryColor },
                       },
@@ -83,11 +77,11 @@ function toCategoryTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeri
             const total = g.totalEmbodiedEmissionsKg.result;
             if (total === null) return [];
             const categoryColor = getCategoryColor(i);
-            const categoryLabel = t('inventoryCategory_' + g.category);
+            const groupLabel = categoryLabel(g);
 
             return [
                 {
-                    name: categoryLabel,
+                    name: groupLabel,
                     value: total,
                     itemStyle: { color: categoryColor },
                     children: g.rows.flatMap((row) => {
@@ -97,7 +91,7 @@ function toCategoryTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeri
                             : [
                                   {
                                       name: row.name,
-                                      categoryLabel,
+                                      categoryLabel: groupLabel,
                                       value,
                                       itemStyle: { color: categoryColor },
                                   },
@@ -108,20 +102,6 @@ function toCategoryTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeri
         })
         .filter((g) => (g.children?.length ?? 0) > 0);
 }
-
-/** Legend items matching categories and colors */
-const legend = computed(() =>
-    props.groups.flatMap((g, i) =>
-        g.rows.some(
-            (r) =>
-                !r.excluded &&
-                r.rowEmbodiedEmissionsKg.result !== null &&
-                r.rowEmbodiedEmissionsKg.result > 0,
-        )
-            ? [{ name: t('inventoryCategory_' + g.category), color: getCategoryColor(i) }]
-            : [],
-    ),
-);
 
 /** Pre-computed data items for the treemap. */
 const chartData = computed(() =>
@@ -154,6 +134,10 @@ const chartOption = computed<ECOption>(() => ({
     series: [
         {
             type: 'treemap',
+            top: 4,
+            left: -5,
+            right: 0,
+            bottom: 35,
             data: chartData.value,
             roam: true,
             nodeClick: 'zoomToNode',
@@ -161,7 +145,7 @@ const chartOption = computed<ECOption>(() => ({
             label: {
                 show: true,
                 position: 'insideTopLeft',
-                color: '#141920',
+                color: '#ffffff',
                 fontSize: 13,
                 fontWeight: 'bold',
                 lineHeight: 18,
@@ -184,29 +168,6 @@ const chartOption = computed<ECOption>(() => ({
 </script>
 
 <style scoped>
-.embodied-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 20px;
-    margin: 0 0 12px;
-    padding: 0;
-    list-style: none;
-}
-
-.embodied-legend__item {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.85rem;
-    color: #334155;
-}
-
-.embodied-legend__swatch {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-}
-
 .embodied-treemap {
     width: 100%;
     height: 340px;

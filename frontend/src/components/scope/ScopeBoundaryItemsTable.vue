@@ -6,10 +6,7 @@
                 :key="item.id"
                 class="boundary-row row items-baseline q-gutter-sm q-mb-sm"
             >
-                <span
-                    class="boundary-prefix"
-                    :class="{ 'boundary-prefix--included': kind === 'included' }"
-                >
+                <span class="boundary-prefix">
                     {{ t(`scopeBoundary.${kind}.prefix`) }}
                 </span>
 
@@ -17,6 +14,8 @@
                     v-model="item.type"
                     :schema="BoundaryItemSchema.shape.type"
                     :placeholder="t('scopeBoundary.placeholders.type')"
+                    :data-row-id="item.id"
+                    data-field="type"
                     dense
                     outlined
                     hide-bottom-space
@@ -29,6 +28,8 @@
                     v-model="item.purpose"
                     :schema="BoundaryItemSchema.shape.purpose"
                     :placeholder="t('scopeBoundary.placeholders.purpose')"
+                    :data-row-id="item.id"
+                    data-field="purpose"
                     dense
                     outlined
                     hide-bottom-space
@@ -41,6 +42,8 @@
                     v-model="item.reason"
                     :schema="BoundaryItemSchema.shape.reason"
                     :placeholder="t(`scopeBoundary.placeholders.${kind}Reason`)"
+                    :data-row-id="item.id"
+                    data-field="reason"
                     dense
                     outlined
                     hide-bottom-space
@@ -61,8 +64,8 @@
         <q-btn
             flat
             dense
-            class="boundary-add-btn text-weight-bold"
-            :class="kind === 'included' ? 'text-primary' : 'text-dark'"
+            no-caps
+            class="q-mb-xs text-body2 text-weight-medium text-grey-9"
             :label="`+ ${t(`scopeBoundary.${kind}.add`)}`"
             @click="addItem"
         />
@@ -103,10 +106,6 @@ function removeItem(id: string): void {
     white-space: nowrap;
     min-width: 140px;
     color: #1d1d1d;
-
-    &--included {
-        color: #0b6b66;
-    }
 }
 
 .boundary-separator {
@@ -121,10 +120,5 @@ function removeItem(id: string): void {
     &--grow {
         flex: 1.5 1 260px;
     }
-}
-
-.boundary-add-btn {
-    letter-spacing: 0.5px;
-    padding-left: 0;
 }
 </style>

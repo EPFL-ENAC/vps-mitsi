@@ -1,419 +1,163 @@
 <template>
-    <q-table
-        :rows="surveyData.hardware"
-        :columns="visibleColumns"
-        :table-colspan="visibleColumns.length + 1"
-        row-key="id"
-        flat
-        bordered
-        dense
-        :pagination="{ rowsPerPage: 0 }"
-        :rows-per-page-options="[0]"
-        hide-bottom
-        class="inventory-table"
-    >
-        <!--
-            Header row 1: group sub-headers. We don't bind props here since there itsn't one group per column
-        -->
-        <template #header="slotProps">
-            <q-tr class="inventory-group-row">
-                <q-th
-                    v-for="grp in groupRows"
-                    :key="grp.name"
-                    :colspan="grp.span"
-                    class="inventory-group-th text-left"
-                >
-                    {{ grp.label }}
-                </q-th>
-                <q-th auto-width class="inventory-group-th" />
-            </q-tr>
-
-            <!-- Header row 2: per-column headers (slotProps.cols exists here). -->
-            <q-tr :props="slotProps">
-                <q-th
-                    v-for="col in slotProps.cols"
-                    :key="col.name"
+    <div>
+        <q-table
+            :rows="surveyData.hardware"
+            :columns="columns"
+            row-key="id"
+            flat
+            bordered
+            dense
+            :pagination="{ rowsPerPage: 0 }"
+            :rows-per-page-options="[0]"
+            hide-bottom
+            class="inventory-table bg-white"
+        >
+            <template #body="slotProps">
+                <q-tr
                     :props="slotProps"
-                    :data-kind="col.kind"
+                    :class="{
+                        'inventory-row--excluded': surveyResults.isSecondHandExcluded(
+                            slotProps.row,
+                        ),
+                    }"
                 >
-                    <span
-                        class="inventory-th-label"
-                        :class="{ 'zod-required-label': isSchemaRequired(col.zod) }"
-                    >
-                        {{ col.label }}
-                    </span>
-                    <span v-if="col.calc" class="inventory-calc-badge">∑</span>
-                </q-th>
-                <q-th auto-width />
-            </q-tr>
-        </template>
+                    <q-td key="category">{{ categoryLabel(slotProps.row) }}</q-td>
+                    <q-td key="name" class="text-weight-medium">{{ rowName(slotProps.row) }}</q-td>
+                    <q-td key="quantity">{{ slotProps.row.quantity ?? '—' }}</q-td>
+                    <q-td key="datacenterId">{{ datacenterLabel(slotProps.row) }}</q-td>
 
-        <template #body="slotProps">
-            <q-tr
-                :props="slotProps"
-                :class="{
-                    'inventory-row--excluded': surveyResults.isSecondHandExcluded(slotProps.row),
-                }"
-            >
-                <q-td
-                    v-for="col in slotProps.cols"
-                    :key="col.name"
-                    :props="slotProps"
-                    :data-kind="col.kind"
-                >
-                    <!-- Second-hand not-counted impact -->
-                    <template v-if="col.name === 'impactManufacturingDistributionEol'">
-                        <template v-if="surveyResults.isSecondHandExcluded(slotProps.row)">
-                            <ComputationResultDisplay
-                                :computation="
-                                    surveyResults.hardwareUnitEmbodiedEmissionsKg(slotProps.row)
-                                "
+                    <!-- Actions buttons: read, edit, delete -->
+                    <q-td key="actions" class="text-right">
+                        <div class="row items-center justify-end no-wrap q-gutter-x-xs">
+                            <q-btn
+                                flat
+                                round
+                                dense
+                                size="sm"
+                                icon="visibility"
+                                text-color="dark"
+                                :aria-label="$t('inventoryViewRow')"
+                                @click="open(slotProps.row, 'view')"
                             >
-                                <template #default="{ result }">
-                                    <span class="inventory-strike">{{ formatKg(result) }}</span>
-                                </template>
-                                <template #failure>
-                                    <span class="inventory-strike">{{
-                                        t('mainNotApplicable')
-                                    }}</span>
-                                </template>
-                            </ComputationResultDisplay>
-                            <span class="inventory-dim">({{ $t('inventoryNotCounted') }})</span>
-                        </template>
-                        <ZodValidatedNumberInput
-                            v-else-if="col.zod"
-                            v-model="slotProps.row.impactManufacturingDistributionEol"
-                            :schema="col.zod"
-                            dense
-                            outlined
-                            hide-bottom-space
-                        />
-                    </template>
+                                <q-tooltip>{{ $t('inventoryViewRow') }}</q-tooltip>
+                            </q-btn>
+                            <q-btn
+                                flat
+                                round
+                                dense
+                                size="sm"
+                                icon="edit"
+                                text-color="dark"
+                                :aria-label="$t('inventoryEditRow')"
+                                @click="open(slotProps.row, 'edit')"
+                            >
+                                <q-tooltip>{{ $t('inventoryEditRow') }}</q-tooltip>
+                            </q-btn>
+                            <q-btn
+                                flat
+                                round
+                                dense
+                                size="sm"
+                                icon="delete"
+                                text-color="negative"
+                                :aria-label="$t('inventoryDeleteRow')"
+                                @click="confirmDeleteRow(slotProps.row)"
+                            >
+                                <q-tooltip>{{ $t('inventoryDeleteRow') }}</q-tooltip>
+                            </q-btn>
+                        </div>
+                    </q-td>
+                </q-tr>
+            </template>
+        </q-table>
 
-                    <!-- Subtotal -->
-                    <template v-else-if="col.name === 'subtotal'">
-                        <template v-if="surveyResults.isSecondHandExcluded(slotProps.row)">
-                            <span class="inventory-dim">{{ $t('inventoryNotCounted') }}</span>
-                        </template>
-                        <ComputationResultDisplay
-                            v-else-if="col.derived"
-                            :computation="col.derived(slotProps.row)"
-                            :format-value="formatKg"
-                        />
-                    </template>
-
-                    <!-- Datacenter select (store-driven options, value = id) -->
-                    <template v-else-if="col.kind === 'datacenter'">
-                        <ZodValidatedSelect
-                            v-model="slotProps.row.datacenterId"
-                            :schema="col.zod"
-                            :options="col.options"
-                            emit-value
-                            map-options
-                            dense
-                            outlined
-                            hide-bottom-space
-                        />
-                    </template>
-
-                    <!-- Schema enum select (translated options) -->
-                    <template v-else-if="col.kind === 'enum'">
-                        <ZodValidatedSelect
-                            v-model="slotProps.row[col.field]"
-                            :schema="col.zod"
-                            :options="col.options"
-                            emit-value
-                            map-options
-                            dense
-                            outlined
-                            hide-bottom-space
-                        />
-                    </template>
-
-                    <!-- Toggle (2nd hand) — a real switch, not an input -->
-                    <template v-else-if="col.kind === 'toggle'">
-                        <q-toggle v-model="slotProps.row[col.field]" />
-                    </template>
-
-                    <!-- Number -->
-                    <template v-else-if="col.kind === 'number' && col.zod">
-                        <ZodValidatedNumberInput
-                            v-model="slotProps.row[col.field]"
-                            :schema="col.zod"
-                            dense
-                            outlined
-                            hide-bottom-space
-                        />
-                    </template>
-
-                    <!-- Free text -->
-                    <template v-else-if="col.kind === 'text' && col.zod">
-                        <ZodValidatedTextInput
-                            v-model="slotProps.row[col.field]"
-                            :schema="col.zod"
-                            dense
-                            outlined
-                            hide-bottom-space
-                        />
-                    </template>
-
-                    <!-- Other derived cells (memoryTotalGb / storageTotal) -->
-                    <template v-else-if="col.kind === 'derived'">
-                        <ComputationResultDisplay
-                            v-if="col.derived"
-                            :computation="col.derived(slotProps.row)"
-                            :format-value="formatGb"
-                        />
-                    </template>
-                </q-td>
-                <q-td auto-width class="text-right">
-                    <q-btn
-                        flat
-                        dense
-                        icon="delete"
-                        :aria-label="$t('inventoryDeleteRow')"
-                        @click="confirmDeleteRow(slotProps.row)"
-                    />
-                </q-td>
-            </q-tr>
-        </template>
-    </q-table>
+        <HardwareDetailDialog
+            v-if="selectedRow"
+            v-model:open="dialogOpen"
+            v-model:row="selectedRow"
+            :readonly="dialogMode === 'view'"
+        />
+    </div>
 </template>
 
 <script setup lang="ts">
-import { useSurveyDataStore } from 'src/stores/surveyData';
-import { useSurveyResultsStore } from 'src/stores/surveyResults';
-
-import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInput.vue';
-import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
-import ZodValidatedSelect from 'src/components/inputs/ZodValidatedSelect.vue';
-import { isSchemaRequired } from 'src/composables/useValidation';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useQuasar, type QTableColumn } from 'quasar';
 import type { z } from 'zod';
 
-import {
-    type HardwareItem,
-    HardwareCategorySchema,
-    HardwareItemSchema,
-    StorageCasingSchema,
-    StorageTechnologySchema,
-    StorageTypeSchema,
-} from 'src/models/HardwareItem/schema';
-import type { VisibilityMode } from 'src/types/ui';
-import { formatDatacenterName, formatGb, formatKg, normalizeKey } from 'src/utils/format';
-import { createSchemaColumn } from 'src/utils/tables';
-
-import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
-import type { ComputationResult } from 'src/utils/computation';
+import HardwareDetailDialog from 'src/components/inventory/HardwareDetailDialog.vue';
+import { useSurveyDataStore } from 'src/stores/surveyData';
+import { useSurveyResultsStore } from 'src/stores/surveyResults';
+import { HardwareItemSchema, type HardwareItem } from 'src/models/HardwareItem/schema';
+import { useHardwareDialog } from 'src/composables/useDetailDialog';
+import { formatCategoryName, formatDatacenterName } from 'src/utils/format';
 
 const surveyData = useSurveyDataStore();
 const surveyResults = useSurveyResultsStore();
-
-const GROUPS = ['general', 'impact', 'cpu', 'memory', 'storage', 'gpu', 'network'] as const;
-type GroupKey = (typeof GROUPS)[number];
-
-type DerivedField = 'subtotal' | 'memoryTotalGb' | 'storageTotal';
-type InventoryField = keyof HardwareItem | DerivedField;
-
-interface InventoryColumn extends QTableColumn<HardwareItem, InventoryField> {
-    field: InventoryField;
-    group: GroupKey;
-    mode: VisibilityMode;
-    kind: 'enum' | 'datacenter' | 'text' | 'number' | 'toggle' | 'derived';
-    /** Field feeds the calculation → show the ∑ badge. */
-    calc?: boolean;
-    zod: z.ZodType | undefined;
-    options?: { label: string; value: string }[];
-    /** Quasar sets col.value in body slots, so use a separate name for the calculation. */
-    derived?: (row: HardwareItem) => ComputationResult<number>;
-    sort?: (a: unknown, b: unknown, rowA: HardwareItem, rowB: HardwareItem) => number;
-}
-
-const props = defineProps<{
-    mode: VisibilityMode;
-}>();
+const { dialogOpen, dialogMode, selectedRow, open, close } = useHardwareDialog();
 
 const { t } = useI18n();
 const $q = useQuasar();
 
-/** Columns are cumulative: advanced ⊇ normal ⊇ simple. */
-const MODE_RANK: Record<VisibilityMode, number> = { simple: 0, normal: 1, advanced: 2 };
-
-// Options for the datacenter select come from the store's datacenters.
-const datacenterOptions = computed<{ label: string; value: string }[]>(() =>
-    surveyData.datacenters.map((dc) => ({
-        label: formatDatacenterName(dc),
-        value: dc.id,
-    })),
-);
-
-type ColumnSpec = Omit<InventoryColumn, 'name' | 'label' | 'field' | 'zod'> & {
-    field: keyof HardwareItem;
-};
-
-const schemaColumn = createSchemaColumn(HardwareItemSchema.shape, (field) =>
-    t(`inventoryColumns.${field}`),
-);
-
-function column(spec: ColumnSpec): InventoryColumn {
-    return {
-        ...schemaColumn(spec.field),
-        ...spec,
-    };
-}
-
-function enumOptions(values: readonly string[], keyPrefix: string) {
-    return values.map((value) => ({ label: t(keyPrefix + normalizeKey(value)), value }));
+interface InventoryColumn extends QTableColumn<HardwareItem> {
+    kind?: 'enum' | 'datacenter' | 'text' | 'number' | 'toggle' | 'derived';
+    zod?: z.ZodType;
 }
 
 const columns = computed<InventoryColumn[]>(() => [
-    column({
+    {
+        name: 'category',
+        label: t('inventoryColumns.category'),
         field: 'category',
-        group: 'general',
-        mode: 'simple',
+        align: 'left',
         kind: 'enum',
-        sortable: true,
-        options: enumOptions(HardwareCategorySchema.options, 'inventoryCategory_'),
-    }),
-    column({ field: 'name', group: 'general', mode: 'simple', kind: 'text', sortable: true }),
-    column({ field: 'rackUnit', group: 'general', mode: 'advanced', kind: 'number' }),
-    column({
+        zod: HardwareItemSchema.shape.category,
+    },
+    {
+        name: 'name',
+        label: t('inventoryColumns.name'),
+        field: 'name',
+        align: 'left',
+        kind: 'text',
+        zod: HardwareItemSchema.shape.name,
+    },
+    {
+        name: 'quantity',
+        label: t('inventoryColumns.quantity'),
         field: 'quantity',
-        group: 'general',
-        mode: 'simple',
+        align: 'left',
         kind: 'number',
-        calc: true,
-        sortable: true,
-    }),
-    column({ field: 'description', group: 'general', mode: 'normal', kind: 'text' }),
-    column({
+        zod: HardwareItemSchema.shape.quantity,
+    },
+    {
+        name: 'datacenterId',
+        label: t('inventoryColumns.datacenterId'),
         field: 'datacenterId',
-        group: 'general',
-        mode: 'simple',
+        align: 'left',
         kind: 'datacenter',
-        options: datacenterOptions.value,
-    }),
-    column({ field: 'isSecondHand', group: 'general', mode: 'simple', kind: 'toggle', calc: true }),
-
-    column({
-        field: 'impactManufacturing',
-        group: 'impact',
-        mode: 'normal',
-        kind: 'number',
-        sortable: true,
-    }),
-    column({
-        field: 'impactManufacturingDistributionEol',
-        group: 'impact',
-        mode: 'simple',
-        kind: 'number',
-        calc: true,
-        sortable: true,
-    }),
-    column({ field: 'resilioDbHash', group: 'impact', mode: 'normal', kind: 'text' }),
-    {
-        name: 'subtotal',
-        field: 'subtotal',
-        align: 'left',
-        label: t('inventoryColumns.subtotal'),
-        group: 'impact',
-        mode: 'simple',
-        kind: 'derived',
-        calc: true,
-        sortable: true,
-        zod: undefined,
-        derived: surveyResults.hardwareRowEmbodiedEmissionsKg,
-        sort: (_a, _b, rowA, rowB) => {
-            const a = surveyResults.hardwareRowEmbodiedEmissionsKg(rowA).result;
-            const b = surveyResults.hardwareRowEmbodiedEmissionsKg(rowB).result;
-            if (a === null) return b === null ? 0 : 1;
-            return b === null ? -1 : a - b;
-        },
+        zod: HardwareItemSchema.shape.datacenterId,
     },
-
-    column({ field: 'cpuName', group: 'cpu', mode: 'normal', kind: 'text' }),
-    column({ field: 'cpuQuantity', group: 'cpu', mode: 'simple', kind: 'number' }),
-    column({ field: 'cpuLithography', group: 'cpu', mode: 'advanced', kind: 'number' }),
-    column({ field: 'cpuDieSize', group: 'cpu', mode: 'advanced', kind: 'number' }),
-    column({ field: 'cpuCores', group: 'cpu', mode: 'advanced', kind: 'number' }),
-
-    column({ field: 'memoryQuantity', group: 'memory', mode: 'simple', kind: 'number' }),
-    column({ field: 'memorySizeGb', group: 'memory', mode: 'simple', kind: 'number' }),
     {
-        name: 'memoryTotalGb',
-        field: 'memoryTotalGb',
-        align: 'left',
-        label: t('inventoryColumns.memoryTotalGb'),
-        group: 'memory',
-        mode: 'advanced',
+        name: 'actions',
+        label: '',
+        field: 'id',
+        align: 'right',
         kind: 'derived',
-        zod: undefined,
-        derived: surveyResults.hardwareMemoryPerUnitGb,
     },
-
-    column({
-        field: 'storageType',
-        group: 'storage',
-        mode: 'advanced',
-        kind: 'enum',
-        options: enumOptions(StorageTypeSchema.options, 'inventoryStorageType_'),
-    }),
-    column({ field: 'storageQuantity', group: 'storage', mode: 'simple', kind: 'number' }),
-    column({ field: 'storageSize', group: 'storage', mode: 'simple', kind: 'number' }),
-    {
-        name: 'storageTotal',
-        field: 'storageTotal',
-        align: 'left',
-        label: t('inventoryColumns.storageTotal'),
-        group: 'storage',
-        mode: 'advanced',
-        kind: 'derived',
-        zod: undefined,
-        derived: surveyResults.hardwareStorageCapacityPerUnit,
-    },
-    column({
-        field: 'storageTechnology',
-        group: 'storage',
-        mode: 'advanced',
-        kind: 'enum',
-        options: enumOptions(StorageTechnologySchema.options, 'inventoryStorageTechnology_'),
-    }),
-    column({
-        field: 'storageCasing',
-        group: 'storage',
-        mode: 'advanced',
-        kind: 'enum',
-        options: enumOptions(StorageCasingSchema.options, 'inventoryStorageCasing_'),
-    }),
-
-    column({ field: 'gpuName', group: 'gpu', mode: 'normal', kind: 'text' }),
-    column({ field: 'gpuQuantity', group: 'gpu', mode: 'simple', kind: 'number' }),
-    column({ field: 'gpuLithography', group: 'gpu', mode: 'advanced', kind: 'number' }),
-    column({ field: 'gpuDieSize', group: 'gpu', mode: 'advanced', kind: 'number' }),
-    column({ field: 'gpuMemory', group: 'gpu', mode: 'normal', kind: 'number' }),
-
-    column({ field: 'networkPorts', group: 'network', mode: 'normal', kind: 'number' }),
-    column({ field: 'psuQuantity', group: 'network', mode: 'advanced', kind: 'number' }),
-    column({ field: 'psuPower', group: 'network', mode: 'advanced', kind: 'number' }),
 ]);
 
-const visibleColumns = computed(() =>
-    columns.value.filter((col) => MODE_RANK[col.mode] <= MODE_RANK[props.mode]),
-);
-
-/** Group sub-headers, spans matched to the columns rendered in this mode. */
-const groupRows = computed(() =>
-    GROUPS.map((name) => ({
-        name,
-        label: t(`inventoryGroups.${name}`),
-        span: visibleColumns.value.filter((col) => col.group === name).length,
-    })).filter((group) => group.span > 0),
-);
+function categoryLabel(row: HardwareItem): string {
+    return formatCategoryName(row.category, row.categoryOther, t);
+}
 
 function rowName(row: HardwareItem): string {
-    return row.name.trim() || t('inventoryColumns.name');
+    return row.name.trim() || '—';
+}
+
+function datacenterLabel(row: HardwareItem): string {
+    const dc = surveyData.datacenters.find((item) => item.id === row.datacenterId);
+    return dc ? formatDatacenterName(dc) : '—';
 }
 
 function confirmDeleteRow(row: HardwareItem): void {
@@ -425,54 +169,20 @@ function confirmDeleteRow(row: HardwareItem): void {
     }).onOk(() => {
         const i = surveyData.hardware.findIndex((h) => h.id === row.id);
         if (i >= 0) surveyData.hardware.splice(i, 1);
+        if (selectedRow.value?.id === row.id) {
+            close();
+        }
     });
 }
+
+defineExpose({ openDialog: open });
 </script>
 
 <style scoped lang="scss">
 @use 'src/css/table-cells';
 
 .inventory-table {
-    @include table-cells.cells;
-}
-
-.inventory-group-row .q-th {
-    background: #f2f4f8;
-}
-
-.inventory-group-th {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: #48525f;
-    border-bottom: 1px solid #e6e9ef;
-}
-
-.inventory-th-label {
-    white-space: nowrap;
-}
-
-.inventory-calc-badge {
-    display: inline-block;
-    margin-left: 4px;
-    font-size: 10px;
-    line-height: 1;
-    padding: 2px 5px;
-    border-radius: 999px;
-    background: #fff0f1;
-    color: #c1001a;
-    font-weight: 700;
-}
-
-.inventory-strike {
-    text-decoration: line-through;
-    color: #78828f;
-}
-
-.inventory-dim {
-    color: #78828f;
-    font-style: italic;
+    @include table-cells.master-detail-table;
 }
 
 .inventory-row--excluded .q-td {

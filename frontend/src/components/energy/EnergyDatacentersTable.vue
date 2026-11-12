@@ -1,140 +1,153 @@
 <template>
-    <q-table
-        :rows="surveyData.datacenters"
-        :columns="columns"
-        :table-colspan="columns.length + 1"
-        row-key="id"
-        :pagination="{ rowsPerPage: 0 }"
-        :rows-per-page-options="[0]"
-        dense
-        flat
-        bordered
-        hide-bottom
-        class="energy-table"
-    >
-        <template #header="props">
-            <q-tr :props="props">
-                <q-th
-                    v-for="col in props.cols"
-                    :key="col.name"
-                    :props="props"
-                    :data-kind="col.kind"
-                >
-                    <span :class="{ 'zod-required-label': isSchemaRequired(col.zod) }">
-                        {{ col.label }}
-                    </span>
-                </q-th>
-                <q-th auto-width />
-            </q-tr>
-        </template>
+    <div>
+        <q-table
+            :rows="surveyData.datacenters"
+            :columns="columns"
+            row-key="id"
+            flat
+            bordered
+            dense
+            :pagination="{ rowsPerPage: 0 }"
+            :rows-per-page-options="[0]"
+            hide-bottom
+            class="energy-table bg-white"
+        >
+            <template #body="slotProps">
+                <q-tr :props="slotProps">
+                    <q-td key="datacenter" class="text-weight-medium">
+                        {{ formatDatacenterName(slotProps.row) }}
+                    </q-td>
+                    <q-td key="location">{{ formatCell(slotProps.row.energy.location) }}</q-td>
+                    <q-td key="carbonIntensity">
+                        {{ formatCell(slotProps.row.energy.carbonIntensity, 'gCO₂/kWh') }}
+                    </q-td>
+                    <q-td key="energyConsumption">
+                        {{ formatCell(slotProps.row.energy.energyConsumption, 'kWh') }}
+                    </q-td>
 
-        <template #body="props">
-            <q-tr :props="props">
-                <q-td
-                    v-for="col in props.cols"
-                    :key="col.name"
-                    :props="props"
-                    :data-kind="col.kind"
-                >
-                    <template v-if="col.name === 'datacenter'">{{ col.value }}</template>
-                    <ZodValidatedNumberInput
-                        v-else-if="col.kind === 'number' && col.zod"
-                        v-model="props.row.energy[col.name]"
-                        :schema="col.zod"
-                        :aria-label="col.label"
-                        dense
-                        outlined
-                        hide-bottom-space
-                    />
-                    <ZodValidatedTextInput
-                        v-else-if="col.kind === 'text' && col.zod"
-                        v-model="props.row.energy[col.name]"
-                        :schema="col.zod"
-                        :aria-label="col.label"
-                        dense
-                        outlined
-                        hide-bottom-space
-                    />
-                </q-td>
-                <q-td auto-width>
-                    <q-btn
-                        flat
-                        dense
-                        icon="restart_alt"
-                        :aria-label="t('energyDcClear')"
-                        @click="clearEnergy(props.row)"
-                    />
-                </q-td>
-            </q-tr>
-        </template>
-    </q-table>
+                    <!-- Actions buttons: read, edit, clear -->
+                    <q-td key="actions" class="text-right">
+                        <div class="row items-center justify-end no-wrap q-gutter-x-xs">
+                            <q-btn
+                                flat
+                                round
+                                dense
+                                size="sm"
+                                icon="visibility"
+                                text-color="dark"
+                                :aria-label="$t('energyViewRow')"
+                                @click="open(slotProps.row, 'view')"
+                            >
+                                <q-tooltip>{{ $t('energyViewRow') }}</q-tooltip>
+                            </q-btn>
+                            <q-btn
+                                flat
+                                round
+                                dense
+                                size="sm"
+                                icon="edit"
+                                text-color="dark"
+                                :aria-label="$t('energyEditRow')"
+                                @click="open(slotProps.row, 'edit')"
+                            >
+                                <q-tooltip>{{ $t('energyEditRow') }}</q-tooltip>
+                            </q-btn>
+                            <q-btn
+                                flat
+                                round
+                                dense
+                                size="sm"
+                                icon="restart_alt"
+                                text-color="negative"
+                                :aria-label="$t('energyDcClear')"
+                                @click="clearEnergy(slotProps.row)"
+                            >
+                                <q-tooltip>{{ $t('energyDcClear') }}</q-tooltip>
+                            </q-btn>
+                        </div>
+                    </q-td>
+                </q-tr>
+            </template>
+        </q-table>
+
+        <EnergyDatacenterDetailDialog
+            v-if="selectedRow"
+            v-model:open="dialogOpen"
+            v-model:row="selectedRow"
+            :readonly="dialogMode === 'view'"
+        />
+    </div>
 </template>
 
 <script setup lang="ts">
-import { useSurveyDataStore } from 'src/stores/surveyData';
-
-import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInput.vue';
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useQuasar, type QTableColumn } from 'quasar';
 import type { z } from 'zod';
-import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
-import { useI18n } from 'vue-i18n';
+
+import EnergyDatacenterDetailDialog from 'src/components/energy/EnergyDatacenterDetailDialog.vue';
+import { useSurveyDataStore } from 'src/stores/surveyData';
+import { useEnergyDialog } from 'src/composables/useDetailDialog';
+import { DatacenterEnergySchema, type DatacenterDraft } from 'src/models/Datacenter/schema';
 import { formatDatacenterName } from 'src/utils/format';
-import { createSchemaColumn } from 'src/utils/tables';
-import { isSchemaRequired } from 'src/composables/useValidation';
-import {
-    DatacenterEnergySchema,
-    type DatacenterDraft,
-    type DatacenterEnergy,
-} from 'src/models/Datacenter/schema';
 
 const surveyData = useSurveyDataStore();
-
-interface EnergyColumn extends QTableColumn<DatacenterDraft> {
-    name: keyof DatacenterEnergy | 'datacenter';
-    kind: 'datacenter' | 'text' | 'number';
-    zod?: z.ZodType;
-}
+const { dialogOpen, dialogMode, selectedRow, open } = useEnergyDialog();
 
 const { t } = useI18n();
 const $q = useQuasar();
 
-type ColumnSpec = Omit<EnergyColumn, 'name' | 'label' | 'field' | 'zod'> & {
-    field: keyof DatacenterEnergy;
-};
-
-const schemaColumn = createSchemaColumn(DatacenterEnergySchema.shape, (field) =>
-    t(`energyColumns.${field}`),
-);
-
-function column(spec: ColumnSpec): EnergyColumn {
-    const { field, ...options } = spec;
-
-    return {
-        ...schemaColumn(field),
-        ...options,
-        field: (dc) => dc.energy[field],
-    };
+interface EnergyColumn extends QTableColumn<DatacenterDraft> {
+    kind?: 'datacenter' | 'text' | 'number' | 'actions';
+    zod?: z.ZodType;
 }
 
+/** Compact master list: PUE and the comments live in the detail dialog only. */
 const columns = computed<EnergyColumn[]>(() => [
     {
         name: 'datacenter',
-        field: formatDatacenterName,
         label: t('energyColumns.datacenter'),
+        field: formatDatacenterName,
+        align: 'left',
         kind: 'datacenter',
     },
-    column({ field: 'comment', kind: 'text' }),
-    column({ field: 'location', kind: 'text' }),
-    column({ field: 'locationComment', kind: 'text' }),
-    column({ field: 'carbonIntensity', kind: 'number' }),
-    column({ field: 'carbonIntensityComment', kind: 'text' }),
-    column({ field: 'pue', kind: 'number' }),
-    column({ field: 'pueComment', kind: 'text' }),
-    column({ field: 'energyConsumption', kind: 'number' }),
-    column({ field: 'energyComment', kind: 'text' }),
+    {
+        name: 'location',
+        label: t('energyColumns.location'),
+        field: (dc) => dc.energy.location,
+        align: 'left',
+        kind: 'text',
+        zod: DatacenterEnergySchema.shape.location,
+    },
+    {
+        name: 'carbonIntensity',
+        label: t('energyColumns.carbonIntensity'),
+        field: (dc) => dc.energy.carbonIntensity,
+        align: 'left',
+        kind: 'number',
+        zod: DatacenterEnergySchema.shape.carbonIntensity,
+    },
+    {
+        name: 'energyConsumption',
+        label: t('energyColumns.energyConsumption'),
+        field: (dc) => dc.energy.energyConsumption,
+        align: 'left',
+        kind: 'number',
+        zod: DatacenterEnergySchema.shape.energyConsumption,
+    },
+    {
+        name: 'actions',
+        label: '',
+        field: 'id',
+        align: 'right',
+        kind: 'actions',
+    },
 ]);
-
+function formatCell(val: string | number | null | undefined, unit?: string): string {
+    if (val === null || val === undefined || val === '' || Number.isNaN(val)) return '—';
+    const text = typeof val === 'number' ? val.toLocaleString() : val.trim();
+    return !text ? '—' : unit ? `${text} ${unit}` : text;
+}
 function clearEnergy(dc: DatacenterDraft): void {
     $q.dialog({
         title: t('energyClearConfirmTitle'),
@@ -145,12 +158,14 @@ function clearEnergy(dc: DatacenterDraft): void {
         persistent: true,
     }).onOk(() => surveyData.clearDatacenterEnergy(dc.id));
 }
+
+defineExpose({ openDialog: open });
 </script>
 
 <style scoped lang="scss">
 @use 'src/css/table-cells';
 
 .energy-table {
-    @include table-cells.cells;
+    @include table-cells.master-detail-table;
 }
 </style>
