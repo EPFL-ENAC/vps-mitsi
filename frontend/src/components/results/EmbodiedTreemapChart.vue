@@ -1,12 +1,5 @@
 <template>
     <div v-if="hasData">
-        <!-- Legend row -->
-        <ul class="embodied-legend">
-            <li v-for="entry in legend" :key="entry.name" class="embodied-legend__item">
-                <span class="embodied-legend__swatch" :style="{ backgroundColor: entry.color }" />
-                {{ entry.name }}
-            </li>
-        </ul>
         <v-chart class="embodied-treemap" :option="chartOption" autoresize />
     </div>
     <div v-else class="text-grey-6 text-center q-py-md">{{ t('mainNotApplicable') }}</div>
@@ -110,20 +103,6 @@ function toCategoryTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeri
         .filter((g) => (g.children?.length ?? 0) > 0);
 }
 
-/** Legend items matching categories and colors */
-const legend = computed(() =>
-    props.groups.flatMap((g, i) =>
-        g.rows.some(
-            (r) =>
-                !r.excluded &&
-                r.rowEmbodiedEmissionsKg.result !== null &&
-                r.rowEmbodiedEmissionsKg.result > 0,
-        )
-            ? [{ name: categoryLabel(g), color: getCategoryColor(i) }]
-            : [],
-    ),
-);
-
 /** Pre-computed data items for the treemap. */
 const chartData = computed(() =>
     props.variant === 'category'
@@ -155,6 +134,10 @@ const chartOption = computed<ECOption>(() => ({
     series: [
         {
             type: 'treemap',
+            top: 4,
+            left: -5,
+            right: 0,
+            bottom: 35,
             data: chartData.value,
             roam: true,
             nodeClick: 'zoomToNode',
@@ -185,29 +168,6 @@ const chartOption = computed<ECOption>(() => ({
 </script>
 
 <style scoped>
-.embodied-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 20px;
-    margin: 0 0 12px;
-    padding: 0;
-    list-style: none;
-}
-
-.embodied-legend__item {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.85rem;
-    color: #334155;
-}
-
-.embodied-legend__swatch {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-}
-
 .embodied-treemap {
     width: 100%;
     height: 340px;
