@@ -37,7 +37,7 @@
                                 icon="visibility"
                                 text-color="dark"
                                 :aria-label="$t('inventoryViewRow')"
-                                @click="open(slotProps.row, 'view')"
+                                @click="detailDialog.openHardware(slotProps.row, 'view')"
                             >
                                 <q-tooltip>{{ $t('inventoryViewRow') }}</q-tooltip>
                             </q-btn>
@@ -49,7 +49,7 @@
                                 icon="edit"
                                 text-color="dark"
                                 :aria-label="$t('inventoryEditRow')"
-                                @click="open(slotProps.row, 'edit')"
+                                @click="detailDialog.openHardware(slotProps.row, 'edit')"
                             >
                                 <q-tooltip>{{ $t('inventoryEditRow') }}</q-tooltip>
                             </q-btn>
@@ -72,10 +72,10 @@
         </q-table>
 
         <HardwareDetailDialog
-            v-if="selectedRow"
-            v-model:open="dialogOpen"
-            v-model:row="selectedRow"
-            :readonly="dialogMode === 'view'"
+            v-if="detailDialog.hardwareSelectedRow"
+            v-model:open="detailDialog.hardwareDialogOpen"
+            v-model:row="detailDialog.hardwareSelectedRow"
+            :readonly="detailDialog.hardwareDialogMode === 'view'"
         />
     </div>
 </template>
@@ -90,12 +90,12 @@ import HardwareDetailDialog from 'src/components/inventory/HardwareDetailDialog.
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useSurveyResultsStore } from 'src/stores/surveyResults';
 import { HardwareItemSchema, type HardwareItem } from 'src/models/HardwareItem/schema';
-import { useHardwareDialog } from 'src/composables/useDetailDialog';
+import { useDetailDialogStore } from 'src/composables/useDetailDialog';
 import { formatCategoryName, formatDatacenterName } from 'src/utils/format';
 
 const surveyData = useSurveyDataStore();
 const surveyResults = useSurveyResultsStore();
-const { dialogOpen, dialogMode, selectedRow, open, close } = useHardwareDialog();
+const detailDialog = useDetailDialogStore();
 
 const { t } = useI18n();
 const $q = useQuasar();
@@ -169,13 +169,13 @@ function confirmDeleteRow(row: HardwareItem): void {
     }).onOk(() => {
         const i = surveyData.hardware.findIndex((h) => h.id === row.id);
         if (i >= 0) surveyData.hardware.splice(i, 1);
-        if (selectedRow.value?.id === row.id) {
-            close();
+        if (detailDialog.hardwareSelectedRow?.id === row.id) {
+            detailDialog.closeHardware();
         }
     });
 }
 
-defineExpose({ openDialog: open });
+defineExpose({ openDialog: detailDialog.openHardware });
 </script>
 
 <style scoped lang="scss">

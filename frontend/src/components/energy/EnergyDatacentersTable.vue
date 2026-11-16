@@ -36,7 +36,7 @@
                                 icon="visibility"
                                 text-color="dark"
                                 :aria-label="$t('energyViewRow')"
-                                @click="open(slotProps.row, 'view')"
+                                @click="detailDialog.openEnergy(slotProps.row, 'view')"
                             >
                                 <q-tooltip>{{ $t('energyViewRow') }}</q-tooltip>
                             </q-btn>
@@ -48,7 +48,7 @@
                                 icon="edit"
                                 text-color="dark"
                                 :aria-label="$t('energyEditRow')"
-                                @click="open(slotProps.row, 'edit')"
+                                @click="detailDialog.openEnergy(slotProps.row, 'edit')"
                             >
                                 <q-tooltip>{{ $t('energyEditRow') }}</q-tooltip>
                             </q-btn>
@@ -71,10 +71,10 @@
         </q-table>
 
         <EnergyDatacenterDetailDialog
-            v-if="selectedRow"
-            v-model:open="dialogOpen"
-            v-model:row="selectedRow"
-            :readonly="dialogMode === 'view'"
+            v-if="detailDialog.energySelectedRow"
+            v-model:open="detailDialog.energyDialogOpen"
+            v-model:row="detailDialog.energySelectedRow"
+            :readonly="detailDialog.energyDialogMode === 'view'"
         />
     </div>
 </template>
@@ -86,12 +86,12 @@ import { useQuasar, type QTableColumn } from 'quasar';
 
 import EnergyDatacenterDetailDialog from 'src/components/energy/EnergyDatacenterDetailDialog.vue';
 import { useSurveyDataStore } from 'src/stores/surveyData';
-import { useEnergyDialog } from 'src/composables/useDetailDialog';
+import { useDetailDialogStore } from 'src/composables/useDetailDialog';
 import type { DatacenterDraft } from 'src/models/Datacenter/schema';
 import { formatDatacenterName } from 'src/utils/format';
 
 const surveyData = useSurveyDataStore();
-const { dialogOpen, dialogMode, selectedRow, open } = useEnergyDialog();
+const detailDialog = useDetailDialogStore();
 
 const { t } = useI18n();
 const $q = useQuasar();
@@ -154,7 +154,7 @@ function clearEnergy(dc: DatacenterDraft): void {
     }).onOk(() => surveyData.clearDatacenterEnergy(dc.id));
 }
 
-defineExpose({ openDialog: open });
+defineExpose({ openDialog: detailDialog.openEnergy });
 </script>
 
 <style scoped lang="scss">

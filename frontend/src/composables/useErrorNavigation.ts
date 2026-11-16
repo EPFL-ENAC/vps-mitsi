@@ -5,7 +5,7 @@ import type { ZodType } from 'zod';
 
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useValidation } from 'src/composables/useValidation';
-import { useHardwareDialog, useEnergyDialog } from 'src/composables/useDetailDialog';
+import { useDetailDialogStore } from 'src/composables/useDetailDialog';
 import { ScopeSchema, BoundaryItemSchema } from 'src/models/Scope/schema';
 import { DatacenterGeneralInfoSchema, DatacenterEnergySchema } from 'src/models/Datacenter/schema';
 import { HardwareItemSchema } from 'src/models/HardwareItem/schema';
@@ -50,8 +50,7 @@ export function useErrorNavigation() {
     const { t } = useI18n();
     const { formatIssue } = useValidation();
     const surveyData = useSurveyDataStore();
-    const { open: openHardwareDialog } = useHardwareDialog();
-    const { open: openEnergyDialog } = useEnergyDialog();
+    const detailDialog = useDetailDialogStore();
 
     function resolveFieldLabel(prefix: string, field: string): string {
         const fullKey = `${prefix}.${field}`;
@@ -218,12 +217,12 @@ export function useErrorNavigation() {
         inventory: (issue) => {
             if (!issue.rowId) return;
             const item = surveyData.hardware.find((row) => row.id === issue.rowId);
-            if (item) openHardwareDialog(item, 'edit');
+            if (item) detailDialog.openHardware(item, 'edit');
         },
         energy: (issue) => {
             if (!issue.rowId) return;
             const dc = surveyData.datacenters.find((row) => row.id === issue.rowId);
-            if (dc) openEnergyDialog(dc, 'edit');
+            if (dc) detailDialog.openEnergy(dc, 'edit');
         },
     };
 

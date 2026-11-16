@@ -50,7 +50,7 @@ import EnergyDatacenterDetailDialog from '../../src/components/energy/EnergyData
 import EnergyDatacenterDetailForm from '../../src/components/energy/EnergyDatacenterDetailForm.vue';
 import { useSurveyDataStore } from '../../src/stores/surveyData.ts';
 import { useSurveyResultsStore } from '../../src/stores/surveyResults.ts';
-import { useEnergyDialog } from '../../src/composables/useDetailDialog.ts';
+import { useDetailDialogStore } from '../../src/composables/useDetailDialog.ts';
 import en from '../../src/i18n/en-GB/index.ts';
 
 /** Exercise real Quasar controls and inspect their public props/events in SSR. */
@@ -234,7 +234,7 @@ export async function renderEnergyTable({ datacenters = [], messages } = {}) {
         messages,
     });
     // The dialog state lives in a Pinia store, so each render starts from a fresh one.
-    useEnergyDialog(result.pinia).close();
+    useDetailDialogStore(result.pinia).closeEnergy();
     const table = result.instances.find(
         (instance) => instance.$options.__name === 'EnergyDatacentersTable',
     );

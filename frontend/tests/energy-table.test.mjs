@@ -8,7 +8,7 @@ import {
     renderDialogContent,
 } from './helpers/render-tables.mjs';
 import { DatacenterDraftSchema, DatacenterEnergySchema } from '../src/models/Datacenter/schema.ts';
-import { useEnergyDialog, useHardwareDialog } from '../src/composables/useDetailDialog.ts';
+import { useDetailDialogStore } from '../src/composables/useDetailDialog.ts';
 import en from '../src/i18n/en-GB/index.ts';
 
 const datacenter = (overrides = {}) =>
@@ -178,40 +178,38 @@ test('readonly mode renders text blocks without editable inputs', async () => {
 test('exposed openDialog drives the shared energy dialog state', async () => {
     const row = filled();
     const { tableExposed, pinia } = await renderEnergyTable({ datacenters: [row] });
-    const state = useEnergyDialog(pinia);
+    const state = useDetailDialogStore(pinia);
 
-    assert.equal(state.dialogOpen.value, false);
+    assert.equal(state.energyDialogOpen, false);
     assert.equal(typeof tableExposed.openDialog, 'function');
 
     tableExposed.openDialog(row, 'view');
-    assert.equal(state.dialogOpen.value, true);
-    assert.equal(state.dialogMode.value, 'view');
-    assert.equal(state.selectedRow.value.id, 'dc-1');
+    assert.equal(state.energyDialogOpen, true);
+    assert.equal(state.energyDialogMode, 'view');
+    assert.equal(state.energySelectedRow.id, 'dc-1');
 
     // The mode argument is optional and defaults to editing.
     tableExposed.openDialog(row);
-    assert.equal(state.dialogMode.value, 'edit');
-    state.close();
-    assert.equal(state.dialogOpen.value, false);
-    assert.equal(state.selectedRow.value, null);
+    assert.equal(state.energyDialogMode, 'edit');
+    state.closeEnergy();
+    assert.equal(state.energyDialogOpen, false);
+    assert.equal(state.energySelectedRow, null);
 });
 
 test('hardware and energy dialog states are independent', () => {
-    // Both slices live in the same Pinia store, so they share one instance.
     const pinia = createPinia();
-    const energy = useEnergyDialog(pinia);
-    const hardware = useHardwareDialog(pinia);
-    energy.close();
-    hardware.close();
+    const state = useDetailDialogStore(pinia);
+    state.closeEnergy();
+    state.closeHardware();
 
-    energy.open(filled(), 'edit');
-    assert.equal(energy.dialogOpen.value, true);
-    assert.equal(hardware.dialogOpen.value, false);
+    state.openEnergy(filled(), 'edit');
+    assert.equal(state.energyDialogOpen, true);
+    assert.equal(state.hardwareDialogOpen, false);
 
-    hardware.open({ id: 'h1' }, 'view');
-    assert.equal(hardware.dialogMode.value, 'view');
-    assert.equal(energy.dialogMode.value, 'edit');
+    state.openHardware({ id: 'h1' }, 'view');
+    assert.equal(state.hardwareDialogMode, 'view');
+    assert.equal(state.energyDialogMode, 'edit');
 
-    energy.close();
-    hardware.close();
+    state.closeEnergy();
+    state.closeHardware();
 });
