@@ -10,53 +10,23 @@
             <q-card-section class="q-pt-none">
                 <div class="row q-col-gutter-md">
                     <div class="col-12 col-sm-6">
-                        <div
-                            v-if="readonly"
-                            class="q-py-xs"
-                            :data-row-id="dc.id"
-                            data-field="location"
-                        >
-                            <div class="text-caption text-grey-7 q-mb-xs">
-                                {{ $t('energyColumns.location') }}
-                            </div>
-                            <div class="text-body2 text-dark text-weight-medium">
-                                {{ formatReadonly(dc.energy.location) }}
-                            </div>
-                        </div>
-                        <ZodValidatedTextInput
-                            v-else
+                        <DetailField
                             v-model="dc.energy.location"
-                            :schema="DatacenterEnergySchema.shape.location"
+                            :readonly="readonly"
+                            :row-id="dc.id"
+                            field="location"
                             :label="$t('energyColumns.location')"
-                            :data-row-id="dc.id"
-                            data-field="location"
-                            outlined
-                            dense
+                            :schema="DatacenterEnergySchema.shape.location"
                         />
                     </div>
                     <div class="col-12 col-sm-6">
-                        <div
-                            v-if="readonly"
-                            class="q-py-xs"
-                            :data-row-id="dc.id"
-                            data-field="locationComment"
-                        >
-                            <div class="text-caption text-grey-7 q-mb-xs">
-                                {{ $t('energyColumns.locationComment') }}
-                            </div>
-                            <div class="text-body2 text-dark text-weight-medium">
-                                {{ formatReadonly(dc.energy.locationComment) }}
-                            </div>
-                        </div>
-                        <ZodValidatedTextInput
-                            v-else
+                        <DetailField
                             v-model="dc.energy.locationComment"
-                            :schema="DatacenterEnergySchema.shape.locationComment"
+                            :readonly="readonly"
+                            :row-id="dc.id"
+                            field="locationComment"
                             :label="$t('energyColumns.locationComment')"
-                            :data-row-id="dc.id"
-                            data-field="locationComment"
-                            outlined
-                            dense
+                            :schema="DatacenterEnergySchema.shape.locationComment"
                         />
                     </div>
                 </div>
@@ -73,53 +43,25 @@
             <q-card-section class="q-pt-none">
                 <div class="row q-col-gutter-md">
                     <div class="col-12 col-sm-6">
-                        <div
-                            v-if="readonly"
-                            class="q-py-xs"
-                            :data-row-id="dc.id"
-                            data-field="carbonIntensity"
-                        >
-                            <div class="text-caption text-grey-7 q-mb-xs">
-                                {{ $t('energyColumns.carbonIntensity') }}
-                            </div>
-                            <div class="text-body2 text-dark text-weight-medium">
-                                {{ formatReadonly(dc.energy.carbonIntensity, 'gCO₂/kWh') }}
-                            </div>
-                        </div>
-                        <ZodValidatedNumberInput
-                            v-else
+                        <DetailField
                             v-model="dc.energy.carbonIntensity"
-                            :schema="DatacenterEnergySchema.shape.carbonIntensity"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="dc.id"
+                            field="carbonIntensity"
                             :label="$t('energyColumns.carbonIntensity')"
-                            :data-row-id="dc.id"
-                            data-field="carbonIntensity"
-                            outlined
-                            dense
+                            :schema="DatacenterEnergySchema.shape.carbonIntensity"
+                            unit="gCO₂/kWh"
                         />
                     </div>
                     <div class="col-12 col-sm-6">
-                        <div
-                            v-if="readonly"
-                            class="q-py-xs"
-                            :data-row-id="dc.id"
-                            data-field="carbonIntensityComment"
-                        >
-                            <div class="text-caption text-grey-7 q-mb-xs">
-                                {{ $t('energyColumns.carbonIntensityComment') }}
-                            </div>
-                            <div class="text-body2 text-dark text-weight-medium">
-                                {{ formatReadonly(dc.energy.carbonIntensityComment) }}
-                            </div>
-                        </div>
-                        <ZodValidatedTextInput
-                            v-else
+                        <DetailField
                             v-model="dc.energy.carbonIntensityComment"
-                            :schema="DatacenterEnergySchema.shape.carbonIntensityComment"
+                            :readonly="readonly"
+                            :row-id="dc.id"
+                            field="carbonIntensityComment"
                             :label="$t('energyColumns.carbonIntensityComment')"
-                            :data-row-id="dc.id"
-                            data-field="carbonIntensityComment"
-                            outlined
-                            dense
+                            :schema="DatacenterEnergySchema.shape.carbonIntensityComment"
                         />
                     </div>
                 </div>
@@ -136,48 +78,24 @@
             <q-card-section class="q-pt-none">
                 <div class="row q-col-gutter-md">
                     <div class="col-12 col-sm-6">
-                        <div v-if="readonly" class="q-py-xs" :data-row-id="dc.id" data-field="pue">
-                            <div class="text-caption text-grey-7 q-mb-xs">
-                                {{ $t('energyColumns.pue') }}
-                            </div>
-                            <div class="text-body2 text-dark text-weight-medium">
-                                {{ formatReadonly(dc.energy.pue) }}
-                            </div>
-                        </div>
-                        <ZodValidatedNumberInput
-                            v-else
+                        <DetailField
                             v-model="dc.energy.pue"
-                            :schema="DatacenterEnergySchema.shape.pue"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="dc.id"
+                            field="pue"
                             :label="$t('energyColumns.pue')"
-                            :data-row-id="dc.id"
-                            data-field="pue"
-                            outlined
-                            dense
+                            :schema="DatacenterEnergySchema.shape.pue"
                         />
                     </div>
                     <div class="col-12 col-sm-6">
-                        <div
-                            v-if="readonly"
-                            class="q-py-xs"
-                            :data-row-id="dc.id"
-                            data-field="pueComment"
-                        >
-                            <div class="text-caption text-grey-7 q-mb-xs">
-                                {{ $t('energyColumns.pueComment') }}
-                            </div>
-                            <div class="text-body2 text-dark text-weight-medium">
-                                {{ formatReadonly(dc.energy.pueComment) }}
-                            </div>
-                        </div>
-                        <ZodValidatedTextInput
-                            v-else
+                        <DetailField
                             v-model="dc.energy.pueComment"
-                            :schema="DatacenterEnergySchema.shape.pueComment"
+                            :readonly="readonly"
+                            :row-id="dc.id"
+                            field="pueComment"
                             :label="$t('energyColumns.pueComment')"
-                            :data-row-id="dc.id"
-                            data-field="pueComment"
-                            outlined
-                            dense
+                            :schema="DatacenterEnergySchema.shape.pueComment"
                         />
                     </div>
                 </div>
@@ -194,53 +112,25 @@
             <q-card-section class="q-pt-none">
                 <div class="row q-col-gutter-md">
                     <div class="col-12 col-sm-6">
-                        <div
-                            v-if="readonly"
-                            class="q-py-xs"
-                            :data-row-id="dc.id"
-                            data-field="energyConsumption"
-                        >
-                            <div class="text-caption text-grey-7 q-mb-xs">
-                                {{ $t('energyColumns.energyConsumption') }}
-                            </div>
-                            <div class="text-body2 text-dark text-weight-medium">
-                                {{ formatReadonly(dc.energy.energyConsumption, 'kWh') }}
-                            </div>
-                        </div>
-                        <ZodValidatedNumberInput
-                            v-else
+                        <DetailField
                             v-model="dc.energy.energyConsumption"
-                            :schema="DatacenterEnergySchema.shape.energyConsumption"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="dc.id"
+                            field="energyConsumption"
                             :label="$t('energyColumns.energyConsumption')"
-                            :data-row-id="dc.id"
-                            data-field="energyConsumption"
-                            outlined
-                            dense
+                            :schema="DatacenterEnergySchema.shape.energyConsumption"
+                            unit="kWh"
                         />
                     </div>
                     <div class="col-12 col-sm-6">
-                        <div
-                            v-if="readonly"
-                            class="q-py-xs"
-                            :data-row-id="dc.id"
-                            data-field="energyComment"
-                        >
-                            <div class="text-caption text-grey-7 q-mb-xs">
-                                {{ $t('energyColumns.energyComment') }}
-                            </div>
-                            <div class="text-body2 text-dark text-weight-medium">
-                                {{ formatReadonly(dc.energy.energyComment) }}
-                            </div>
-                        </div>
-                        <ZodValidatedTextInput
-                            v-else
+                        <DetailField
                             v-model="dc.energy.energyComment"
-                            :schema="DatacenterEnergySchema.shape.energyComment"
+                            :readonly="readonly"
+                            :row-id="dc.id"
+                            field="energyComment"
                             :label="$t('energyColumns.energyComment')"
-                            :data-row-id="dc.id"
-                            data-field="energyComment"
-                            outlined
-                            dense
+                            :schema="DatacenterEnergySchema.shape.energyComment"
                         />
                     </div>
                 </div>
@@ -255,20 +145,14 @@
                 </div>
             </q-card-section>
             <q-card-section class="q-pt-none">
-                <div v-if="readonly" class="q-py-xs" :data-row-id="dc.id" data-field="comment">
-                    <div class="text-body2 text-dark text-weight-medium">
-                        {{ formatReadonly(dc.energy.comment) }}
-                    </div>
-                </div>
-                <ZodValidatedTextInput
-                    v-else
+                <DetailField
                     v-model="dc.energy.comment"
-                    :schema="DatacenterEnergySchema.shape.comment"
+                    :readonly="readonly"
+                    :row-id="dc.id"
+                    field="comment"
                     :label="$t('energyColumns.comment')"
-                    :data-row-id="dc.id"
-                    data-field="comment"
-                    outlined
-                    dense
+                    :schema="DatacenterEnergySchema.shape.comment"
+                    hide-readonly-label
                 />
             </q-card-section>
         </q-card>
@@ -276,8 +160,7 @@
 </template>
 
 <script setup lang="ts">
-import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInput.vue';
-import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
+import DetailField from 'src/components/inputs/DetailField.vue';
 import { DatacenterEnergySchema, type DatacenterDraft } from 'src/models/Datacenter/schema';
 
 const dc = defineModel<DatacenterDraft>('row', { required: true });
@@ -285,9 +168,4 @@ const dc = defineModel<DatacenterDraft>('row', { required: true });
 defineProps<{
     readonly: boolean;
 }>();
-
-function formatReadonly(val: string | number | null | undefined, unit?: string): string {
-    if (val === null || val === undefined || val === '') return '—';
-    return unit ? `${val} ${unit}` : String(val);
-}
 </script>

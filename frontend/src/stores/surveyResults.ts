@@ -337,12 +337,11 @@ export const useSurveyResultsStore = defineStore('surveyResults', () => {
 
     const embodiedEmissionsByCategory = computed<EmbodiedGroup[]>(() => {
         // Declared standard categories first, then custom names in appearance order.
-        const standardCategories = HardwareCategorySchema.options.filter(
+        const orderedKeys: string[] = HardwareCategorySchema.options.filter(
             (category) => category !== HardwareCategorySchema.enum.other,
         );
-        const orderedKeys: string[] = [...standardCategories];
         const hardwareByKey = new Map<string, HardwareItem[]>(
-            standardCategories.map((category) => [category, []]),
+            orderedKeys.map((category) => [category, []]),
         );
         for (const row of data.hardware) {
             const key = categoryGroupKey(row);

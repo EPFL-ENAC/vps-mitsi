@@ -13,7 +13,6 @@ import ScopePage from '../src/pages/ScopePage.vue';
 import { ScopeDraftSchema, BoundaryItemDraftSchema } from '../src/models/Scope/schema.ts';
 import {
     DatacenterDraftSchema,
-    DatacenterEnergySchema,
     DatacenterGeneralInfoSchema,
 } from '../src/models/Datacenter/schema.ts';
 import { HardwareItemDraftSchema } from '../src/models/HardwareItem/schema.ts';
@@ -171,13 +170,13 @@ test('energy summary table is a compact 5-column master list; clear requires con
     );
     assert.equal(result.tables[0].columns.at(-1).align, 'right');
     assert.equal(result.tables[0].columns.at(-1).label, '');
-    // Editable columns carry their canonical schema, mirroring the inventory table.
-    for (const column of result.tables[0].columns.filter((c) => c.zod)) {
-        assert.equal(column.zod, DatacenterEnergySchema.shape[column.name]);
-    }
-    assert.equal(result.tables[0].columns[3].zod, DatacenterEnergySchema.shape.energyConsumption);
     // No inline inputs: editing happens in the detail dialog.
     assert.equal(result.inputs.length, 0);
+    // The master list carries no schema metadata; only the dialog edits values.
+    assert.deepEqual(
+        result.tables[0].columns.filter((c) => c.zod),
+        [],
+    );
     // Calculation parameters render in the summary row.
     assert.ok(result.html.includes('125 gCO₂/kWh'));
     assert.ok(result.html.includes('100 kWh'));

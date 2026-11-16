@@ -140,6 +140,7 @@ export async function renderTables(
         html,
         instances,
         store,
+        pinia,
         router,
         results,
         dialogs,
@@ -226,16 +227,14 @@ export async function renderInventoryDialogShell({ row, readonly = false, messag
 
 /** Inspect the energy summary columns and the rendered master rows. */
 export async function renderEnergyTable({ datacenters = [], messages } = {}) {
-    // The energy dialog state is module-scoped (shared with error navigation),
-    // so reset it to keep test cases independent of each other.
-    useEnergyDialog().close();
     const result = await renderTables(EnergyDatacentersTable, {
         setupStore(store) {
             store.datacenters = datacenters;
         },
         messages,
     });
-    useEnergyDialog().close();
+    // The dialog state lives in a Pinia store, so each render starts from a fresh one.
+    useEnergyDialog(result.pinia).close();
     const table = result.instances.find(
         (instance) => instance.$options.__name === 'EnergyDatacentersTable',
     );

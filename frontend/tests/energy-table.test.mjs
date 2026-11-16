@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { createPinia } from 'pinia';
 import {
     renderEnergyTable,
     renderEnergyDialog,
@@ -53,16 +54,12 @@ test('summary table exposes exactly the five master-detail columns', async () =>
     );
 });
 
-test('editable columns carry the canonical energy schemas', async () => {
+test('master list columns stay schema-free now that editing happens in the dialog', async () => {
     const { columns } = await renderEnergyTable();
-    const withZod = columns.filter((column) => column.zod);
     assert.deepEqual(
-        withZod.map((column) => column.name),
-        ['location', 'carbonIntensity', 'energyConsumption'],
+        columns.filter((column) => column.zod).map((column) => column.name),
+        [],
     );
-    for (const column of withZod) {
-        assert.equal(column.zod, DatacenterEnergySchema.shape[column.name]);
-    }
 });
 
 test('summary rows format measurements and hide PUE and comments from the master list', async () => {
@@ -180,8 +177,8 @@ test('readonly mode renders text blocks without editable inputs', async () => {
 
 test('exposed openDialog drives the shared energy dialog state', async () => {
     const row = filled();
-    const state = useEnergyDialog();
-    const { tableExposed } = await renderEnergyTable({ datacenters: [row] });
+    const { tableExposed, pinia } = await renderEnergyTable({ datacenters: [row] });
+    const state = useEnergyDialog(pinia);
 
     assert.equal(state.dialogOpen.value, false);
     assert.equal(typeof tableExposed.openDialog, 'function');
@@ -199,9 +196,11 @@ test('exposed openDialog drives the shared energy dialog state', async () => {
     assert.equal(state.selectedRow.value, null);
 });
 
-test('hardware and energy dialog states are independent', async () => {
-    const energy = useEnergyDialog();
-    const hardware = useHardwareDialog();
+test('hardware and energy dialog states are independent', () => {
+    // Both slices live in the same Pinia store, so they share one instance.
+    const pinia = createPinia();
+    const energy = useEnergyDialog(pinia);
+    const hardware = useHardwareDialog(pinia);
     energy.close();
     hardware.close();
 

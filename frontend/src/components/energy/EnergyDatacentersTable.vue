@@ -83,12 +83,11 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useQuasar, type QTableColumn } from 'quasar';
-import type { z } from 'zod';
 
 import EnergyDatacenterDetailDialog from 'src/components/energy/EnergyDatacenterDetailDialog.vue';
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useEnergyDialog } from 'src/composables/useDetailDialog';
-import { DatacenterEnergySchema, type DatacenterDraft } from 'src/models/Datacenter/schema';
+import type { DatacenterDraft } from 'src/models/Datacenter/schema';
 import { formatDatacenterName } from 'src/utils/format';
 
 const surveyData = useSurveyDataStore();
@@ -99,7 +98,6 @@ const $q = useQuasar();
 
 interface EnergyColumn extends QTableColumn<DatacenterDraft> {
     kind?: 'datacenter' | 'text' | 'number' | 'actions';
-    zod?: z.ZodType;
 }
 
 /** Compact master list: PUE and the comments live in the detail dialog only. */
@@ -117,7 +115,6 @@ const columns = computed<EnergyColumn[]>(() => [
         field: (dc) => dc.energy.location,
         align: 'left',
         kind: 'text',
-        zod: DatacenterEnergySchema.shape.location,
     },
     {
         name: 'carbonIntensity',
@@ -125,7 +122,6 @@ const columns = computed<EnergyColumn[]>(() => [
         field: (dc) => dc.energy.carbonIntensity,
         align: 'left',
         kind: 'number',
-        zod: DatacenterEnergySchema.shape.carbonIntensity,
     },
     {
         name: 'energyConsumption',
@@ -133,7 +129,6 @@ const columns = computed<EnergyColumn[]>(() => [
         field: (dc) => dc.energy.energyConsumption,
         align: 'left',
         kind: 'number',
-        zod: DatacenterEnergySchema.shape.energyConsumption,
     },
     {
         name: 'actions',

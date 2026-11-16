@@ -60,7 +60,7 @@ export function formatCategoryName(
     if (category === 'other' && categoryOther?.trim()) {
         return categoryOther.trim();
     }
-    const isStandard = (HardwareCategorySchema.options as readonly string[]).includes(category);
+    const isStandard = HardwareCategorySchema.safeParse(category).success;
     return isStandard && t ? t(`inventoryCategory_${category}`) : category;
 }
 

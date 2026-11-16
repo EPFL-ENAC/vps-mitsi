@@ -1,108 +1,24 @@
 <template>
     <q-card-section class="col scroll q-pa-md bg-grey-1">
-        <q-card
-            v-for="group in GROUPS"
-            :key="group"
-            flat
-            bordered
-            class="q-mb-md bg-white rounded-borders"
-        >
+        <!-- 1. General -->
+        <q-card flat bordered class="q-mb-md bg-white rounded-borders">
             <q-card-section class="q-pb-sm">
                 <div class="text-subtitle1 text-weight-bold text-dark">
-                    {{ $t(`inventoryGroups.${group}`) }}
+                    {{ $t('inventoryGroups.general') }}
                 </div>
             </q-card-section>
-
             <q-card-section class="q-pt-none">
                 <div class="row q-col-gutter-md">
-                    <div
-                        v-for="field in fieldsFor(group)"
-                        :key="field.field"
-                        class="col-12 col-sm-6 col-md-4"
-                    >
-                        <!-- A. READ-ONLY MODE (Selectable & copyable text) -->
-                        <div
-                            v-if="readonly"
-                            class="q-py-xs"
-                            :data-row-id="row.id"
-                            :data-field="field.field"
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="category"
+                            :label="$t('inventoryColumns.category')"
+                            :display-value="formatCategoryName(row.category, row.categoryOther, t)"
                         >
-                            <div class="text-caption text-grey-7 q-mb-xs">
-                                {{ $t(`inventoryColumns.${field.field}`) }}
-                            </div>
-
-                            <!-- Calculations readonly (subtotal in kg, capacities in GB) -->
-                            <div
-                                v-if="field.kind === 'derived'"
-                                class="text-body2 text-weight-bold text-dark"
-                            >
-                                <ComputationResultDisplay
-                                    v-if="field.derived"
-                                    :computation="field.derived(row)"
-                                    :format-value="field.formatValue!"
-                                />
-                            </div>
-
-                            <!-- Switch readonly (Badge) -->
-                            <div v-else-if="field.kind === 'toggle'" class="text-body2 text-dark">
-                                <q-badge
-                                    :color="row.isSecondHand ? 'primary' : 'grey-3'"
-                                    :text-color="row.isSecondHand ? 'white' : 'grey-8'"
-                                    class="text-weight-medium rounded-borders"
-                                >
-                                    {{ row.isSecondHand ? $t('commonYes') : $t('commonNo') }}
-                                </q-badge>
-                            </div>
-
-                            <!-- Text / Numbers / Selection -->
-                            <div v-else class="text-body2 text-dark text-weight-medium">
-                                {{ formatReadonlyValue(field) }}
-                            </div>
-                        </div>
-
-                        <!-- B. EDIT MODE (Interactive validated inputs) -->
-                        <template v-else>
-                            <!-- Calculs (Subtotal, Memory Total, Storage Total) -->
-                            <div v-if="field.kind === 'derived'" class="q-pt-xs">
-                                <div class="text-caption text-grey-7">
-                                    {{ $t(`inventoryColumns.${field.field}`) }}
-                                </div>
-                                <div class="text-body2 text-weight-bold q-mt-xs">
-                                    <ComputationResultDisplay
-                                        v-if="field.derived"
-                                        :computation="field.derived(row)"
-                                        :format-value="field.formatValue!"
-                                    />
-                                </div>
-                            </div>
-
-                            <!-- Toggle (2nd hand) -->
-                            <q-toggle
-                                v-else-if="field.kind === 'toggle'"
-                                v-model="row.isSecondHand"
-                                :label="$t(`inventoryColumns.${field.field}`)"
-                                :data-row-id="row.id"
-                                :data-field="field.field"
-                            />
-
-                            <!-- Datacenter select -->
-                            <ZodValidatedSelect
-                                v-else-if="field.kind === 'datacenter'"
-                                v-model="(row as Record<string, any>)[field.field]"
-                                :schema="field.schema!"
-                                :options="datacenterOptions"
-                                :label="$t(`inventoryColumns.${field.field}`)"
-                                :data-row-id="row.id"
-                                :data-field="field.field"
-                                emit-value
-                                map-options
-                                outlined
-                                dense
-                            />
-
-                            <!-- Enum select (the category cell swaps in place for a custom name) -->
                             <ZodValidatedTextInput
-                                v-if="field.field === 'category' && row.category === 'other'"
+                                v-if="row.category === 'other'"
                                 v-model="row.categoryOther"
                                 :schema="HardwareItemSchema.shape.categoryOther"
                                 :label="$t('inventoryColumns.categoryOther')"
@@ -125,49 +41,517 @@
                                     </q-btn>
                                 </template>
                             </ZodValidatedTextInput>
-
                             <ZodValidatedSelect
-                                v-else-if="field.kind === 'enum'"
-                                v-model="(row as Record<string, any>)[field.field]"
-                                :schema="field.schema!"
-                                :options="
-                                    field.field === 'category'
-                                        ? categoryOptions
-                                        : (field.options ?? [])
-                                "
-                                :label="$t(`inventoryColumns.${field.field}`)"
+                                v-else
+                                v-model="row.category"
+                                :schema="HardwareItemSchema.shape.category"
+                                :options="categoryOptions"
+                                :label="$t('inventoryColumns.category')"
                                 :data-row-id="row.id"
-                                :data-field="field.field"
+                                data-field="category"
                                 emit-value
                                 map-options
                                 outlined
                                 dense
                             />
+                        </DetailField>
+                    </div>
 
-                            <!-- Text -->
-                            <ZodValidatedTextInput
-                                v-else-if="field.kind === 'text'"
-                                v-model="(row as Record<string, any>)[field.field]"
-                                :schema="field.schema!"
-                                :label="$t(`inventoryColumns.${field.field}`)"
-                                :data-row-id="row.id"
-                                :data-field="field.field"
-                                outlined
-                                dense
-                            />
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.name"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="name"
+                            :label="$t('inventoryColumns.name')"
+                            :schema="HardwareItemSchema.shape.name"
+                        />
+                    </div>
 
-                            <!-- Number -->
-                            <ZodValidatedNumberInput
-                                v-else-if="field.kind === 'number'"
-                                v-model="(row as Record<string, any>)[field.field]"
-                                :schema="field.schema!"
-                                :label="$t(`inventoryColumns.${field.field}`)"
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.rackUnit"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="rackUnit"
+                            :label="$t('inventoryColumns.rackUnit')"
+                            :schema="HardwareItemSchema.shape.rackUnit"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.quantity"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="quantity"
+                            :label="$t('inventoryColumns.quantity')"
+                            :schema="HardwareItemSchema.shape.quantity"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.description"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="description"
+                            :label="$t('inventoryColumns.description')"
+                            :schema="HardwareItemSchema.shape.description"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.datacenterId"
+                            kind="select"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="datacenterId"
+                            :label="$t('inventoryColumns.datacenterId')"
+                            :schema="HardwareItemSchema.shape.datacenterId"
+                            :options="datacenterOptions"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="isSecondHand"
+                            :label="$t('inventoryColumns.isSecondHand')"
+                        >
+                            <template #readonly>
+                                <div class="text-body2 text-dark">
+                                    <q-badge
+                                        :color="row.isSecondHand ? 'primary' : 'grey-3'"
+                                        :text-color="row.isSecondHand ? 'white' : 'grey-8'"
+                                        class="text-weight-medium rounded-borders"
+                                    >
+                                        {{ row.isSecondHand ? $t('commonYes') : $t('commonNo') }}
+                                    </q-badge>
+                                </div>
+                            </template>
+                            <q-toggle
+                                v-model="row.isSecondHand"
+                                :label="$t('inventoryColumns.isSecondHand')"
                                 :data-row-id="row.id"
-                                :data-field="field.field"
-                                outlined
-                                dense
+                                data-field="isSecondHand"
                             />
-                        </template>
+                        </DetailField>
+                    </div>
+                </div>
+            </q-card-section>
+        </q-card>
+
+        <!-- 2. Impact -->
+        <q-card flat bordered class="q-mb-md bg-white rounded-borders">
+            <q-card-section class="q-pb-sm">
+                <div class="text-subtitle1 text-weight-bold text-dark">
+                    {{ $t('inventoryGroups.impact') }}
+                </div>
+            </q-card-section>
+            <q-card-section class="q-pt-none">
+                <div class="row q-col-gutter-md">
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.impactManufacturing"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="impactManufacturing"
+                            :label="$t('inventoryColumns.impactManufacturing')"
+                            :schema="HardwareItemSchema.shape.impactManufacturing"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.impactManufacturingDistributionEol"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="impactManufacturingDistributionEol"
+                            :label="$t('inventoryColumns.impactManufacturingDistributionEol')"
+                            :schema="HardwareItemSchema.shape.impactManufacturingDistributionEol"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.resilioDbHash"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="resilioDbHash"
+                            :label="$t('inventoryColumns.resilioDbHash')"
+                            :schema="HardwareItemSchema.shape.resilioDbHash"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <div
+                            :class="readonly ? 'q-py-xs' : 'q-pt-xs'"
+                            :data-row-id="readonly ? row.id : undefined"
+                            :data-field="readonly ? 'subtotal' : undefined"
+                        >
+                            <div class="text-caption text-grey-7" :class="{ 'q-mb-xs': readonly }">
+                                {{ $t('inventoryColumns.subtotal') }}
+                            </div>
+                            <div
+                                class="text-body2 text-weight-bold"
+                                :class="readonly ? 'text-dark' : 'q-mt-xs'"
+                            >
+                                <ComputationResultDisplay
+                                    :computation="surveyResults.hardwareRowEmbodiedEmissionsKg(row)"
+                                    :format-value="formatKg"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </q-card-section>
+        </q-card>
+
+        <!-- 3. CPU -->
+        <q-card flat bordered class="q-mb-md bg-white rounded-borders">
+            <q-card-section class="q-pb-sm">
+                <div class="text-subtitle1 text-weight-bold text-dark">
+                    {{ $t('inventoryGroups.cpu') }}
+                </div>
+            </q-card-section>
+            <q-card-section class="q-pt-none">
+                <div class="row q-col-gutter-md">
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.cpuName"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="cpuName"
+                            :label="$t('inventoryColumns.cpuName')"
+                            :schema="HardwareItemSchema.shape.cpuName"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.cpuQuantity"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="cpuQuantity"
+                            :label="$t('inventoryColumns.cpuQuantity')"
+                            :schema="HardwareItemSchema.shape.cpuQuantity"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.cpuLithography"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="cpuLithography"
+                            :label="$t('inventoryColumns.cpuLithography')"
+                            :schema="HardwareItemSchema.shape.cpuLithography"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.cpuDieSize"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="cpuDieSize"
+                            :label="$t('inventoryColumns.cpuDieSize')"
+                            :schema="HardwareItemSchema.shape.cpuDieSize"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.cpuCores"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="cpuCores"
+                            :label="$t('inventoryColumns.cpuCores')"
+                            :schema="HardwareItemSchema.shape.cpuCores"
+                        />
+                    </div>
+                </div>
+            </q-card-section>
+        </q-card>
+
+        <!-- 4. Memory -->
+        <q-card flat bordered class="q-mb-md bg-white rounded-borders">
+            <q-card-section class="q-pb-sm">
+                <div class="text-subtitle1 text-weight-bold text-dark">
+                    {{ $t('inventoryGroups.memory') }}
+                </div>
+            </q-card-section>
+            <q-card-section class="q-pt-none">
+                <div class="row q-col-gutter-md">
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.memoryQuantity"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="memoryQuantity"
+                            :label="$t('inventoryColumns.memoryQuantity')"
+                            :schema="HardwareItemSchema.shape.memoryQuantity"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.memorySizeGb"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="memorySizeGb"
+                            :label="$t('inventoryColumns.memorySizeGb')"
+                            :schema="HardwareItemSchema.shape.memorySizeGb"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <div
+                            :class="readonly ? 'q-py-xs' : 'q-pt-xs'"
+                            :data-row-id="readonly ? row.id : undefined"
+                            :data-field="readonly ? 'memoryTotalGb' : undefined"
+                        >
+                            <div class="text-caption text-grey-7" :class="{ 'q-mb-xs': readonly }">
+                                {{ $t('inventoryColumns.memoryTotalGb') }}
+                            </div>
+                            <div
+                                class="text-body2 text-weight-bold"
+                                :class="readonly ? 'text-dark' : 'q-mt-xs'"
+                            >
+                                <ComputationResultDisplay
+                                    :computation="surveyResults.hardwareMemoryPerUnitGb(row)"
+                                    :format-value="formatGb"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </q-card-section>
+        </q-card>
+
+        <!-- 5. Storage -->
+        <q-card flat bordered class="q-mb-md bg-white rounded-borders">
+            <q-card-section class="q-pb-sm">
+                <div class="text-subtitle1 text-weight-bold text-dark">
+                    {{ $t('inventoryGroups.storage') }}
+                </div>
+            </q-card-section>
+            <q-card-section class="q-pt-none">
+                <div class="row q-col-gutter-md">
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.storageType"
+                            kind="select"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="storageType"
+                            :label="$t('inventoryColumns.storageType')"
+                            :schema="HardwareItemSchema.shape.storageType"
+                            :options="storageTypeOptions"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.storageQuantity"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="storageQuantity"
+                            :label="$t('inventoryColumns.storageQuantity')"
+                            :schema="HardwareItemSchema.shape.storageQuantity"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.storageSize"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="storageSize"
+                            :label="$t('inventoryColumns.storageSize')"
+                            :schema="HardwareItemSchema.shape.storageSize"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <div
+                            :class="readonly ? 'q-py-xs' : 'q-pt-xs'"
+                            :data-row-id="readonly ? row.id : undefined"
+                            :data-field="readonly ? 'storageTotal' : undefined"
+                        >
+                            <div class="text-caption text-grey-7" :class="{ 'q-mb-xs': readonly }">
+                                {{ $t('inventoryColumns.storageTotal') }}
+                            </div>
+                            <div
+                                class="text-body2 text-weight-bold"
+                                :class="readonly ? 'text-dark' : 'q-mt-xs'"
+                            >
+                                <ComputationResultDisplay
+                                    :computation="surveyResults.hardwareStorageCapacityPerUnit(row)"
+                                    :format-value="formatGb"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.storageTechnology"
+                            kind="select"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="storageTechnology"
+                            :label="$t('inventoryColumns.storageTechnology')"
+                            :schema="HardwareItemSchema.shape.storageTechnology"
+                            :options="storageTechnologyOptions"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.storageCasing"
+                            kind="select"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="storageCasing"
+                            :label="$t('inventoryColumns.storageCasing')"
+                            :schema="HardwareItemSchema.shape.storageCasing"
+                            :options="storageCasingOptions"
+                        />
+                    </div>
+                </div>
+            </q-card-section>
+        </q-card>
+
+        <!-- 6. GPU -->
+        <q-card flat bordered class="q-mb-md bg-white rounded-borders">
+            <q-card-section class="q-pb-sm">
+                <div class="text-subtitle1 text-weight-bold text-dark">
+                    {{ $t('inventoryGroups.gpu') }}
+                </div>
+            </q-card-section>
+            <q-card-section class="q-pt-none">
+                <div class="row q-col-gutter-md">
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.gpuName"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="gpuName"
+                            :label="$t('inventoryColumns.gpuName')"
+                            :schema="HardwareItemSchema.shape.gpuName"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.gpuQuantity"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="gpuQuantity"
+                            :label="$t('inventoryColumns.gpuQuantity')"
+                            :schema="HardwareItemSchema.shape.gpuQuantity"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.gpuLithography"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="gpuLithography"
+                            :label="$t('inventoryColumns.gpuLithography')"
+                            :schema="HardwareItemSchema.shape.gpuLithography"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.gpuDieSize"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="gpuDieSize"
+                            :label="$t('inventoryColumns.gpuDieSize')"
+                            :schema="HardwareItemSchema.shape.gpuDieSize"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.gpuMemory"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="gpuMemory"
+                            :label="$t('inventoryColumns.gpuMemory')"
+                            :schema="HardwareItemSchema.shape.gpuMemory"
+                        />
+                    </div>
+                </div>
+            </q-card-section>
+        </q-card>
+
+        <!-- 7. Network -->
+        <q-card flat bordered class="bg-white rounded-borders">
+            <q-card-section class="q-pb-sm">
+                <div class="text-subtitle1 text-weight-bold text-dark">
+                    {{ $t('inventoryGroups.network') }}
+                </div>
+            </q-card-section>
+            <q-card-section class="q-pt-none">
+                <div class="row q-col-gutter-md">
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.networkPorts"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="networkPorts"
+                            :label="$t('inventoryColumns.networkPorts')"
+                            :schema="HardwareItemSchema.shape.networkPorts"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.psuQuantity"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="psuQuantity"
+                            :label="$t('inventoryColumns.psuQuantity')"
+                            :schema="HardwareItemSchema.shape.psuQuantity"
+                        />
+                    </div>
+
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <DetailField
+                            v-model="row.psuPower"
+                            kind="number"
+                            :readonly="readonly"
+                            :row-id="row.id"
+                            field="psuPower"
+                            :label="$t('inventoryColumns.psuPower')"
+                            :schema="HardwareItemSchema.shape.psuPower"
+                        />
                     </div>
                 </div>
             </q-card-section>
@@ -178,9 +562,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { z } from 'zod';
 
-import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInput.vue';
+import DetailField from 'src/components/inputs/DetailField.vue';
 import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
 import ZodValidatedSelect from 'src/components/inputs/ZodValidatedSelect.vue';
 import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
@@ -195,7 +578,6 @@ import {
 } from 'src/models/HardwareItem/schema';
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useSurveyResultsStore } from 'src/stores/surveyResults';
-import type { ComputationResult } from 'src/utils/computation';
 import {
     formatCategoryName,
     formatDatacenterName,
@@ -203,22 +585,6 @@ import {
     formatKg,
     normalizeKey,
 } from 'src/utils/format';
-
-const GROUPS = ['general', 'impact', 'cpu', 'memory', 'storage', 'gpu', 'network'] as const;
-type GroupKey = (typeof GROUPS)[number];
-
-type FieldKind = 'enum' | 'datacenter' | 'text' | 'number' | 'toggle' | 'derived';
-type InventoryField = keyof HardwareItem | 'subtotal' | 'memoryTotalGb' | 'storageTotal';
-
-interface FormFieldSpec {
-    field: InventoryField;
-    group: GroupKey;
-    kind: FieldKind;
-    schema?: z.ZodType;
-    options?: { label: string; value: string }[];
-    derived?: (row: HardwareItem) => ComputationResult<number>;
-    formatValue?: (val: number) => string;
-}
 
 const row = defineModel<HardwareItem>('row', { required: true });
 
@@ -234,15 +600,14 @@ function enumOptions(values: readonly string[], keyPrefix: string) {
     return values.map((value) => ({ label: t(keyPrefix + normalizeKey(value)), value }));
 }
 
-const datacenterOptions = computed<{ label: string; value: string }[]>(() =>
+const datacenterOptions = computed(() =>
     surveyData.datacenters.map((dc) => ({
         label: formatDatacenterName(dc),
         value: dc.id,
     })),
 );
 
-/** Standard categories plus the "+ Add other" entry that swaps the cell for a free-text input. */
-const categoryOptions = computed<{ label: string; value: string }[]>(() => [
+const categoryOptions = computed(() => [
     ...enumOptions(
         HardwareCategorySchema.options.filter((c) => c !== 'other'),
         'inventoryCategory_',
@@ -250,142 +615,18 @@ const categoryOptions = computed<{ label: string; value: string }[]>(() => [
     { label: `+ ${t('inventoryCategoryAddOther')}`, value: 'other' },
 ]);
 
-/** Leave the custom category and return to the standard select in the same grid cell. */
+const storageTypeOptions = computed(() =>
+    enumOptions(StorageTypeSchema.options, 'inventoryStorageType_'),
+);
+const storageTechnologyOptions = computed(() =>
+    enumOptions(StorageTechnologySchema.options, 'inventoryStorageTechnology_'),
+);
+const storageCasingOptions = computed(() =>
+    enumOptions(StorageCasingSchema.options, 'inventoryStorageCasing_'),
+);
+
 function resetCustomCategory(): void {
     row.value.category = 'server';
     row.value.categoryOther = '';
-}
-
-/** Read value readonly */
-function formatReadonlyValue(field: FormFieldSpec): string {
-    if (field.kind === 'derived') return '—';
-    if (field.field === 'category') {
-        return formatCategoryName(row.value.category, row.value.categoryOther, t);
-    }
-    const val = row.value[field.field as keyof HardwareItem];
-    if (val === null || val === undefined || val === '') return '—';
-
-    if (field.kind === 'datacenter') {
-        const dc = surveyData.datacenters.find((d) => d.id === val);
-        return dc ? formatDatacenterName(dc) : String(val);
-    }
-    if (field.kind === 'enum') {
-        const option = field.options?.find((opt) => opt.value === val);
-        return option ? option.label : String(val);
-    }
-    return String(val);
-}
-
-const fields = computed<FormFieldSpec[]>(() => {
-    const shape = HardwareItemSchema.shape;
-    return [
-        // General
-        {
-            field: 'category',
-            group: 'general',
-            kind: 'enum',
-            schema: shape.category,
-            // The select options are built in categoryOptions (standard values + "+ Add other").
-        },
-        { field: 'name', group: 'general', kind: 'text', schema: shape.name },
-        { field: 'rackUnit', group: 'general', kind: 'number', schema: shape.rackUnit },
-        { field: 'quantity', group: 'general', kind: 'number', schema: shape.quantity },
-        { field: 'description', group: 'general', kind: 'text', schema: shape.description },
-        { field: 'datacenterId', group: 'general', kind: 'datacenter', schema: shape.datacenterId },
-        { field: 'isSecondHand', group: 'general', kind: 'toggle', schema: shape.isSecondHand },
-
-        // Impact
-        {
-            field: 'impactManufacturing',
-            group: 'impact',
-            kind: 'number',
-            schema: shape.impactManufacturing,
-        },
-        {
-            field: 'impactManufacturingDistributionEol',
-            group: 'impact',
-            kind: 'number',
-            schema: shape.impactManufacturingDistributionEol,
-        },
-        { field: 'resilioDbHash', group: 'impact', kind: 'text', schema: shape.resilioDbHash },
-        {
-            field: 'subtotal',
-            group: 'impact',
-            kind: 'derived',
-            derived: surveyResults.hardwareRowEmbodiedEmissionsKg,
-            formatValue: formatKg,
-        },
-
-        // CPU
-        { field: 'cpuName', group: 'cpu', kind: 'text', schema: shape.cpuName },
-        { field: 'cpuQuantity', group: 'cpu', kind: 'number', schema: shape.cpuQuantity },
-        { field: 'cpuLithography', group: 'cpu', kind: 'number', schema: shape.cpuLithography },
-        { field: 'cpuDieSize', group: 'cpu', kind: 'number', schema: shape.cpuDieSize },
-        { field: 'cpuCores', group: 'cpu', kind: 'number', schema: shape.cpuCores },
-
-        // Memory
-        { field: 'memoryQuantity', group: 'memory', kind: 'number', schema: shape.memoryQuantity },
-        { field: 'memorySizeGb', group: 'memory', kind: 'number', schema: shape.memorySizeGb },
-        {
-            field: 'memoryTotalGb',
-            group: 'memory',
-            kind: 'derived',
-            derived: surveyResults.hardwareMemoryPerUnitGb,
-            formatValue: formatGb,
-        },
-
-        // Storage
-        {
-            field: 'storageType',
-            group: 'storage',
-            kind: 'enum',
-            schema: shape.storageType,
-            options: enumOptions(StorageTypeSchema.options, 'inventoryStorageType_'),
-        },
-        {
-            field: 'storageQuantity',
-            group: 'storage',
-            kind: 'number',
-            schema: shape.storageQuantity,
-        },
-        { field: 'storageSize', group: 'storage', kind: 'number', schema: shape.storageSize },
-        {
-            field: 'storageTotal',
-            group: 'storage',
-            kind: 'derived',
-            derived: surveyResults.hardwareStorageCapacityPerUnit,
-            formatValue: formatGb,
-        },
-        {
-            field: 'storageTechnology',
-            group: 'storage',
-            kind: 'enum',
-            schema: shape.storageTechnology,
-            options: enumOptions(StorageTechnologySchema.options, 'inventoryStorageTechnology_'),
-        },
-        {
-            field: 'storageCasing',
-            group: 'storage',
-            kind: 'enum',
-            schema: shape.storageCasing,
-            options: enumOptions(StorageCasingSchema.options, 'inventoryStorageCasing_'),
-        },
-
-        // GPU
-        { field: 'gpuName', group: 'gpu', kind: 'text', schema: shape.gpuName },
-        { field: 'gpuQuantity', group: 'gpu', kind: 'number', schema: shape.gpuQuantity },
-        { field: 'gpuLithography', group: 'gpu', kind: 'number', schema: shape.gpuLithography },
-        { field: 'gpuDieSize', group: 'gpu', kind: 'number', schema: shape.gpuDieSize },
-        { field: 'gpuMemory', group: 'gpu', kind: 'number', schema: shape.gpuMemory },
-
-        // Network
-        { field: 'networkPorts', group: 'network', kind: 'number', schema: shape.networkPorts },
-        { field: 'psuQuantity', group: 'network', kind: 'number', schema: shape.psuQuantity },
-        { field: 'psuPower', group: 'network', kind: 'number', schema: shape.psuPower },
-    ];
-});
-
-function fieldsFor(group: GroupKey): FormFieldSpec[] {
-    return fields.value.filter((f) => f.group === group);
 }
 </script>

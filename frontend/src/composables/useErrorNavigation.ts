@@ -14,6 +14,13 @@ import { formatDatacenterName } from 'src/utils/format';
 
 export type SectionId = 'scope' | 'inventory' | 'energy';
 
+/** Wait for a freshly opened dialog to mount before querying its fields. */
+const DIALOG_MOUNT_DELAY_MS = 120;
+/** Expansion item open animation before scrolling to the revealed field. */
+const EXPANSION_TRANSITION_MS = 260;
+/** Duration of the field highlight pulse; matches `field-pulse-amber` in app.scss. */
+const HIGHLIGHT_DURATION_MS = 1500;
+
 export interface DiagnosticIssue {
     id: string;
     section: SectionId;
@@ -229,12 +236,15 @@ export function useErrorNavigation() {
 
     function focusElement(element: HTMLElement): void {
         const wasClosed = expandEnclosingSection(element);
-        const delay = wasClosed ? 260 : 0;
+        const delay = wasClosed ? EXPANSION_TRANSITION_MS : 0;
 
         window.setTimeout(() => {
             element.scrollIntoView({ behavior: 'smooth', block: 'center' });
             element.classList.add('field-highlight-pulse');
-            window.setTimeout(() => element.classList.remove('field-highlight-pulse'), 2000);
+            window.setTimeout(
+                () => element.classList.remove('field-highlight-pulse'),
+                HIGHLIGHT_DURATION_MS,
+            );
 
             const control = element.querySelector<HTMLElement>('input, textarea, select');
             (control ?? element).focus({ preventScroll: true });
@@ -261,7 +271,7 @@ export function useErrorNavigation() {
             if (element) {
                 focusElement(element);
             }
-        }, 120);
+        }, DIALOG_MOUNT_DELAY_MS);
     }
 
     return {
