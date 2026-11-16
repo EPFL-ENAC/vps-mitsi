@@ -13,7 +13,7 @@
         <h2 class="text-h5 q-mt-lg q-mb-sm">{{ $t('welcomeLcaLabel') }}</h2>
         <p class="text-body1 text-grey-8 welcome__para">{{ $t('welcomeLcaText') }}</p>
 
-        <q-separator spaced />
+        <q-separator class="q-my-lg" />
 
         <h2 class="text-h5 q-mb-sm">{{ $t('welcomeGuideLabel') }}</h2>
         <p class="text-body1 text-grey-8 welcome__para">{{ $t('welcomeGuideText') }}</p>
@@ -37,7 +37,7 @@
             </li>
         </ol>
 
-        <q-separator spaced />
+        <q-separator class="q-my-lg" />
 
         <p class="text-caption text-grey-6 welcome__para">{{ $t('welcomeFootnote') }}</p>
     </div>

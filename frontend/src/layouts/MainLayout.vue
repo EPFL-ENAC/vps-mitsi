@@ -1,6 +1,6 @@
 <template>
-    <q-layout view="hHh LpR lFf">
-        <q-header elevated class="bg-white text-dark">
+    <q-layout view="hHh LpR lFf" class="bg-grey-1">
+        <q-header bordered class="bg-white text-dark">
             <q-toolbar>
                 <q-btn
                     flat
@@ -12,27 +12,41 @@
                 />
                 <q-toolbar-title class="header-brand text-weight-medium">
                     <img :src="epflLogoUrl" alt="EPFL" class="header-brand__logo" />
-                    <span>MITSI</span>
+                    <span class="text-weight-bold">MITSI</span>
                 </q-toolbar-title>
                 <q-space />
                 <span class="text-caption text-grey-7 q-mr-sm gt-xs">
                     {{ $t('mainTagline') }}
                 </span>
-                <q-btn unelevated color="primary" :label="$t('mainSave')" @click="saveAssessment" />
                 <q-btn
                     unelevated
-                    color="primary"
-                    class="q-ml-sm"
+                    class="text-white q-mr-sm"
+                    style="background-color: #00a79f"
+                    :label="$t('mainSave')"
+                    @click="saveAssessment"
+                />
+                <q-btn
+                    unelevated
+                    class="text-white"
+                    style="background-color: #007480"
                     :label="$t('mainExport')"
                     @click="exportAssessment"
                 />
+                <!-- import button-->
+                <q-btn
+                    unelevated
+                    class="text-white q-ml-sm"
+                    style="background-color: #007480"
+                    :label="$t('mainImport')"
+                    @click="fileInputRef?.pickFiles()"
+                />
+
+                <!-- hidden q-file for file selection -->
                 <q-file
+                    ref="fileInputRef"
                     :model-value="null"
                     accept=".json,application/json"
-                    dense
-                    outlined
-                    class="q-ml-sm"
-                    :label="$t('mainImport')"
+                    class="hidden"
                     @update:model-value="onFilePicked"
                 />
             </q-toolbar>
@@ -48,9 +62,6 @@
                         <q-icon name="home" />
                     </q-item-section>
                     <q-item-section>{{ $t('mainNavWelcome') }}</q-item-section>
-                    <q-item-section side class="nav-badge text-caption text-grey-7">
-                        {{ $t('mainStatusRead') }}
-                    </q-item-section>
                 </q-item>
 
                 <!-- Assessment Dropdown -->
@@ -62,7 +73,8 @@
                     header-class="text-weight-bold"
                     :label="$t('mainNavAssessment')"
                 >
-                    <q-item v-ripple clickable to="/scope" class="q-pl-lg">
+                    <!-- Scope -->
+                    <q-item v-ripple clickable to="/scope">
                         <q-item-section avatar>
                             <q-icon name="my_location" />
                         </q-item-section>
@@ -73,16 +85,25 @@
                             </q-item-label>
                         </q-item-section>
                         <q-item-section side top class="nav-badge text-caption text-grey-7">
-                            {{
-                                $t('mainNavScopeSteps', {
-                                    done: surveyData.scopeCompletedStepCount,
-                                    total: 3,
-                                })
-                            }}
+                            <span class="row items-center no-wrap">
+                                <q-icon
+                                    v-if="surveyData.scopeStatus === 'partial'"
+                                    name="warning"
+                                    size="14px"
+                                    class="q-mr-xs"
+                                />
+                                {{
+                                    $t('mainNavScopeSteps', {
+                                        done: surveyData.scopeCompletedStepCount,
+                                        total: 3,
+                                    })
+                                }}
+                            </span>
                         </q-item-section>
                     </q-item>
 
-                    <q-item v-ripple clickable to="/inventory" class="q-pl-lg">
+                    <!-- Hardware -->
+                    <q-item v-ripple clickable to="/inventory">
                         <q-item-section avatar>
                             <q-icon name="memory" />
                         </q-item-section>
@@ -93,11 +114,20 @@
                             </q-item-label>
                         </q-item-section>
                         <q-item-section side top class="nav-badge text-caption text-grey-7">
-                            {{ $t('mainNavHardwareRows', { n: surveyData.hardware.length }) }}
+                            <span class="row items-center no-wrap">
+                                <q-icon
+                                    v-if="surveyData.missingMandatoryHardware > 0"
+                                    name="warning"
+                                    size="14px"
+                                    class="q-mr-xs"
+                                />
+                                {{ $t('mainNavHardwareRows', { n: surveyData.hardware.length }) }}
+                            </span>
                         </q-item-section>
                     </q-item>
 
-                    <q-item v-ripple clickable to="/energy" class="q-pl-lg">
+                    <!-- Energy -->
+                    <q-item v-ripple clickable to="/energy">
                         <q-item-section avatar>
                             <q-icon name="bolt" />
                         </q-item-section>
@@ -108,11 +138,18 @@
                             </q-item-label>
                         </q-item-section>
                         <q-item-section side top class="nav-badge text-caption text-grey-7">
-                            {{ energyBadgeLabel }}
+                            <span class="row items-center no-wrap">
+                                <q-icon
+                                    v-if="surveyData.hasIncompleteEnergy"
+                                    name="warning"
+                                    size="14px"
+                                    class="q-mr-xs"
+                                />
+                                {{ energyBadgeLabel }}
+                            </span>
                         </q-item-section>
                     </q-item>
                 </q-expansion-item>
-
                 <q-separator spaced />
 
                 <!-- Results -->
@@ -142,82 +179,90 @@
             </q-list>
         </q-drawer>
 
-        <q-page-container>
+        <q-page-container class="bg-grey-1">
             <router-view />
         </q-page-container>
-
         <q-footer bordered class="bg-white text-dark">
-            <q-toolbar class="assessment-summary q-px-md">
+            <q-toolbar class="assessment-summary q-px-md items-center">
                 <span class="text-caption text-grey-7">{{ savedText }}</span>
                 <span v-if="exportedText" class="text-caption text-grey-6 q-ml-sm">
                     · {{ exportedText }}
                 </span>
-                <i18n-t
-                    keypath="mainFooterEmbodied"
-                    tag="span"
-                    scope="global"
-                    class="text-caption text-grey-8"
-                >
-                    <template #value>
-                        <ComputationResultDisplay
-                            v-if="surveyData.isScopeValid"
-                            :computation="surveyResults.totalEmbodiedEmissionsKg"
-                            :format-value="formatEmbodiedTonnes"
-                        >
-                            <template #ignored-input="{ input }">{{
-                                input.name || input.id
-                            }}</template>
-                        </ComputationResultDisplay>
-                        <template v-else>{{ t('mainNotApplicable') }}</template>
-                    </template>
-                </i18n-t>
-                <i18n-t
-                    keypath="mainFooterOperational"
-                    tag="span"
-                    scope="global"
-                    class="text-caption text-grey-8"
-                >
-                    <template #value>
-                        <ComputationResultDisplay
-                            v-if="surveyData.isScopeValid"
-                            :computation="surveyResults.totalOperationalEmissionsKg"
-                            :format-value="formatOperationalTonnes"
-                        >
-                            <template #ignored-input="{ input }">{{
-                                formatDatacenterName(input)
-                            }}</template>
-                        </ComputationResultDisplay>
-                        <template v-else>{{ t('mainNotApplicable') }}</template>
-                    </template>
-                </i18n-t>
-                <i18n-t
-                    keypath="mainFooterTotal"
-                    tag="span"
-                    scope="global"
-                    class="text-caption text-grey-8"
-                >
-                    <template #value>
-                        <ComputationResultDisplay
-                            v-if="surveyData.isScopeValid"
-                            :computation="surveyResults.totalLifespanEmissionsKg"
-                            :format-value="formatTotalTonnes"
-                        />
-                        <template v-else>{{ t('mainNotApplicable') }}</template>
-                    </template>
-                </i18n-t>
-                <i18n-t
-                    keypath="mainFooterPerFu"
-                    tag="span"
-                    scope="global"
-                    class="text-caption text-grey-7"
-                >
-                    <template #value>
-                        <ComputationResultDisplay
-                            :computation="surveyResults.emissionsPerFunctionalUnitKg"
-                            :format-value="formatFunctionalUnitGrams"
-                        />
-                    </template>
-                </i18n-t>
+
+                <template v-if="resultsUnlocked">
+                    <i18n-t
+                        keypath="mainFooterEmbodied"
+                        tag="span"
+                        scope="global"
+                        class="text-caption text-grey-8"
+                    >
+                        <template #value>
+                            <ComputationResultDisplay
+                                v-if="surveyData.isScopeValid"
+                                :computation="surveyResults.totalEmbodiedEmissionsKg"
+                                :format-value="formatEmbodiedTonnes"
+                            >
+                                <template #ignored-input="{ input }">{{
+                                    input.name || input.id
+                                }}</template>
+                            </ComputationResultDisplay>
+                            <template v-else>{{ t('mainNotApplicable') }}</template>
+                        </template>
+                    </i18n-t>
+                    <i18n-t
+                        keypath="mainFooterOperational"
+                        tag="span"
+                        scope="global"
+                        class="text-caption text-grey-8"
+                    >
+                        <template #value>
+                            <ComputationResultDisplay
+                                v-if="surveyData.isScopeValid"
+                                :computation="surveyResults.totalOperationalEmissionsKg"
+                                :format-value="formatOperationalTonnes"
+                            >
+                                <template #ignored-input="{ input }">{{
+                                    formatDatacenterName(input)
+                                }}</template>
+                            </ComputationResultDisplay>
+                            <template v-else>{{ t('mainNotApplicable') }}</template>
+                        </template>
+                    </i18n-t>
+                    <i18n-t
+                        keypath="mainFooterTotal"
+                        tag="span"
+                        scope="global"
+                        class="text-caption text-grey-8"
+                    >
+                        <template #value>
+                            <ComputationResultDisplay
+                                v-if="surveyData.isScopeValid"
+                                :computation="surveyResults.totalLifespanEmissionsKg"
+                                :format-value="formatTotalTonnes"
+                            />
+                            <template v-else>{{ t('mainNotApplicable') }}</template>
+                        </template>
+                    </i18n-t>
+                    <i18n-t
+                        keypath="mainFooterPerFu"
+                        tag="span"
+                        scope="global"
+                        class="text-caption text-grey-7"
+                    >
+                        <template #value>
+                            <ComputationResultDisplay
+                                :computation="surveyResults.emissionsPerFunctionalUnitKg"
+                                :format-value="formatFunctionalUnitGrams"
+                            />
+                        </template>
+                    </i18n-t>
+                </template>
+
+                <!-- Pushes error summary button to the right end -->
+                <q-space />
+
+                <!-- Error summary trigger and bottom-sheet panel -->
+                <ErrorSummaryPanel />
             </q-toolbar>
         </q-footer>
     </q-layout>
@@ -237,6 +282,10 @@ import { isImportEmpty } from 'src/models/MitsiState/utils';
 import { formatDatacenterName, formatResult } from 'src/utils/format';
 import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
 import ExportAssessmentDialog from 'src/components/ExportAssessmentDialog.vue';
+import ErrorSummaryPanel from 'src/components/ErrorSummaryPanel.vue';
+import type { QFile } from 'quasar';
+
+const fileInputRef = ref<QFile | null>(null);
 
 const surveyData = useSurveyDataStore();
 const surveyResults = useSurveyResultsStore();
@@ -415,5 +464,9 @@ function formatTimeAgo(ts: number): string {
 .nav-badge {
     white-space: nowrap;
     color: #6b7280;
+}
+
+.q-item .nav-badge .q-icon {
+    color: #f59e0b !important;
 }
 </style>

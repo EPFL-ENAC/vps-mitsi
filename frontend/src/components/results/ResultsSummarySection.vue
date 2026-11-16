@@ -2,27 +2,27 @@
     <q-markup-table dense flat bordered class="results-table">
         <tbody>
             <tr>
-                <th scope="row" class="results-key text-left" data-kind="text">
+                <td class="results-key text-left" data-kind="text">
                     {{ $t('resultsSummaryServiceName') }}
-                </th>
+                </td>
                 <td data-kind="text">{{ surveyData.scope.serviceName || '—' }}</td>
             </tr>
             <tr>
-                <th scope="row" class="results-key text-left" data-kind="text">
+                <td class="results-key text-left" data-kind="text">
                     {{ $t('resultsSummaryFunction') }}
-                </th>
+                </td>
                 <td data-kind="text">{{ surveyData.scope.function || '—' }}</td>
             </tr>
             <tr>
-                <th scope="row" class="results-key text-left" data-kind="text">
+                <td class="results-key text-left" data-kind="text">
                     {{ $t('resultsSummaryFunctionalUnit') }}
-                </th>
+                </td>
                 <td data-kind="text">{{ fuSentence }}</td>
             </tr>
             <tr>
-                <th scope="row" class="results-key text-left" data-kind="text">
+                <td class="results-key text-left" data-kind="text">
                     {{ $t('resultsSummaryLifespan') }}
-                </th>
+                </td>
                 <td data-kind="text">
                     {{ $t('resultsLifespanYears', { n: surveyData.scope.lifespanYears ?? '—' }) }}
                 </td>

@@ -8,18 +8,21 @@
             </p>
         </div>
 
-        <!-- Scope gating hint -->
+        <!-- Scope gating hint (informational) -->
         <q-banner
             v-if="!surveyData.isScopeValid"
+            dense
             inline-actions
-            class="bg-warning text-white q-mb-md"
+            class="bg-blue-1 text-blue-9 q-mb-md rounded-borders"
         >
+            <template #avatar>
+                <q-icon name="sym_r_info" size="sm" />
+            </template>
             {{ $t('inventoryNoScopeHint') }}
         </q-banner>
 
-        <!-- Toolbar (one line): mode toggle left, Add row rightmost -->
-        <div class="row items-center q-gutter-x-md q-mb-sm inventory-toolbar">
-            <q-btn-toggle v-model="mode" toggle-color="primary" :options="modeOptions" />
+        <!-- Toolbar: Add row -->
+        <div class="row items-center justify-end q-mb-sm inventory-toolbar">
             <q-btn
                 unelevated
                 color="primary"
@@ -33,7 +36,7 @@
             <i18n-t
                 keypath="inventoryStats"
                 tag="div"
-                class="text-body1 text-weight-medium"
+                class="text-body2 text-grey-8"
                 scope="global"
             >
                 <template #rows>{{ surveyResults.hardwareRowCount }}</template>
@@ -51,9 +54,6 @@
                     </ComputationResultDisplay>
                 </template>
             </i18n-t>
-            <div class="text-grey-7 inventory-mode-hint">
-                {{ $t('inventoryModeHint') }}
-            </div>
         </div>
 
         <!-- Warning bar -->
@@ -67,7 +67,7 @@
 
         <!-- No datacenters hint -->
         <q-banner
-            v-if="surveyData.datacenters.length === 0"
+            v-if="!surveyData.datacenters.length"
             inline-actions
             class="bg-grey-3 text-grey-8 q-mb-md"
         >
@@ -75,20 +75,12 @@
         </q-banner>
 
         <!-- Inventory table -->
-        <HardwareInventoryTable :mode="mode" />
+        <HardwareInventoryTable />
 
         <!-- Footer -->
         <div class="row items-center q-mt-md inventory-footer">
-            <div class="text-body1">
+            <div class="text-body2 text-grey-7">
                 {{ $t('inventoryFooter', { n: surveyResults.excludedSecondHandRowCount }) }}
-            </div>
-            <div class="text-body1 text-weight-medium" style="margin-left: auto">
-                <ComputationResultDisplay
-                    :computation="surveyResults.totalEmbodiedEmissionsKg"
-                    :format-value="formatKg"
-                >
-                    <template #ignored-input="{ input }">{{ input.name || input.id }}</template>
-                </ComputationResultDisplay>
             </div>
         </div>
     </div>
@@ -98,35 +90,17 @@
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useSurveyResultsStore } from 'src/stores/surveyResults';
 
-import { ref } from 'vue';
-import { useI18n } from 'vue-i18n';
-
 import HardwareInventoryTable from 'src/components/inventory/HardwareInventoryTable.vue';
 import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
-import type { VisibilityMode } from 'src/types/ui';
 import { formatKg } from 'src/utils/format';
 
 const surveyData = useSurveyDataStore();
 const surveyResults = useSurveyResultsStore();
-
-const { t } = useI18n();
-
-// ── Local UI state (never persisted) ─────────────────────────────────────────
-const mode = ref<VisibilityMode>('normal');
-const modeOptions = [
-    { label: t('inventoryModeSimple'), value: 'simple' },
-    { label: t('inventoryModeNormal'), value: 'normal' },
-    { label: t('inventoryModeAdvanced'), value: 'advanced' },
-];
 </script>
 
 <style scoped>
 .inventory-toolbar {
     flex-wrap: nowrap;
-}
-
-.inventory-mode-hint {
-    font-size: 13px;
 }
 
 .inventory-footer {
