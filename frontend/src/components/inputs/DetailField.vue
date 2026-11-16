@@ -9,36 +9,15 @@
     </div>
 
     <slot v-else>
-        <ZodValidatedNumberInput
-            v-if="kind === 'number'"
-            v-model="numberModel"
-            :schema="schema!"
+        <component
+            :is="inputComponent"
+            v-if="schema"
+            v-model="model"
+            :schema="schema"
             :label="label"
             :data-row-id="rowId"
             :data-field="field"
-            outlined
-            dense
-        />
-        <ZodValidatedSelect
-            v-else-if="kind === 'select'"
-            v-model="stringModel"
-            :schema="schema!"
-            :options="options ?? []"
-            :label="label"
-            :data-row-id="rowId"
-            :data-field="field"
-            emit-value
-            map-options
-            outlined
-            dense
-        />
-        <ZodValidatedTextInput
-            v-else
-            v-model="stringModel"
-            :schema="schema!"
-            :label="label"
-            :data-row-id="rowId"
-            :data-field="field"
+            v-bind="selectProps"
             outlined
             dense
         />
@@ -81,6 +60,18 @@ const props = withDefaults(
     },
 );
 
+const inputComponent = computed(() => {
+    if (props.kind === 'number') return ZodValidatedNumberInput;
+    if (props.kind === 'select') return ZodValidatedSelect;
+    return ZodValidatedTextInput;
+});
+
+const selectProps = computed(() =>
+    props.kind === 'select'
+        ? { options: props.options ?? [], emitValue: true, mapOptions: true }
+        : {},
+);
+
 const formattedValue = computed<string>(() => {
     if (props.displayValue !== undefined) {
         return props.displayValue || '—';
@@ -91,21 +82,5 @@ const formattedValue = computed<string>(() => {
         return props.options.find((opt) => opt.value === val)?.label ?? String(val);
     }
     return props.unit ? `${val} ${props.unit}` : String(val);
-});
-
-const stringModel = computed<string | undefined>({
-    get: () => (typeof model.value === 'string' ? model.value : undefined),
-    // `T` is constrained to string | number | null | undefined, so narrowing back to T is safe,
-    // but the compiler cannot prove it for an arbitrary generic member.
-    set: (val) => {
-        model.value = val as T; // eslint-disable-line @typescript-eslint/no-unnecessary-type-assertion
-    },
-});
-
-const numberModel = computed<number | null | undefined>({
-    get: () => (typeof model.value === 'number' ? model.value : null),
-    set: (val) => {
-        model.value = val as T; // eslint-disable-line @typescript-eslint/no-unnecessary-type-assertion
-    },
 });
 </script>
