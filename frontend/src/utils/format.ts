@@ -1,6 +1,7 @@
 import type { DatacenterDraft } from 'src/models/Datacenter/schema';
 import type { PueInclusion } from 'src/models/Datacenter/computations';
 import type { Scope } from 'src/models/Scope/schema';
+import { HardwareCategorySchema } from 'src/models/HardwareItem/schema';
 
 /** Show both names when available, with the ID as the unfinished-draft fallback. */
 export function formatDatacenterName(dc: Pick<DatacenterDraft, 'id' | 'generalInfo'>): string {
@@ -15,6 +16,13 @@ export function formatKg(n: number | null): string {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     }).format(n);
+}
+
+/** Integer capacity in GB, with comma thousands separators. */
+export function formatGb(value: number): string {
+    return `${new Intl.NumberFormat('en-US', {
+        maximumFractionDigits: 0,
+    }).format(value)} GB`;
 }
 
 /** Format a result with caller-provided missing and partial-result labels. */
@@ -40,6 +48,20 @@ export function formatResult(
  *  → 'compute_server', '2.5 inch' → '2_5_inch', 'HDD' → 'HDD'. */
 export function normalizeKey(v: string): string {
     return v.replace(/[^A-Za-z0-9]+/g, '_');
+}
+
+/** Display name of a hardware category: custom text is shown as typed,
+ *  standard keys are translated. */
+export function formatCategoryName(
+    category: string,
+    categoryOther?: string,
+    t?: (key: string) => string,
+): string {
+    if (category === 'other' && categoryOther?.trim()) {
+        return categoryOther.trim();
+    }
+    const isStandard = HardwareCategorySchema.safeParse(category).success;
+    return isStandard && t ? t(`inventoryCategory_${category}`) : category;
 }
 
 /** Assemble the functional unit using the locale's word order and time-unit label. */

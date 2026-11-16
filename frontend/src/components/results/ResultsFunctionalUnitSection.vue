@@ -2,9 +2,9 @@
     <q-markup-table dense flat bordered class="results-table">
         <tbody>
             <tr>
-                <th scope="row" class="results-key text-left" data-kind="text">
+                <td class="results-key text-left" data-kind="text">
                     {{ $t('resultsFuNumber') }}
-                </th>
+                </td>
                 <td class="text-right" data-kind="number">
                     <ComputationResultDisplay
                         :disable-tooltip="disableTooltip"
@@ -15,9 +15,9 @@
                 </td>
             </tr>
             <tr>
-                <th scope="row" class="results-key text-left" data-kind="text">
+                <td class="results-key text-left" data-kind="text">
                     {{ $t('resultsFuLifespanNote') }}
-                </th>
+                </td>
                 <td class="text-right" data-kind="number">
                     <ComputationResultDisplay
                         :disable-tooltip="disableTooltip"
@@ -31,7 +31,7 @@
                 </td>
             </tr>
             <tr>
-                <th scope="row" class="results-key text-left" data-kind="text">{{ fuSentence }}</th>
+                <td class="results-key text-left" data-kind="text">{{ fuSentence }}</td>
                 <td class="text-right" data-kind="number">
                     <ComputationResultDisplay
                         :disable-tooltip="disableTooltip"
@@ -114,10 +114,5 @@ const functionalUnitResultOptions = computed(() => ({
     font-weight: 600;
     color: rgba(0, 0, 0, 0.7);
     width: 60%;
-}
-
-.results-total td {
-    border-top: 2px solid rgba(0, 0, 0, 0.2);
-    font-weight: 700;
 }
 </style>

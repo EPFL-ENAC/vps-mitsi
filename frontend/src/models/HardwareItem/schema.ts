@@ -7,6 +7,7 @@ export const HardwareCategorySchema = z.enum([
     'storage_bay',
     'network_device',
     'spare_part',
+    'other',
 ]);
 
 export const StorageTypeSchema = z.enum(['HDD', 'SSD']);
@@ -20,8 +21,9 @@ export const HardwareItemSchema = z.object({
     // UI must generate a uuid when creating a row; '' is only a parse fallback.
     id: z.string(),
 
-    // General (editing mode: simple / normal / advanced)
+    // General
     category: HardwareCategorySchema,
+    categoryOther: z.string().optional(),
     name: z.string().min(1),
     rackUnit: optionalNumber(),
     quantity: z.number().int().min(1),
@@ -45,15 +47,11 @@ export const HardwareItemSchema = z.object({
     // Memory
     memoryQuantity: z.number().int().min(0),
     memorySizeGb: z.number().int().min(0),
-    // computed in store (quantity × size); not authoritative in exported JSON.
-    memoryTotalGb: optionalNumber(),
 
     // Storage
     storageType: StorageTypeSchema.optional(),
     storageQuantity: z.number().int().min(0),
     storageSize: z.number().int().min(0),
-    // computed in store (quantity × size); not authoritative in exported JSON.
-    storageTotal: optionalNumber(),
     storageTechnology: StorageTechnologySchema.optional(),
     storageCasing: StorageCasingSchema.optional(),
 
@@ -73,6 +71,7 @@ export const HardwareItemSchema = z.object({
 export const HardwareItemDraftSchema = HardwareItemSchema.extend({
     id: draftField(HardwareItemSchema.shape.id, ''),
     category: draftField(HardwareItemSchema.shape.category, 'server'),
+    categoryOther: draftField(HardwareItemSchema.shape.categoryOther, ''),
     name: draftField(HardwareItemSchema.shape.name, ''),
     quantity: draftNumber(HardwareItemSchema.shape.quantity),
     datacenterId: draftField(HardwareItemSchema.shape.datacenterId, ''),

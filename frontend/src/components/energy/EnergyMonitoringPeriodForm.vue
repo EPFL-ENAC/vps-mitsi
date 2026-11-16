@@ -6,6 +6,7 @@
                 class="full-width"
                 :label="$t('energyMonitorUnitLabel')"
                 :schema="MonitoringPeriodSchema.shape.unit"
+                data-field="unit"
                 :options="monitoringUnitOptions"
                 emit-value
                 map-options
@@ -20,6 +21,7 @@
                 class="full-width"
                 :label="$t('energyMonitorValueLabel')"
                 :schema="MonitoringPeriodSchema.shape.value"
+                data-field="value"
                 dense
                 outlined
                 hide-bottom-space
@@ -31,6 +33,7 @@
                 class="full-width"
                 :label="$t('energyMonitorCommentLabel')"
                 :schema="MonitoringPeriodSchema.shape.comment"
+                data-field="comment"
                 dense
                 outlined
                 hide-bottom-space

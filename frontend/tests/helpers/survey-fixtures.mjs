@@ -15,8 +15,7 @@ function validScope() {
 
 /**
  * A datacenter energy block that satisfies `DatacenterEnergySchema`.
- * `location`, `comment`, `locationComment`, `carbonIntensityComment` and
- * `energyComment` are mandatory non-empty strings; only `pue`/`pueComment` are optional.
+ * Includes descriptive text; blank text is also valid when measurements are supplied.
  */
 export function validEnergy(overrides = {}) {
     return {

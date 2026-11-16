@@ -2,12 +2,16 @@
     <div class="q-pa-md">
         <div class="text-h4 q-mb-sm">{{ $t('energyPageTitle') }}</div>
         <p class="text-grey-7 q-mb-md">{{ $t('energyPageHint') }}</p>
-        <!-- Scope gating hint -->
+        <!-- Scope gating hint (informational) -->
         <q-banner
             v-if="!surveyData.isScopeValid"
+            dense
             inline-actions
-            class="bg-warning text-white q-mb-md"
+            class="bg-blue-1 text-blue-9 q-mb-md rounded-borders"
         >
+            <template #avatar>
+                <q-icon name="sym_r_info" size="sm" />
+            </template>
             {{ $t('energyNoScopeHint') }}
         </q-banner>
 
@@ -19,7 +23,7 @@
         <q-banner
             v-if="!surveyData.datacenters.length"
             inline-actions
-            class="bg-info text-white q-mb-md"
+            class="bg-grey-3 text-grey-8 q-mb-md"
         >
             {{ $t('energyNoDatacentersHint') }}
         </q-banner>

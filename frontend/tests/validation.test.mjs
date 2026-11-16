@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { createSSRApp, h } from 'vue';
 import { renderToString } from 'vue/server-renderer';
 import { createI18n } from 'vue-i18n';
-import { useValidation } from '../src/composables/useValidation.ts';
+import { isSchemaRequired, useValidation } from '../src/composables/useValidation.ts';
 import { renderInventoryTable } from './helpers/render-tables.mjs';
 import { DatacenterEnergySchema } from '../src/models/Datacenter/schema.ts';
 import { HardwareItemSchema } from '../src/models/HardwareItem/schema.ts';
@@ -54,6 +54,24 @@ test('inventory uses canonical fields directly and skips derived values', async 
             column.kind === 'derived' ? undefined : HardwareItemSchema.shape[column.field],
         );
     }
+});
+
+test('blank energy text has no required indicator or validation error', async () => {
+    const { toValidationRule } = await validationRules();
+    for (const field of [
+        'comment',
+        'location',
+        'locationComment',
+        'carbonIntensityComment',
+        'energyComment',
+    ]) {
+        const schema = DatacenterEnergySchema.shape[field];
+        assert.equal(isSchemaRequired(schema), false, field);
+        assert.equal(toValidationRule(schema)(''), true, field);
+        assert.equal(toValidationRule(schema)('   '), true, field);
+    }
+    assert.equal(isSchemaRequired(DatacenterEnergySchema.shape.energyConsumption), true);
+    assert.equal(isSchemaRequired(ScopeSchema.shape.assessors), true);
 });
 
 test('numeric field rules reject negative values before submission', async () => {

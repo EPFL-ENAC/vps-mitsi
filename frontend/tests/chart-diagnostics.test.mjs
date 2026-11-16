@@ -493,8 +493,6 @@ test('heading statuses translate and disappear when the sources are repaired', a
     });
     assert.equal(text(heading(split.html, en.resultsChartSplitTitle)), 'Incomplete');
     split.store.hardware[1].impactManufacturingDistributionEol = 0;
-    // The draft datacenter also needs its mandatory energy strings before it can be valid.
-    Object.assign(split.store.datacenters[1].energy, validEnergy());
     split.store.datacenters[1].energy.carbonIntensity = 0;
     split.store.datacenters[1].energy.energyConsumption = 0;
     assert.equal(text(heading(await split.renderAgain(), en.resultsChartSplitTitle)), '');

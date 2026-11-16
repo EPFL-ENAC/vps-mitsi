@@ -274,19 +274,13 @@ test('operational collection preserves valid rows, ignored datacenter identity, 
     assert.equal(partial.ignoredInputs[1], badPue);
     assert.equal(partial.inputErrors.length, 2);
     assert.ok(partial.inputErrors.every((error) => error instanceof z.ZodError));
-    // An unfilled datacenter reports every mandatory energy field, including the
-    // non-empty comment strings; the malformed PUE reports only its own field.
+    // Blank text is valid; missing measurements and malformed PUE remain errors.
     assert.deepEqual(
         partial.inputErrors.map((error) => error.issues.map((issue) => issue.path)),
         [
             [
-                ['energy', 'comment'],
-                ['energy', 'location'],
-                ['energy', 'locationComment'],
                 ['energy', 'carbonIntensity'],
-                ['energy', 'carbonIntensityComment'],
                 ['energy', 'energyConsumption'],
-                ['energy', 'energyComment'],
             ],
             [['energy', 'pue']],
         ],
@@ -491,8 +485,6 @@ test('cleared nested energy survives persistence and reset restores fresh assess
     Object.assign(store.datacenters[0].energy, validEnergy());
     store.datacenters[0].energy.energyConsumption = 12;
     store.clearDatacenterEnergy('dc1');
-    // Clearing resets the whole energy block, so refill the mandatory strings before saving.
-    Object.assign(store.datacenters[0].energy, validEnergy({ energyConsumption: null }));
     const json = store.exportJson(defaultExportMetadata());
     const state = JSON.parse(json);
     assert.equal('energy' in state, false);
@@ -509,8 +501,6 @@ test('cleared nested energy survives persistence and reset restores fresh assess
         store.addBoundaryItem('excluded');
         store.addHardwareItem();
         store.addDatacenter();
-        // Added datacenters start blank; fill the mandatory energy strings so saves succeed.
-        Object.assign(store.datacenters.at(-1).energy, validEnergy());
         store.monitoringPeriod.value = 7;
         store.includeSecondHandEmbodied = true;
         store.includeUnderlyingServices = true;
@@ -924,6 +914,91 @@ test('category totals distinguish partial, failed, and excluded groups using ori
     assert.equal(results.totalEmbodiedEmissionsKg.success, 'partial');
     data.hardware = [];
     assert.deepEqual(results.embodiedEmissionsByCategory, []);
+});
+
+test('custom categories group by their typed name after the standard categories', () => {
+    const data = useSurveyDataStore();
+    const results = useSurveyResultsStore();
+    // Appearance order mixes standard and custom rows on purpose.
+    data.hardware = [
+        {
+            ...validHardware(),
+            id: 'pdu-1',
+            category: 'other',
+            categoryOther: 'Rack PDU',
+            impactManufacturingDistributionEol: 10,
+        },
+        { ...validHardware(), id: 'server', quantity: 2, impactManufacturingDistributionEol: 5 },
+        {
+            ...validHardware(),
+            id: 'firewall',
+            category: 'other',
+            categoryOther: 'Firewall',
+            impactManufacturingDistributionEol: 7,
+        },
+        {
+            ...validHardware(),
+            id: 'pdu-2',
+            category: 'other',
+            categoryOther: 'Rack PDU',
+            impactManufacturingDistributionEol: 1,
+        },
+        { ...validHardware(), id: 'storage', category: 'storage_bay', quantity: 3 },
+        {
+            ...validHardware(),
+            id: 'unnamed',
+            category: 'other',
+            impactManufacturingDistributionEol: 2,
+        },
+    ];
+    const groups = results.embodiedEmissionsByCategory;
+
+    // Standard categories keep the enum declaration order, custom names follow by appearance.
+    assert.deepEqual(
+        groups.map((group) => group.category),
+        ['server', 'storage_bay', 'Rack PDU', 'Firewall', 'other'],
+    );
+    assert.deepEqual(
+        groups.map((group) => group.categoryName),
+        ['server', 'storage_bay', 'Rack PDU', 'Firewall', 'other'],
+    );
+    for (const group of groups) {
+        assert.equal(group.categoryName.includes('inventoryCategory_'), false, group.category);
+    }
+
+    // Rows sharing a custom name form one group, in inventory order.
+    const pdu = groups.find((group) => group.category === 'Rack PDU');
+    assert.deepEqual(
+        pdu.rows.map((row) => row.id),
+        ['pdu-1', 'pdu-2'],
+    );
+    assert.equal(pdu.totalEmbodiedEmissionsKg.result, 11);
+    assert.equal(groups.find((group) => group.category === 'Firewall').rows.length, 1);
+    // An unnamed custom row still gets its own group under the generic key.
+    assert.deepEqual(
+        groups.at(-1).rows.map((row) => row.id),
+        ['unnamed'],
+    );
+
+    // Renaming a custom category moves only its renamed rows to a new group, in appearance
+    // order, without losing totals; remaining rows keep the old name.
+    data.hardware[0].categoryOther = 'Power strip';
+    const renamed = results.embodiedEmissionsByCategory;
+    assert.deepEqual(
+        renamed.map((group) => group.category),
+        ['server', 'storage_bay', 'Power strip', 'Firewall', 'Rack PDU', 'other'],
+    );
+    assert.deepEqual(
+        renamed[2].rows.map((row) => row.id),
+        ['pdu-1'],
+    );
+    assert.equal(renamed[2].totalEmbodiedEmissionsKg.result, 10);
+    assert.deepEqual(
+        renamed[4].rows.map((row) => row.id),
+        ['pdu-2'],
+    );
+    // Every row still contributes exactly once to the grand total.
+    assert.equal(results.totalEmbodiedEmissionsKg.result, 10 + 5 * 2 + 7 + 1 + 2);
 });
 
 test('resource sums report selected CPU, GPU, Disk or RAM measurements and preserve exclusions', () => {

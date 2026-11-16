@@ -11,6 +11,24 @@ export const BLUE_SCALE = [
 ] as const;
 
 /**
+ * Generates distinguishable corporate blue/slate shades for 50+ categories.
+ * Stays strictly within the blue spectrum (hue 198-232) and maintains safe text contrast.
+ */
+export function getCategoryColor(index: number): string {
+    if (index < BLUE_SCALE.length - 1) {
+        return BLUE_SCALE[index] ?? BLUE_SCALE[0];
+    }
+    // Modulate hue within the safe blue-indigo range (198 to 232 degrees)
+    const baseHue = 198 + ((index * 17) % 35);
+    // Cycle lightness between 38% and 62% in non-adjacent steps
+    const light = 38 + ((index * 13) % 25);
+    // Cycle saturation between 45% and 75%
+    const sat = 45 + ((index * 11) % 31);
+
+    return `hsl(${baseHue}, ${sat}%, ${light}%)`;
+}
+
+/**
  * Red color scale used for threshold and critical emission indicators.
  * Ordered from darkest to lightest.
  */
