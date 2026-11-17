@@ -17,7 +17,7 @@ const { t } = useI18n();
 
 <template>
     <q-card flat bordered class="assessment-section q-mb-md">
-        <q-expansion-item :default-opened="defaultOpened">
+        <q-expansion-item :default-opened="defaultOpened" header-class="bg-grey-2">
             <template #header>
                 <q-item-section class="assessment-section__title">
                     <q-item-label>
