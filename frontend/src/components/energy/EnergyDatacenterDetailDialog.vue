@@ -1,5 +1,5 @@
 <template>
-    <q-dialog v-model="open" persistent>
+    <q-dialog v-model="open" persistent @show="onDialogShow">
         <q-card class="column no-wrap" style="width: 860px; max-width: 95vw; max-height: 90vh">
             <!--Header and a subtle border-->
             <q-toolbar class="bg-white text-dark q-px-md border-bottom">
@@ -41,6 +41,9 @@ import { computed } from 'vue';
 import EnergyDatacenterDetailForm from 'src/components/energy/EnergyDatacenterDetailForm.vue';
 import type { DatacenterDraft } from 'src/models/Datacenter/schema';
 import { formatDatacenterName } from 'src/utils/format';
+import { useDialogQueryFocus } from 'src/composables/useErrorNavigation';
+
+const { onDialogShow } = useDialogQueryFocus();
 
 const open = defineModel<boolean>('open', { required: true });
 const dc = defineModel<DatacenterDraft>('row', { required: true });

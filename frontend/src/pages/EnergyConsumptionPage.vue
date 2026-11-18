@@ -16,7 +16,12 @@
         </q-banner>
 
         <!-- Usage monitoring period -->
-        <AssessmentSection :title="$t('energyMonitorTitle')" purpose="calculation" default-opened>
+        <AssessmentSection
+            :ref="registerSection"
+            :title="$t('energyMonitorTitle')"
+            purpose="calculation"
+            default-opened
+        >
             <EnergyMonitoringPeriodForm />
         </AssessmentSection>
 
@@ -30,6 +35,7 @@
 
         <!-- Datacenters' information -->
         <AssessmentSection
+            :ref="registerSection"
             :title="$t('energyDcTitle')"
             :title-tooltip="$t('energyDcColumnsTooltip')"
             purpose="calculation"
@@ -46,6 +52,8 @@ import { useSurveyDataStore } from 'src/stores/surveyData';
 import AssessmentSection from 'src/components/AssessmentSection.vue';
 import EnergyMonitoringPeriodForm from 'src/components/energy/EnergyMonitoringPeriodForm.vue';
 import EnergyDatacentersTable from 'src/components/energy/EnergyDatacentersTable.vue';
+import { useSectionQueryFocus } from 'src/composables/useErrorNavigation';
 
 const surveyData = useSurveyDataStore();
+const { registerSection } = useSectionQueryFocus();
 </script>

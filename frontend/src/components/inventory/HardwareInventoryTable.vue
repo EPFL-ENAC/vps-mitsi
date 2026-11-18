@@ -91,6 +91,7 @@ import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useSurveyResultsStore } from 'src/stores/surveyResults';
 import { HardwareItemSchema, type HardwareItem } from 'src/models/HardwareItem/schema';
 import { useDetailDialogStore } from 'src/composables/useDetailDialog';
+import { useRowDialogFromQuery } from 'src/composables/useErrorNavigation';
 import { formatCategoryName, formatDatacenterName } from 'src/utils/format';
 
 const surveyData = useSurveyDataStore();
@@ -99,6 +100,11 @@ const detailDialog = useDetailDialogStore();
 
 const { t } = useI18n();
 const $q = useQuasar();
+
+useRowDialogFromQuery(
+    () => surveyData.hardware,
+    (item) => detailDialog.openHardware(item, 'edit'),
+);
 
 interface InventoryColumn extends QTableColumn<HardwareItem> {
     kind?: 'enum' | 'datacenter' | 'text' | 'number' | 'toggle' | 'derived';
