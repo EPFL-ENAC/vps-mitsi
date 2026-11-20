@@ -18,6 +18,7 @@
                 :label="groupLabel(g)"
                 default-opened
                 dense
+                header-class="text-weight-bold"
                 class="results-category"
             >
                 <div v-if="!interactive" class="text-subtitle2 text-weight-bold q-mb-xs">
@@ -33,6 +34,7 @@
                     :rows="g.rows"
                     :columns="embodiedColumns"
                     row-key="id"
+                    table-header-class="bg-grey-2"
                     class="results-table"
                 >
                     <template #header-cell="props">
@@ -285,6 +287,10 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
 
 .results-category {
     margin-bottom: 8px;
+}
+
+.results-embodied-wrapper > .q-mb-md {
+    margin-bottom: 16px !important;
 }
 
 .results-category-total {
