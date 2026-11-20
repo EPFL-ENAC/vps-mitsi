@@ -61,6 +61,15 @@ export function normalizeKey(v: string): string {
     return v.replace(/[^A-Za-z0-9]+/g, '_');
 }
 
+/** Kebab-case slug of a camelCase i18n key: `resultsTotalTitle` → `results-total-title`.
+ *  Used for in-document anchors (report table of contents, deep links). */
+export function slugifyKey(v: string): string {
+    return v
+        .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+        .replace(/_/g, '-')
+        .toLowerCase();
+}
+
 /** Display name of a hardware category: custom text is shown as typed,
  *  standard keys are translated. */
 export function formatCategoryName(
