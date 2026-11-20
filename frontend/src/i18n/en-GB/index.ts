@@ -163,7 +163,8 @@ export default {
         },
         separators: {
             usedFor: 'used for',
-            because: 'because',
+            includedReason: 'comment',
+            excludedReason: 'because',
         },
         placeholders: {
             type: 'what?',

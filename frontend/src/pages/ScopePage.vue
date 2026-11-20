@@ -63,10 +63,10 @@
                 <div class="col-12">
                     <ZodValidatedTextInput
                         v-model="surveyData.scope.function"
-                        type="textarea"
                         :label="$t('scopeFunctionLabel')"
                         :schema="ScopeSchema.shape.function"
                         data-field="function"
+                        dense
                         outlined
                     >
                         <q-tooltip>{{ $t('scopeFunctionTooltip') }}</q-tooltip>
@@ -183,6 +183,7 @@
             :title="$t('scopeBoundariesInclExclTitle')"
             :title-tooltip="$t('scopeBndColumnsTooltip')"
             purpose="report"
+            default-opened
         >
             <ScopeBoundaryItemsTable kind="included" />
 
