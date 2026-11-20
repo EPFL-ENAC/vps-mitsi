@@ -16,7 +16,12 @@
         </q-banner>
 
         <!-- General (report-only) -->
-        <AssessmentSection :title="$t('scopeGeneralTitle')" purpose="report" default-opened>
+        <AssessmentSection
+            :ref="registerSection"
+            :title="$t('scopeGeneralTitle')"
+            purpose="report"
+            default-opened
+        >
             <div class="row q-col-gutter-md">
                 <div class="col-12 col-md-4">
                     <ZodValidatedTextInput
@@ -55,6 +60,7 @@
 
         <!-- Function (used in calculation) -->
         <AssessmentSection
+            :ref="registerSection"
             :title="$t('scopeFunctionTitle')"
             purpose="calculation"
             :default-opened="!surveyData.isScopeValid"
@@ -170,6 +176,7 @@
 
         <!-- Boundaries — datacenters -->
         <AssessmentSection
+            :ref="registerSection"
             :title="$t('scopeBoundariesDcTitle')"
             :title-tooltip="$t('scopeDcColumnsTooltip')"
             purpose="report"
@@ -180,6 +187,7 @@
 
         <!-- Boundaries — included & excluded -->
         <AssessmentSection
+            :ref="registerSection"
             :title="$t('scopeBoundariesInclExclTitle')"
             :title-tooltip="$t('scopeBndColumnsTooltip')"
             purpose="report"
@@ -192,7 +200,12 @@
         </AssessmentSection>
 
         <!-- Lifespan -->
-        <AssessmentSection :title="$t('scopeLifespanTitle')" purpose="calculation" default-opened>
+        <AssessmentSection
+            :ref="registerSection"
+            :title="$t('scopeLifespanTitle')"
+            purpose="calculation"
+            default-opened
+        >
             <ZodValidatedNumberInput
                 v-model="surveyData.scope.lifespanYears"
                 class="scope-lifespan"
@@ -224,8 +237,11 @@ import { FunctionalUnitSchema, ResourceTypeSchema } from 'src/models/FunctionalU
 import { ScopeSchema } from 'src/models/Scope/schema';
 import { TimeUnitSchema } from 'src/models/TimeUnit/schema';
 import { normalizeKey } from 'src/utils/format';
+import { useSectionQueryFocus } from 'src/composables/useErrorNavigation';
 
 const surveyData = useSurveyDataStore();
+
+const { registerSection } = useSectionQueryFocus();
 
 const { t } = useI18n();
 const fuRequired = computed(() => Object.values(FunctionalUnitSchema.shape).some(isSchemaRequired));

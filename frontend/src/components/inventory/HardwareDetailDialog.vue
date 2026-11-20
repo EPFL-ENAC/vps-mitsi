@@ -1,5 +1,5 @@
 <template>
-    <q-dialog v-model="open" persistent>
+    <q-dialog v-model="open" persistent @show="onDialogShow">
         <q-card class="column no-wrap" style="width: 860px; max-width: 95vw; max-height: 90vh">
             <!--Header and a subtle border-->
             <q-toolbar class="bg-white text-dark q-px-md border-bottom">
@@ -43,6 +43,9 @@ import { useI18n } from 'vue-i18n';
 import HardwareDetailForm from 'src/components/inventory/HardwareDetailForm.vue';
 import type { HardwareItem } from 'src/models/HardwareItem/schema';
 import { formatCategoryName } from 'src/utils/format';
+import { useDialogQueryFocus } from 'src/composables/useErrorNavigation';
+
+const { onDialogShow } = useDialogQueryFocus();
 
 const open = defineModel<boolean>('open', { required: true });
 const row = defineModel<HardwareItem>('row', { required: true });

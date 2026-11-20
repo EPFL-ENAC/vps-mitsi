@@ -87,6 +87,7 @@ import { useQuasar, type QTableColumn } from 'quasar';
 import EnergyDatacenterDetailDialog from 'src/components/energy/EnergyDatacenterDetailDialog.vue';
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useDetailDialogStore } from 'src/composables/useDetailDialog';
+import { useRowDialogFromQuery } from 'src/composables/useErrorNavigation';
 import type { DatacenterDraft } from 'src/models/Datacenter/schema';
 import { formatDatacenterName } from 'src/utils/format';
 
@@ -95,6 +96,11 @@ const detailDialog = useDetailDialogStore();
 
 const { t } = useI18n();
 const $q = useQuasar();
+
+useRowDialogFromQuery(
+    () => surveyData.datacenters,
+    (dc) => detailDialog.openEnergy(dc, 'edit'),
+);
 
 interface EnergyColumn extends QTableColumn<DatacenterDraft> {
     kind?: 'datacenter' | 'text' | 'number' | 'actions';
@@ -138,11 +144,13 @@ const columns = computed<EnergyColumn[]>(() => [
         kind: 'actions',
     },
 ]);
+
 function formatCell(val: string | number | null | undefined, unit?: string): string {
     if (val === null || val === undefined || val === '' || Number.isNaN(val)) return '—';
     const text = typeof val === 'number' ? val.toLocaleString() : val.trim();
     return !text ? '—' : unit ? `${text} ${unit}` : text;
 }
+
 function clearEnergy(dc: DatacenterDraft): void {
     $q.dialog({
         title: t('energyClearConfirmTitle'),
