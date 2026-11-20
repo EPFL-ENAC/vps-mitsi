@@ -136,8 +136,8 @@
         </q-markup-table>
 
         <!-- treemap by element + treemap by category -->
-        <div v-if="showChart" class="row q-col-gutter-md q-mt-sm">
-            <div class="col-12 col-md-6">
+        <div v-if="showChart" class="row q-col-gutter-md q-mt-sm results-embodied-charts">
+            <div class="col-12 col-sm-6">
                 <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
                     {{ $t('resultsChartTreemapByElement') }}
                     <ComputationResultDisplay
@@ -157,7 +157,7 @@
                     variant="element"
                 />
             </div>
-            <div class="col-12 col-md-6">
+            <div class="col-12 col-sm-6">
                 <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
                     {{ $t('resultsChartTreemapByCategory') }}
                     <ComputationResultDisplay
@@ -303,5 +303,35 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
 .results-not-counted {
     font-style: italic;
     color: rgba(0, 0, 0, 0.5);
+}
+
+.results-embodied-charts {
+    /* Both treemaps must stay on one landscape page: never split the row. */
+    page-break-inside: avoid;
+    break-inside: avoid;
+
+    > * {
+        break-inside: avoid;
+    }
+}
+
+@media print {
+    /* Flex rows get pushed whole to the next page and fall back to a column;
+       CSS Grid fragments predictably, so the two treemaps stay side by side. */
+    .results-embodied-charts {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        break-inside: avoid;
+        page-break-inside: avoid;
+
+        > * {
+            width: auto !important;
+            max-width: none !important;
+            /* Grid children default to min-width:auto and blow out around the canvas. */
+            min-width: 0;
+            break-inside: avoid;
+        }
+    }
 }
 </style>

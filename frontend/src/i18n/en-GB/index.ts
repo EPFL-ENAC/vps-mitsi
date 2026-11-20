@@ -174,6 +174,10 @@ export default {
     },
     scopeBndColumnsTooltip:
         'Document what is included in / excluded from the IT service — type, purpose, reason.',
+    scopeBndColumnKind: 'Boundary',
+    scopeBndColumnType: 'Type',
+    scopeBndColumnPurpose: 'Purpose',
+    scopeBndColumnReason: 'Reason',
     scopeBndDelete: 'Delete',
     // Lifespan
     scopeLifespanTitle: 'Lifespan',
@@ -402,6 +406,8 @@ export default {
     // --- Report (printable; see src/pages/ReportPreviewPage.vue) ---
     reportToolbarTitle: 'Report',
     reportPrint: 'Print',
+    reportTocTitle: 'Contents',
+    reportNoBoundaryItems: 'No included or excluded items were documented.',
     reportGeneratedOn: 'Generated on {date}',
     // --- Validation messages (Zod -> Quasar; see composables/useValidation.ts) ---
     validation: {
