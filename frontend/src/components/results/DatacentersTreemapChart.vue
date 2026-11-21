@@ -95,7 +95,7 @@ const chartOption = computed<ECOption>(() => ({
             const item = Array.isArray(p) ? p[0] : p;
             if (!item) return '';
             const value = Number(item.value);
-            return `${item.name}<br/>${formatKg(value)} (${shareOf(value)})`;
+            return `${echarts.format.encodeHTML(item.name)}<br/>${formatKg(value)} (${shareOf(value)})`;
         },
     },
     series: bands.value.map((band, rank) => ({

@@ -155,6 +155,37 @@ test('datacenter heading preserves status, named inputs, chart values and percen
     assert.equal(text(heading(zero.html, en.resultsChartTreemapByDatacenter)), '');
 });
 
+test('treemap tooltips escape assessment names and keep the value on a second line', async () => {
+    const name = 'R&D <Lab>';
+    const embodied = await renderTables(ResultsEmbodiedSection, {
+        props: { showChart: true },
+        setupStore(store) {
+            setupSources(store);
+            Object.assign(store.hardware[0], { name, category: 'other', categoryOther: name });
+        },
+    });
+    assert.equal(embodied.charts.length, 2);
+    for (const { option } of embodied.charts) {
+        assert.equal(
+            option.tooltip.formatter(option.series[0].data[0]),
+            'R&amp;D &lt;Lab&gt;<br/>10.00 (100.0%)',
+        );
+    }
+
+    const operational = await renderTables(ResultsOperationalSection, {
+        props: { showChart: true },
+        setupStore(store) {
+            setupSources(store);
+            store.datacenters[0].generalInfo.name = name;
+        },
+    });
+    const { option } = operational.charts[0];
+    assert.equal(
+        option.tooltip.formatter(option.series[0].data[0]),
+        'DC — R&amp;D &lt;Lab&gt;<br/>100.00 (100.0%)',
+    );
+});
+
 test('datacenter treemap sorts emissions into equal-width bands with correct shares', async () => {
     const result = await renderTables(ResultsOperationalSection, {
         props: { showChart: true },

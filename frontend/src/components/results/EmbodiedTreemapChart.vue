@@ -128,7 +128,7 @@ const chartOption = computed<ECOption>(() => ({
                 props.grandTotal !== null && props.grandTotal > 0
                     ? (value / props.grandTotal) * 100
                     : 0;
-            return `${item.name}<br/>${formatKg(value)} (${pct.toFixed(1)}${t('resultsColPercent')})`;
+            return `${echarts.format.encodeHTML(item.name)}<br/>${formatKg(value)} (${pct.toFixed(1)}${t('resultsColPercent')})`;
         },
     },
     series: [
