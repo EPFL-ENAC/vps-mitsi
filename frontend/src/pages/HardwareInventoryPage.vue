@@ -75,7 +75,7 @@
         </q-banner>
 
         <!-- Inventory table -->
-        <HardwareInventoryTable ref="table" />
+        <HardwareInventoryTable ref="table" @close="clearRowSelection" />
 
         <!-- Footer -->
         <div class="row items-center q-mt-md inventory-footer">
@@ -100,7 +100,9 @@ const surveyData = useSurveyDataStore();
 const surveyResults = useSurveyResultsStore();
 const table = useTemplateRef<InstanceType<typeof HardwareInventoryTable>>('table');
 
-useAssessmentQueryFocus((rowId, field) => table.value?.showAndFocus(rowId, field));
+const { clearRowSelection } = useAssessmentQueryFocus((rowId, field) =>
+    table.value?.showAndFocus(rowId, field),
+);
 </script>
 
 <style scoped>

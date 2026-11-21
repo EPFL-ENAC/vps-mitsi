@@ -57,6 +57,7 @@ import { focusAndPulseField } from 'src/utils/error-navigation';
 import { formatCategoryName } from 'src/utils/format';
 
 const { t } = useI18n();
+const emit = defineEmits<{ close: [rowId: string] }>();
 
 const row = ref<HardwareItem>();
 const open = ref(false);
@@ -98,6 +99,8 @@ function onShow(): void {
 function onBeforeHide(): void {
     shown = false;
     pendingField = undefined;
+
+    if (row.value) emit('close', row.value.id);
 }
 
 function onHide(): void {

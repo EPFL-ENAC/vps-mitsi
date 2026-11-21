@@ -54,6 +54,8 @@ import type { DialogOptions } from 'src/types/ui';
 import { focusAndPulseField } from 'src/utils/error-navigation';
 import { formatDatacenterName } from 'src/utils/format';
 
+const emit = defineEmits<{ close: [rowId: string] }>();
+
 const row = ref<DatacenterDraft>();
 const open = ref(false);
 const isReadonly = ref(false);
@@ -94,6 +96,8 @@ function onShow(): void {
 function onBeforeHide(): void {
     shown = false;
     pendingField = undefined;
+
+    if (row.value) emit('close', row.value.id);
 }
 
 function onHide(): void {

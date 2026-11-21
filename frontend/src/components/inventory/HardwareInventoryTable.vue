@@ -71,7 +71,7 @@
             </template>
         </q-table>
 
-        <HardwareDetailDialog ref="dialog" />
+        <HardwareDetailDialog ref="dialog" @close="emit('close', $event)" />
     </div>
 </template>
 
@@ -91,6 +91,7 @@ import { formatCategoryName, formatDatacenterName } from 'src/utils/format';
 const surveyData = useSurveyDataStore();
 const surveyResults = useSurveyResultsStore();
 const dialog = useTemplateRef<InstanceType<typeof HardwareDetailDialog>>('dialog');
+const emit = defineEmits<{ close: [rowId: string] }>();
 
 const { t } = useI18n();
 const $q = useQuasar();

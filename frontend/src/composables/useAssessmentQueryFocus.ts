@@ -12,11 +12,23 @@ const navigationQuerySchema = z.object({ selected: queryValue, row: queryValue }
 export function useAssessmentQueryFocus(
     showRow?: (rowId: string, field?: string) => Promise<void> | undefined,
 ) {
-    const { currentRoute } = useRouter();
+    const router = useRouter();
+    const { currentRoute } = router;
     const sections = new Set<FocusableSection>();
 
     function registerSection(instance: Element | ComponentPublicInstance | null): void {
         if (instance) sections.add(instance as FocusableSection);
+    }
+
+    function clearRowSelection(rowId: string): void {
+        const route = currentRoute.value;
+        if (navigationQuerySchema.parse(route.query).row !== rowId) return;
+
+        const query = { ...route.query };
+        delete query.row;
+        delete query.selected;
+
+        void router.replace({ path: route.path, query, hash: route.hash });
     }
 
     onMounted(() => {
@@ -36,5 +48,5 @@ export function useAssessmentQueryFocus(
         );
     });
 
-    return { registerSection };
+    return { registerSection, clearRowSelection };
 }

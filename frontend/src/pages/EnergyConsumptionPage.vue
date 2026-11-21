@@ -41,7 +41,7 @@
             purpose="calculation"
             default-opened
         >
-            <EnergyDatacentersTable ref="table" />
+            <EnergyDatacentersTable ref="table" @close="clearRowSelection" />
         </AssessmentSection>
     </div>
 </template>
@@ -57,7 +57,7 @@ import { useAssessmentQueryFocus } from 'src/composables/useAssessmentQueryFocus
 
 const surveyData = useSurveyDataStore();
 const table = useTemplateRef<InstanceType<typeof EnergyDatacentersTable>>('table');
-const { registerSection } = useAssessmentQueryFocus((rowId, field) =>
+const { registerSection, clearRowSelection } = useAssessmentQueryFocus((rowId, field) =>
     table.value?.showAndFocus(rowId, field),
 );
 </script>

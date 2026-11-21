@@ -70,7 +70,7 @@
             </template>
         </q-table>
 
-        <EnergyDatacenterDetailDialog ref="dialog" />
+        <EnergyDatacenterDetailDialog ref="dialog" @close="emit('close', $event)" />
     </div>
 </template>
 
@@ -87,6 +87,7 @@ import { formatDatacenterName } from 'src/utils/format';
 
 const surveyData = useSurveyDataStore();
 const dialog = useTemplateRef<InstanceType<typeof EnergyDatacenterDetailDialog>>('dialog');
+const emit = defineEmits<{ close: [rowId: string] }>();
 
 const { t } = useI18n();
 const $q = useQuasar();
