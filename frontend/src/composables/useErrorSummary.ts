@@ -1,7 +1,7 @@
-import { computed, reactive, watch, type ComponentPublicInstance } from 'vue';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { z, type ZodType } from 'zod';
+import type { ZodType } from 'zod';
 
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useValidation } from 'src/composables/useValidation';
@@ -9,7 +9,6 @@ import { ScopeSchema, BoundaryItemSchema } from 'src/models/Scope/schema';
 import { DatacenterGeneralInfoSchema, DatacenterEnergySchema } from 'src/models/Datacenter/schema';
 import { HardwareItemSchema } from 'src/models/HardwareItem/schema';
 import { MonitoringPeriodSchema } from 'src/models/MonitoringPeriod/schema';
-import { focusAndPulseField } from 'src/utils/error-navigation';
 import { formatDatacenterName } from 'src/utils/format';
 
 export type SectionId = 'scope' | 'inventory' | 'energy';
@@ -38,71 +37,7 @@ interface ValidationContext {
     idPrefix: string;
 }
 
-type FocusableSection = ComponentPublicInstance & {
-    focusField(field: string, rowId?: string): boolean;
-};
-
-const queryValue = z.string().min(1).optional().catch(undefined);
-const navigationQuerySchema = z.object({ selected: queryValue, row: queryValue });
-
-/** Single page-level watcher that loops through all mounted `AssessmentSection` template refs. */
-export function useSectionQueryFocus() {
-    const { currentRoute } = useRouter();
-    const sections = reactive(new Set<FocusableSection>());
-
-    function registerSection(instance: Element | ComponentPublicInstance | null): void {
-        if (instance) sections.add(instance as FocusableSection);
-    }
-
-    watch(
-        [currentRoute, () => sections.size],
-        ([route]) => {
-            const { selected, row } = navigationQuerySchema.parse(route.query);
-            if (!selected) return;
-
-            for (const section of sections) {
-                if (section.focusField(selected, row)) break;
-            }
-        },
-        { flush: 'post' },
-    );
-
-    return { registerSection };
-}
-
-/** Opens a detail dialog whenever `route.query.row` matches a row in `getRows()`. */
-export function useRowDialogFromQuery<T extends { id: string }>(
-    getRows: () => readonly T[],
-    openDialog: (row: T) => void,
-): void {
-    const { currentRoute } = useRouter();
-
-    watch(
-        currentRoute,
-        (route) => {
-            const { row: rowId } = navigationQuerySchema.parse(route.query);
-            if (!rowId) return;
-
-            const match = getRows().find((row) => row.id === rowId);
-            if (match) openDialog(match);
-        },
-        { immediate: true, flush: 'post' },
-    );
-}
-
-/** Focuses the target field once a detail dialog finishes its open transition (`@show`). */
-export function useDialogQueryFocus() {
-    const { currentRoute } = useRouter();
-
-    return {
-        onDialogShow: () => {
-            const { selected, row } = navigationQuerySchema.parse(currentRoute.value.query);
-            if (selected) focusAndPulseField(document, selected, row);
-        },
-    };
-}
-
-export function useErrorNavigation() {
+export function useErrorSummary() {
     const router = useRouter();
     const { t } = useI18n();
     const { formatIssue } = useValidation();

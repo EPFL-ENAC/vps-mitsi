@@ -237,11 +237,11 @@ import { FunctionalUnitSchema, ResourceTypeSchema } from 'src/models/FunctionalU
 import { ScopeSchema } from 'src/models/Scope/schema';
 import { TimeUnitSchema } from 'src/models/TimeUnit/schema';
 import { normalizeKey } from 'src/utils/format';
-import { useSectionQueryFocus } from 'src/composables/useErrorNavigation';
+import { useAssessmentQueryFocus } from 'src/composables/useAssessmentQueryFocus';
 
 const surveyData = useSurveyDataStore();
 
-const { registerSection } = useSectionQueryFocus();
+const { registerSection } = useAssessmentQueryFocus();
 
 const { t } = useI18n();
 const fuRequired = computed(() => Object.values(FunctionalUnitSchema.shape).some(isSchemaRequired));

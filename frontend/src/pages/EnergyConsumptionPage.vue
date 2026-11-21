@@ -41,19 +41,23 @@
             purpose="calculation"
             default-opened
         >
-            <EnergyDatacentersTable />
+            <EnergyDatacentersTable ref="table" />
         </AssessmentSection>
     </div>
 </template>
 
 <script setup lang="ts">
+import { useTemplateRef } from 'vue';
 import { useSurveyDataStore } from 'src/stores/surveyData';
 
 import AssessmentSection from 'src/components/AssessmentSection.vue';
 import EnergyMonitoringPeriodForm from 'src/components/energy/EnergyMonitoringPeriodForm.vue';
 import EnergyDatacentersTable from 'src/components/energy/EnergyDatacentersTable.vue';
-import { useSectionQueryFocus } from 'src/composables/useErrorNavigation';
+import { useAssessmentQueryFocus } from 'src/composables/useAssessmentQueryFocus';
 
 const surveyData = useSurveyDataStore();
-const { registerSection } = useSectionQueryFocus();
+const table = useTemplateRef<InstanceType<typeof EnergyDatacentersTable>>('table');
+const { registerSection } = useAssessmentQueryFocus((rowId, field) =>
+    table.value?.showAndFocus(rowId, field),
+);
 </script>

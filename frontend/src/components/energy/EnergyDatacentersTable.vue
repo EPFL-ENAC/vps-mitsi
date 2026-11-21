@@ -36,7 +36,7 @@
                                 icon="visibility"
                                 text-color="dark"
                                 :aria-label="$t('energyViewRow')"
-                                @click="detailDialog.openEnergy(slotProps.row, 'view')"
+                                @click="openDialog(slotProps.row, 'view')"
                             >
                                 <q-tooltip>{{ $t('energyViewRow') }}</q-tooltip>
                             </q-btn>
@@ -48,7 +48,7 @@
                                 icon="edit"
                                 text-color="dark"
                                 :aria-label="$t('energyEditRow')"
-                                @click="detailDialog.openEnergy(slotProps.row, 'edit')"
+                                @click="openDialog(slotProps.row)"
                             >
                                 <q-tooltip>{{ $t('energyEditRow') }}</q-tooltip>
                             </q-btn>
@@ -70,37 +70,26 @@
             </template>
         </q-table>
 
-        <EnergyDatacenterDetailDialog
-            v-if="detailDialog.energySelectedRow"
-            v-model:open="detailDialog.energyDialogOpen"
-            v-model:row="detailDialog.energySelectedRow"
-            :readonly="detailDialog.energyDialogMode === 'view'"
-        />
+        <EnergyDatacenterDetailDialog ref="dialog" />
     </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useQuasar, type QTableColumn } from 'quasar';
 
 import EnergyDatacenterDetailDialog from 'src/components/energy/EnergyDatacenterDetailDialog.vue';
 import { useSurveyDataStore } from 'src/stores/surveyData';
-import { useDetailDialogStore } from 'src/composables/useDetailDialog';
-import { useRowDialogFromQuery } from 'src/composables/useErrorNavigation';
+import type { DialogMode } from 'src/types/ui';
 import type { DatacenterDraft } from 'src/models/Datacenter/schema';
 import { formatDatacenterName } from 'src/utils/format';
 
 const surveyData = useSurveyDataStore();
-const detailDialog = useDetailDialogStore();
+const dialog = useTemplateRef<InstanceType<typeof EnergyDatacenterDetailDialog>>('dialog');
 
 const { t } = useI18n();
 const $q = useQuasar();
-
-useRowDialogFromQuery(
-    () => surveyData.datacenters,
-    (dc) => detailDialog.openEnergy(dc, 'edit'),
-);
 
 interface EnergyColumn extends QTableColumn<DatacenterDraft> {
     kind?: 'datacenter' | 'text' | 'number' | 'actions';
@@ -162,7 +151,16 @@ function clearEnergy(dc: DatacenterDraft): void {
     }).onOk(() => surveyData.clearDatacenterEnergy(dc.id));
 }
 
-defineExpose({ openDialog: detailDialog.openEnergy });
+function openDialog(row: DatacenterDraft, mode: DialogMode = 'edit'): void {
+    void dialog.value?.showAndFocus(row, { mode });
+}
+
+function showAndFocus(rowId: string, field?: string): Promise<void> | undefined {
+    const row = surveyData.datacenters.find((item) => item.id === rowId);
+    if (row) return dialog.value?.showAndFocus(row, { field });
+}
+
+defineExpose({ openDialog, showAndFocus });
 </script>
 
 <style scoped lang="scss">
