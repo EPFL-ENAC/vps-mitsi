@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import { buildFieldSelector, focusAndPulseField } from 'src/composables/useErrorNavigation';
+import { buildFieldSelector, focusAndPulseField } from 'src/utils/error-navigation';
 
 const props = defineProps<{
     title: string;

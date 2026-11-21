@@ -1,13 +1,7 @@
 import { computed, reactive, watch, type ComponentPublicInstance } from 'vue';
-import {
-    useRoute,
-    useRouter,
-    type LocationQueryValue,
-    type RouteLocationNormalizedLoaded,
-    type Router,
-} from 'vue-router';
+import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import type { ZodType } from 'zod';
+import { z, type ZodType } from 'zod';
 
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useValidation } from 'src/composables/useValidation';
@@ -15,6 +9,7 @@ import { ScopeSchema, BoundaryItemSchema } from 'src/models/Scope/schema';
 import { DatacenterGeneralInfoSchema, DatacenterEnergySchema } from 'src/models/Datacenter/schema';
 import { HardwareItemSchema } from 'src/models/HardwareItem/schema';
 import { MonitoringPeriodSchema } from 'src/models/MonitoringPeriod/schema';
+import { focusAndPulseField } from 'src/utils/error-navigation';
 import { formatDatacenterName } from 'src/utils/format';
 
 export type SectionId = 'scope' | 'inventory' | 'energy';
@@ -43,93 +38,30 @@ interface ValidationContext {
     idPrefix: string;
 }
 
-export interface FocusableSection {
-    focusField: (field: string, rowId?: string) => boolean;
-}
+type FocusableSection = ComponentPublicInstance & {
+    focusField(field: string, rowId?: string): boolean;
+};
 
-function queryString(
-    value: LocationQueryValue | LocationQueryValue[] | undefined,
-): string | undefined {
-    return typeof value === 'string' && value ? value : undefined;
-}
-
-function isFocusableSection(el: unknown): el is FocusableSection {
-    return (
-        typeof el === 'object' &&
-        el !== null &&
-        'focusField' in el &&
-        typeof el.focusField === 'function'
-    );
-}
-
-export function buildFieldSelector(field: string, rowId?: string): string {
-    return rowId
-        ? `[data-row-id="${CSS.escape(rowId)}"][data-field="${CSS.escape(field)}"]`
-        : `[data-field="${CSS.escape(field)}"]`;
-}
-
-/** Scrolls to the target field, pulses it until `animationend`, and focuses its control. */
-export function focusAndPulseField(container: ParentNode, field: string, rowId?: string): boolean {
-    const element = container.querySelector<HTMLElement>(buildFieldSelector(field, rowId));
-    if (!element) return false;
-
-    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    element.classList.add('field-highlight-pulse');
-    element.addEventListener(
-        'animationend',
-        () => element.classList.remove('field-highlight-pulse'),
-        { once: true },
-    );
-
-    const control = element.querySelector<HTMLElement>('input, textarea, select');
-    (control ?? element).focus({ preventScroll: true });
-    return true;
-}
-
-/** Removes deep-link selection params from the URL once focus has been applied. */
-function clearNavigationQuery(router: Router): void {
-    const query = { ...router.currentRoute.value.query };
-    delete query.selected;
-    delete query.row;
-    void router.replace({ query });
-}
-
-function focusFromRoute(route: RouteLocationNormalizedLoaded, router: Router): void {
-    const selected = queryString(route.query.selected);
-    if (!selected) return;
-
-    if (focusAndPulseField(document, selected, queryString(route.query.row))) {
-        clearNavigationQuery(router);
-    }
-}
+const queryValue = z.string().min(1).optional().catch(undefined);
+const navigationQuerySchema = z.object({ selected: queryValue, row: queryValue });
 
 /** Single page-level watcher that loops through all mounted `AssessmentSection` template refs. */
 export function useSectionQueryFocus() {
-    const route = useRoute();
-    const router = useRouter();
+    const { currentRoute } = useRouter();
     const sections = reactive(new Set<FocusableSection>());
 
-    function registerSection(el: Element | ComponentPublicInstance | null): void {
-        if (isFocusableSection(el)) {
-            sections.add(el);
-        }
+    function registerSection(instance: Element | ComponentPublicInstance | null): void {
+        if (instance) sections.add(instance as FocusableSection);
     }
 
     watch(
-        () =>
-            [
-                sections.size,
-                queryString(route.query.selected),
-                queryString(route.query.row),
-            ] as const,
-        ([, selected, rowId]) => {
+        [currentRoute, () => sections.size],
+        ([route]) => {
+            const { selected, row } = navigationQuerySchema.parse(route.query);
             if (!selected) return;
 
             for (const section of sections) {
-                if (section.focusField(selected, rowId)) {
-                    clearNavigationQuery(router);
-                    break;
-                }
+                if (section.focusField(selected, row)) break;
             }
         },
         { flush: 'post' },
@@ -143,32 +75,30 @@ export function useRowDialogFromQuery<T extends { id: string }>(
     getRows: () => readonly T[],
     openDialog: (row: T) => void,
 ): void {
-    const route = useRoute();
-    const router = useRouter();
+    const { currentRoute } = useRouter();
 
     watch(
-        () => queryString(route.query.row),
-        (rowId) => {
+        currentRoute,
+        (route) => {
+            const { row: rowId } = navigationQuerySchema.parse(route.query);
             if (!rowId) return;
 
             const match = getRows().find((row) => row.id === rowId);
-            if (!match) {
-                clearNavigationQuery(router);
-                return;
-            }
-            openDialog(match);
+            if (match) openDialog(match);
         },
-        { immediate: true },
+        { immediate: true, flush: 'post' },
     );
 }
 
 /** Focuses the target field once a detail dialog finishes its open transition (`@show`). */
 export function useDialogQueryFocus() {
-    const route = useRoute();
-    const router = useRouter();
+    const { currentRoute } = useRouter();
 
     return {
-        onDialogShow: () => focusFromRoute(route, router),
+        onDialogShow: () => {
+            const { selected, row } = navigationQuerySchema.parse(currentRoute.value.query);
+            if (selected) focusAndPulseField(document, selected, row);
+        },
     };
 }
 
@@ -339,13 +269,16 @@ export function useErrorNavigation() {
     });
 
     function navigateToIssue(issue: DiagnosticIssue): void {
-        void router.push({
+        const destination = {
             path: issue.route,
             query: {
                 selected: issue.field,
                 ...(issue.rowId && { row: issue.rowId }),
             },
-        });
+        };
+        const sameLink =
+            router.resolve(destination).fullPath === router.currentRoute.value.fullPath;
+        void router.push(sameLink ? { ...destination, force: true, replace: true } : destination);
     }
 
     return {
