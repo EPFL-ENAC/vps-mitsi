@@ -75,7 +75,7 @@
         </q-banner>
 
         <!-- Inventory table -->
-        <HardwareInventoryTable />
+        <HardwareInventoryTable ref="table" @close="clearRowSelection" />
 
         <!-- Footer -->
         <div class="row items-center q-mt-md inventory-footer">
@@ -87,15 +87,22 @@
 </template>
 
 <script setup lang="ts">
+import { useTemplateRef } from 'vue';
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useSurveyResultsStore } from 'src/stores/surveyResults';
 
 import HardwareInventoryTable from 'src/components/inventory/HardwareInventoryTable.vue';
 import ComputationResultDisplay from 'src/components/ComputationResultDisplay.vue';
+import { useAssessmentQueryFocus } from 'src/composables/useAssessmentQueryFocus';
 import { formatKg } from 'src/utils/format';
 
 const surveyData = useSurveyDataStore();
 const surveyResults = useSurveyResultsStore();
+const table = useTemplateRef<InstanceType<typeof HardwareInventoryTable>>('table');
+
+const { clearRowSelection } = useAssessmentQueryFocus((rowId, field) =>
+    table.value?.showAndFocus(rowId, field),
+);
 </script>
 
 <style scoped>

@@ -10,6 +10,7 @@ import {
     QTh,
     QTd,
     QBtn,
+    QBadge,
     QInput,
     QSelect,
     QToggle,
@@ -50,7 +51,6 @@ import EnergyDatacenterDetailDialog from '../../src/components/energy/EnergyData
 import EnergyDatacenterDetailForm from '../../src/components/energy/EnergyDatacenterDetailForm.vue';
 import { useSurveyDataStore } from '../../src/stores/surveyData.ts';
 import { useSurveyResultsStore } from '../../src/stores/surveyResults.ts';
-import { useDetailDialogStore } from '../../src/composables/useDetailDialog.ts';
 import en from '../../src/i18n/en-GB/index.ts';
 
 /** Exercise real Quasar controls and inspect their public props/events in SSR. */
@@ -90,6 +90,7 @@ export async function renderTables(
                 QTh,
                 QTd,
                 QBtn,
+                QBadge,
                 QInput,
                 QSelect,
                 QToggle,
@@ -219,10 +220,7 @@ export async function renderInventoryDialog({
 
 /** Render the full-screen dialog shell (used to assert header/badge markup). */
 export async function renderInventoryDialogShell({ row, readonly = false, messages } = {}) {
-    return renderTables(HardwareDetailDialog, {
-        props: { row, readonly, open: true },
-        messages,
-    });
+    return renderDetailDialogShell(HardwareDetailDialog, { row, readonly, messages });
 }
 
 /** Inspect the energy summary columns and the rendered master rows. */
@@ -233,17 +231,7 @@ export async function renderEnergyTable({ datacenters = [], messages } = {}) {
         },
         messages,
     });
-    // The dialog state lives in a Pinia store, so each render starts from a fresh one.
-    useDetailDialogStore(result.pinia).closeEnergy();
-    const table = result.instances.find(
-        (instance) => instance.$options.__name === 'EnergyDatacentersTable',
-    );
-    return {
-        ...result,
-        columns: result.tables[0].columns,
-        /** The public surface published through `defineExpose` (as a parent sees it). */
-        tableExposed: table?.$.exposed ?? {},
-    };
+    return { ...result, columns: result.tables[0].columns };
 }
 
 /** Render the energy detail form body for a single datacenter. */
@@ -256,10 +244,14 @@ export async function renderEnergyDialog({ row, readonly = false, messages } = {
 
 /** Render the energy dialog shell (used to assert header/badge markup). */
 export async function renderEnergyDialogShell({ row, readonly = false, messages } = {}) {
-    return renderTables(EnergyDatacenterDetailDialog, {
-        props: { row, readonly, open: true },
-        messages,
-    });
+    return renderDetailDialogShell(EnergyDatacenterDetailDialog, { row, readonly, messages });
+}
+
+async function renderDetailDialogShell(component, { row, readonly, messages }) {
+    const result = await renderTables(component, { messages });
+    const dialog = result.instances.find((instance) => instance.$.type === component);
+    await dialog.$.exposed.showAndFocus(row, { mode: readonly ? 'view' : 'edit' });
+    return result;
 }
 
 /**
