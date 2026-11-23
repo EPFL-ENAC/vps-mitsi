@@ -17,7 +17,7 @@
             :label="label"
             :data-row-id="rowId"
             :data-field="field"
-            v-bind="selectProps"
+            v-bind="inputProps"
             outlined
             dense
         />
@@ -31,6 +31,7 @@ import type { z } from 'zod';
 import ZodValidatedNumberInput from 'src/components/inputs/ZodValidatedNumberInput.vue';
 import ZodValidatedSelect from 'src/components/inputs/ZodValidatedSelect.vue';
 import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
+import { formatNumber } from 'src/utils/format';
 
 const model = defineModel<T>();
 
@@ -48,6 +49,8 @@ const props = withDefaults(
         displayValue?: string | undefined;
         /** Hides the caption in read-only mode when the card header already names the field. */
         hideReadonlyLabel?: boolean;
+        /** Shows numbers with comma thousands separators, read-only and while editing. */
+        formatThousands?: boolean;
     }>(),
     {
         kind: 'text',
@@ -57,6 +60,7 @@ const props = withDefaults(
         unit: undefined,
         displayValue: undefined,
         hideReadonlyLabel: false,
+        formatThousands: false,
     },
 );
 
@@ -66,11 +70,15 @@ const inputComponent = computed(() => {
     return ZodValidatedTextInput;
 });
 
-const selectProps = computed(() =>
-    props.kind === 'select'
-        ? { options: props.options ?? [], emitValue: true, mapOptions: true }
-        : {},
-);
+const inputProps = computed(() => {
+    if (props.kind === 'select') {
+        return { options: props.options ?? [], emitValue: true, mapOptions: true };
+    }
+    if (props.kind === 'number' && props.formatThousands) {
+        return { formatThousands: true };
+    }
+    return {};
+});
 
 const formattedValue = computed<string>(() => {
     if (props.displayValue !== undefined) {
@@ -81,6 +89,7 @@ const formattedValue = computed<string>(() => {
     if (props.options) {
         return props.options.find((opt) => opt.value === val)?.label ?? String(val);
     }
-    return props.unit ? `${val} ${props.unit}` : String(val);
+    const text = props.formatThousands && typeof val === 'number' ? formatNumber(val) : String(val);
+    return props.unit ? `${text} ${props.unit}` : text;
 });
 </script>

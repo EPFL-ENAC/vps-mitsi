@@ -4,6 +4,7 @@ import { QInput, type ValidationRule } from 'quasar';
 import type { z } from 'zod';
 import { useValidation, isSchemaRequired } from 'src/composables/useValidation';
 import { numberInputAttributes } from 'src/utils/number-input';
+import { formatNumber, parseNumber } from 'src/utils/format';
 
 defineOptions({ inheritAttrs: false });
 
@@ -15,8 +16,10 @@ const props = withDefaults(
         label?: string | undefined;
         rules?: ValidationRule[] | undefined;
         required?: boolean | undefined;
+        /** Shows comma thousands separators while idle, raw digits while editing. */
+        formatThousands?: boolean | undefined;
     }>(),
-    { label: undefined, rules: undefined, required: undefined },
+    { label: undefined, rules: undefined, required: undefined, formatThousands: false },
 );
 
 const model = defineModel<string | number | null | undefined>({
@@ -36,21 +39,50 @@ const isRequired = computed(() => props.required ?? isSchemaRequired(props.schem
 const rules = computed(() => [toValidationRule(props.schema), ...(props.rules ?? [])]);
 const numberAttrs = computed(() => numberInputAttributes(props.schema));
 
+// Formatted fields type as text so a comma is never rejected by the native number input.
+const inputAttrs = computed(() =>
+    props.formatThousands
+        ? { type: 'text' as const, inputmode: 'decimal' as const }
+        : { type: 'number' as const, ...numberAttrs.value },
+);
+
+const isFocused = ref(false);
+/** Raw digits kept while the field has focus, so separators never fight the caret. */
+const rawText = ref('');
+
+/** Formatted while idle, raw text while editing; the model keeps the unformatted value. */
+const displayValue = computed(() => {
+    if (isFocused.value) return rawText.value;
+    if (props.formatThousands && typeof model.value === 'number') {
+        return formatNumber(model.value);
+    }
+    return model.value ?? '';
+});
+
+function onFocus(): void {
+    isFocused.value = true;
+    rawText.value = model.value == null ? '' : String(model.value);
+}
+
+function onUpdate(value: string | number | null): void {
+    rawText.value = value == null ? '' : String(value);
+    model.value = typeof value === 'string' ? parseNumber(value) : value;
+}
+
 defineExpose({ input });
 </script>
 
 <template>
     <QInput
         ref="input"
-        v-bind="$attrs"
-        v-model.number="model"
+        v-bind="{ ...$attrs, ...inputAttrs }"
         :class="{ 'zod-required': isRequired }"
         :label="props.label"
-        type="number"
-        :min="numberAttrs.min"
-        :max="numberAttrs.max"
-        :step="numberAttrs.step"
+        :model-value="displayValue"
         :rules="rules"
+        @blur="isFocused = false"
+        @focus="onFocus"
+        @update:model-value="onUpdate"
     >
         <template v-for="(_, name) in $slots" #[name]="slotProps">
             <slot :name="name" v-bind="slotProps ?? {}" />

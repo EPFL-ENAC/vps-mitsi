@@ -121,6 +121,7 @@
                             :label="$t('energyColumns.energyConsumption')"
                             :schema="DatacenterEnergySchema.shape.energyConsumption"
                             unit="kWh"
+                            format-thousands
                         />
                     </div>
                     <div class="col-12 col-sm-6">

@@ -84,7 +84,7 @@ import EnergyDatacenterDetailDialog from 'src/components/energy/EnergyDatacenter
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import type { DialogMode } from 'src/types/ui';
 import type { DatacenterDraft } from 'src/models/Datacenter/schema';
-import { formatDatacenterName } from 'src/utils/format';
+import { formatDatacenterName, formatNumber } from 'src/utils/format';
 
 const surveyData = useSurveyDataStore();
 const dialog = useTemplateRef<InstanceType<typeof EnergyDatacenterDetailDialog>>('dialog');
@@ -144,8 +144,8 @@ const columns = computed<EnergyColumn[]>(() => [
 ]);
 
 function formatCell(val: string | number | null | undefined, unit?: string): string {
-    if (val === null || val === undefined || val === '' || Number.isNaN(val)) return '—';
-    const text = typeof val === 'number' ? val.toLocaleString() : val.trim();
+    if (val === null || val === undefined || val === '') return '—';
+    const text = typeof val === 'number' ? formatNumber(val) : val.trim();
     return !text ? '—' : unit ? `${text} ${unit}` : text;
 }
 
