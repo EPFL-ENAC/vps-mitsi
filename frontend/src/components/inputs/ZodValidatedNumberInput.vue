@@ -8,8 +8,8 @@ import { formatNumber, parseNumber } from 'src/utils/format';
 
 defineOptions({ inheritAttrs: false });
 
-//Without `required: undefined`, Vue defaults an omitted Boolean prop to `false`,
-// so `props.required ?? isSchemaRequired(...)` would never reach the schema check
+// Without `required: undefined`, Vue defaults an omitted Boolean prop to `false`,
+// so `props.required ?? isSchemaRequired(...)` would never reach the schema check.
 const props = withDefaults(
     defineProps<{
         schema: z.ZodType;
@@ -33,11 +33,18 @@ const model = defineModel<string | number | null | undefined>({
     },
 });
 const input = ref<QInput>();
+const isFocused = ref(false);
+const rawText = ref('');
 const { toValidationRule } = useValidation();
 
 const isRequired = computed(() => props.required ?? isSchemaRequired(props.schema));
-const rules = computed(() => [toValidationRule(props.schema), ...(props.rules ?? [])]);
 const numberAttrs = computed(() => numberInputAttributes(props.schema));
+
+const schemaRule = toValidationRule(props.schema) as (value: unknown) => true | string;
+const rules = computed(() => [
+    (val: unknown) => schemaRule(typeof val === 'string' ? parseNumber(val) : val),
+    ...(props.rules ?? []),
+]);
 
 // Formatted fields type as text so a comma is never rejected by the native number input.
 const inputAttrs = computed(() =>
@@ -46,26 +53,20 @@ const inputAttrs = computed(() =>
         : { type: 'number' as const, ...numberAttrs.value },
 );
 
-const isFocused = ref(false);
-/** Raw digits kept while the field has focus, so separators never fight the caret. */
-const rawText = ref('');
-
-/** Formatted while idle, raw text while editing; the model keeps the unformatted value. */
 const displayValue = computed(() => {
+    if (!props.formatThousands) return model.value ?? '';
     if (isFocused.value) return rawText.value;
-    if (props.formatThousands && typeof model.value === 'number') {
-        return formatNumber(model.value);
-    }
-    return model.value ?? '';
+    return typeof model.value === 'number' ? formatNumber(model.value) : (model.value ?? '');
 });
 
 function onFocus(): void {
+    if (!props.formatThousands) return;
     isFocused.value = true;
     rawText.value = model.value == null ? '' : String(model.value);
 }
 
 function onUpdate(value: string | number | null): void {
-    rawText.value = value == null ? '' : String(value);
+    if (props.formatThousands) rawText.value = value == null ? '' : String(value);
     model.value = typeof value === 'string' ? parseNumber(value) : value;
 }
 
