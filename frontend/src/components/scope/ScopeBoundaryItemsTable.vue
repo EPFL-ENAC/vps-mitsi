@@ -36,7 +36,9 @@
                     class="boundary-input"
                 />
 
-                <span class="boundary-separator">{{ t('scopeBoundary.separators.because') }}</span>
+                <span class="boundary-separator">{{
+                    t(`scopeBoundary.separators.${kind}Reason`)
+                }}</span>
 
                 <ZodValidatedTextInput
                     v-model="item.reason"
