@@ -21,6 +21,7 @@
                     <q-td key="carbonIntensity">
                         {{ formatCell(slotProps.row.energy.carbonIntensity, 'gCO₂/kWh') }}
                     </q-td>
+                    <q-td key="pue">{{ formatCell(slotProps.row.energy.pue) }}</q-td>
                     <q-td key="energyConsumption">
                         {{ formatCell(slotProps.row.energy.energyConsumption, 'kWh') }}
                     </q-td>
@@ -96,7 +97,7 @@ interface EnergyColumn extends QTableColumn<DatacenterDraft> {
     kind?: 'datacenter' | 'text' | 'number' | 'actions';
 }
 
-/** Compact master list: PUE and the comments live in the detail dialog only. */
+/** Compact master list: only the comments stay in the detail dialog. */
 const columns = computed<EnergyColumn[]>(() => [
     {
         name: 'datacenter',
@@ -116,6 +117,13 @@ const columns = computed<EnergyColumn[]>(() => [
         name: 'carbonIntensity',
         label: t('energyColumns.carbonIntensity'),
         field: (dc) => dc.energy.carbonIntensity,
+        align: 'left',
+        kind: 'number',
+    },
+    {
+        name: 'pue',
+        label: t('energyColumns.pue'),
+        field: (dc) => dc.energy.pue,
         align: 'left',
         kind: 'number',
     },
