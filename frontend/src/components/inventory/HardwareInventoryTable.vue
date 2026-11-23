@@ -23,6 +23,7 @@
                 >
                     <q-td key="category">{{ categoryLabel(slotProps.row) }}</q-td>
                     <q-td key="name" class="text-weight-medium">{{ rowName(slotProps.row) }}</q-td>
+                    <q-td key="description">{{ slotProps.row.description?.trim() || '—' }}</q-td>
                     <q-td key="quantity">{{ slotProps.row.quantity ?? '—' }}</q-td>
                     <q-td key="datacenterId">{{ datacenterLabel(slotProps.row) }}</q-td>
 
@@ -117,6 +118,14 @@ const columns = computed<InventoryColumn[]>(() => [
         align: 'left',
         kind: 'text',
         zod: HardwareItemSchema.shape.name,
+    },
+    {
+        name: 'description',
+        label: t('inventoryColumns.description'),
+        field: 'description',
+        align: 'left',
+        kind: 'text',
+        zod: HardwareItemSchema.shape.description,
     },
     {
         name: 'quantity',
