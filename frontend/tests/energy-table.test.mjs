@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { h } from 'vue';
 import {
+    renderTables,
     renderEnergyTable,
     renderEnergyDialog,
     renderEnergyDialogShell,
     renderDialogContent,
 } from './helpers/render-tables.mjs';
 import { DatacenterDraftSchema, DatacenterEnergySchema } from '../src/models/Datacenter/schema.ts';
+import { formatNumber } from '../src/utils/format.ts';
 import en from '../src/i18n/en-GB/index.ts';
 
 const datacenter = (overrides = {}) =>
@@ -32,11 +35,11 @@ const filled = (overrides = {}) =>
         },
     });
 
-test('summary table exposes exactly the five master-detail columns', async () => {
+test('summary table exposes the master-detail columns, including PUE', async () => {
     const { columns } = await renderEnergyTable();
     assert.deepEqual(
         columns.map((column) => column.name),
-        ['datacenter', 'location', 'carbonIntensity', 'energyConsumption', 'actions'],
+        ['datacenter', 'location', 'carbonIntensity', 'pue', 'energyConsumption', 'actions'],
     );
     assert.equal(columns.at(-1).align, 'right');
     assert.equal(columns.at(-1).label, '');
@@ -46,6 +49,7 @@ test('summary table exposes exactly the five master-detail columns', async () =>
             en.energyColumns.datacenter,
             en.energyColumns.location,
             en.energyColumns.carbonIntensity,
+            en.energyColumns.pue,
             en.energyColumns.energyConsumption,
             '',
         ],
@@ -60,15 +64,16 @@ test('master list columns stay schema-free now that editing happens in the dialo
     );
 });
 
-test('summary rows format measurements and hide PUE and comments from the master list', async () => {
+test('summary rows format measurements and keep comments out of the master list', async () => {
     const { html, inputs } = await renderEnergyTable({ datacenters: [filled()] });
     assert.ok(html.includes('DC — Main datacenter'));
     assert.ok(html.includes('Lausanne, Switzerland'));
     assert.ok(html.includes('500 gCO₂/kWh'));
+    // PUE is a calculation parameter rendered in its own summary column.
+    assert.ok(html.includes(`>${formatNumber(1.2)}<`));
     // Energy consumption is a calculation parameter, so it is summarised with its unit.
     assert.ok(html.includes('100 kWh'));
-    // PUE and every comment live in the detail dialog only.
-    assert.doesNotMatch(html, />1\.2</);
+    // Every comment still lives in the detail dialog only.
     assert.doesNotMatch(html, /Swiss grid mix average/);
     assert.doesNotMatch(html, /Datacenter note/);
     assert.doesNotMatch(html, /Metered via PDU/);
@@ -125,17 +130,50 @@ test('clear action confirms and resets the energy block only', async () => {
     assert.equal(result.store.datacenters[0].generalInfo.name, 'Main datacenter');
 });
 
-test('detail dialog shell exposes the back button, title and mode badge', async () => {
+test('detail dialog shell shows the title, mode badge and mode-specific header actions', async () => {
     const readShell = await renderEnergyDialogShell({ row: filled(), readonly: true });
     const readHtml = await renderDialogContent(readShell);
-    assert.ok(readHtml.includes('arrow_back'));
+    // The header no longer offers a back arrow; viewing ends with a single close action.
+    assert.ok(!readHtml.includes('arrow_back'));
     assert.ok(readHtml.includes('DC — Main datacenter'));
     assert.ok(readHtml.includes(en.energyDcTitle));
     assert.ok(readHtml.includes(en.inventoryModeReadonly));
+    assert.ok(readHtml.includes('>close<'));
+    assert.ok(!readHtml.includes(en.commonCancel));
+    assert.ok(!readHtml.includes(en.commonSave));
 
     const editShell = await renderEnergyDialogShell({ row: filled() });
     const editHtml = await renderDialogContent(editShell);
+    assert.ok(!editHtml.includes('arrow_back'));
     assert.ok(editHtml.includes(en.inventoryModeEditing));
+    assert.ok(editHtml.includes(en.commonCancel));
+    assert.ok(editHtml.includes(en.commonSave));
+    assert.ok(!editHtml.includes('>close<'));
+});
+
+test('Cancel discards the draft while Save publishes it to the row', async () => {
+    for (const [label, committed] of [
+        [en.commonSave, true],
+        [en.commonCancel, false],
+    ]) {
+        const row = filled();
+        const shell = await renderEnergyDialogShell({ row });
+        // Render the dialog body so the header buttons belong to this dialog instance.
+        const content = await renderTables({
+            render: () => h('div', shell.modalDialogs[0].$slots.default()),
+        });
+
+        const location = content.zodInputs.find(
+            (control) => control.$attrs['data-field'] === 'location',
+        );
+        location.$emit('update:modelValue', 'Geneva');
+
+        const action = content.buttons.find((control) => control.$props.label === label);
+        action.$.vnode.props.onClick();
+
+        // Neither action touches the row until Save publishes the draft.
+        assert.equal(row.energy.location, committed ? 'Geneva' : 'Lausanne, Switzerland');
+    }
 });
 
 test('detail form renders every energy field with deep-link attributes', async () => {
