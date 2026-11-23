@@ -164,6 +164,7 @@
                             field="impactManufacturing"
                             :label="$t('inventoryColumns.impactManufacturing')"
                             :schema="HardwareItemSchema.shape.impactManufacturing"
+                            format-thousands
                         />
                     </div>
 
@@ -176,6 +177,7 @@
                             field="impactManufacturingDistributionEol"
                             :label="$t('inventoryColumns.impactManufacturingDistributionEol')"
                             :schema="HardwareItemSchema.shape.impactManufacturingDistributionEol"
+                            format-thousands
                         />
                     </div>
 
@@ -267,6 +269,7 @@
                             field="cpuDieSize"
                             :label="$t('inventoryColumns.cpuDieSize')"
                             :schema="HardwareItemSchema.shape.cpuDieSize"
+                            format-thousands
                         />
                     </div>
 
@@ -385,6 +388,7 @@
                             field="storageSize"
                             :label="$t('inventoryColumns.storageSize')"
                             :schema="HardwareItemSchema.shape.storageSize"
+                            format-thousands
                         />
                     </div>
 
@@ -491,6 +495,7 @@
                             field="gpuDieSize"
                             :label="$t('inventoryColumns.gpuDieSize')"
                             :schema="HardwareItemSchema.shape.gpuDieSize"
+                            format-thousands
                         />
                     </div>
 
@@ -551,6 +556,7 @@
                             field="psuPower"
                             :label="$t('inventoryColumns.psuPower')"
                             :schema="HardwareItemSchema.shape.psuPower"
+                            format-thousands
                         />
                     </div>
                 </div>
