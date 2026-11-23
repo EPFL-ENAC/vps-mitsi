@@ -178,8 +178,8 @@ function confirmDeleteRow(row: HardwareItem): void {
     });
 }
 
-function openDialog(row: HardwareItem, mode: DialogMode = 'edit'): void {
-    void dialog.value?.showAndFocus(row, { mode });
+function openDialog(row: HardwareItem, mode: DialogMode = 'edit', isNew = false): void {
+    void dialog.value?.showAndFocus(row, isNew ? { mode, isNew } : { mode });
 }
 
 function showAndFocus(rowId: string, field?: string): Promise<void> | undefined {

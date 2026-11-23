@@ -9,4 +9,6 @@ export type DialogMode = 'view' | 'edit';
 export interface DialogOptions {
     mode?: DialogMode;
     field?: string | undefined;
+    /** Marks a row that was just created, so cancelling removes it again. */
+    isNew?: boolean | undefined;
 }
