@@ -145,7 +145,7 @@ test('boundary rows render sentence inputs and edit selected collection only', a
     }
 });
 
-test('energy summary table is a compact 5-column master list; clear requires confirmation', async () => {
+test('energy summary table is a compact master list; clear requires confirmation', async () => {
     const result = await renderTables(EnergyDatacentersTable, {
         setupStore(store) {
             store.datacenters = [
@@ -163,10 +163,10 @@ test('energy summary table is a compact 5-column master list; clear requires con
         },
     });
 
-    // Same five-column master-detail contract as the hardware inventory table.
+    // Same master-detail contract as the hardware inventory table, plus the PUE column.
     assert.deepEqual(
         result.tables[0].columns.map((c) => c.name),
-        ['datacenter', 'location', 'carbonIntensity', 'energyConsumption', 'actions'],
+        ['datacenter', 'location', 'carbonIntensity', 'pue', 'energyConsumption', 'actions'],
     );
     assert.equal(result.tables[0].columns.at(-1).align, 'right');
     assert.equal(result.tables[0].columns.at(-1).label, '');

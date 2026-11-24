@@ -1,6 +1,8 @@
 export default {
     // --- Shared labels ---
     commonBack: 'Back',
+    commonCancel: 'Cancel',
+    commonSave: 'Save',
     commonYes: 'Yes',
     commonNo: 'No',
     // --- Welcome page ---
