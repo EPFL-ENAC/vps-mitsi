@@ -33,18 +33,21 @@ const model = defineModel<string | number | null | undefined>({
     },
 });
 const input = ref<QInput>();
-const isFocused = ref(false);
-const rawText = ref('');
+const editText = ref<string | null>(null);
 const { toValidationRule } = useValidation();
 
 const isRequired = computed(() => props.required ?? isSchemaRequired(props.schema));
 const numberAttrs = computed(() => numberInputAttributes(props.schema));
 
-const schemaRule = toValidationRule(props.schema) as (value: unknown) => true | string;
-const rules = computed(() => [
-    (val: unknown) => schemaRule(typeof val === 'string' ? parseNumber(val) : val),
-    ...(props.rules ?? []),
-]);
+const rules = computed<ValidationRule[]>(() => {
+    const rule = toValidationRule(props.schema);
+    return [
+        typeof rule === 'function'
+            ? (value, patterns) => rule(parseInputValue(value), patterns)
+            : rule,
+        ...(props.rules ?? []),
+    ];
+});
 
 // Formatted fields type as text so a comma is never rejected by the native number input.
 const inputAttrs = computed(() =>
@@ -54,20 +57,23 @@ const inputAttrs = computed(() =>
 );
 
 const displayValue = computed(() => {
-    if (!props.formatThousands) return model.value ?? '';
-    if (isFocused.value) return rawText.value;
-    return typeof model.value === 'number' ? formatNumber(model.value) : (model.value ?? '');
+    const value = model.value ?? '';
+    if (!props.formatThousands) return value;
+    if (editText.value !== null) return editText.value;
+    return typeof value === 'number' ? formatNumber(value) : value;
 });
 
+function parseInputValue<T>(value: T): T | string | number {
+    return typeof value === 'string' ? parseNumber(value) : value;
+}
+
 function onFocus(): void {
-    if (!props.formatThousands) return;
-    isFocused.value = true;
-    rawText.value = model.value == null ? '' : String(model.value);
+    if (props.formatThousands) editText.value = String(model.value ?? '');
 }
 
 function onUpdate(value: string | number | null): void {
-    if (props.formatThousands) rawText.value = value == null ? '' : String(value);
-    model.value = typeof value === 'string' ? parseNumber(value) : value;
+    if (editText.value !== null) editText.value = String(value ?? '');
+    model.value = parseInputValue(value);
 }
 
 defineExpose({ input });
@@ -81,7 +87,7 @@ defineExpose({ input });
         :label="props.label"
         :model-value="displayValue"
         :rules="rules"
-        @blur="isFocused = false"
+        @blur="editText = null"
         @focus="onFocus"
         @update:model-value="onUpdate"
     >
