@@ -309,9 +309,12 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
     margin-bottom: 16px !important;
 }
 
+/* Stays glued to its table's last row, but the next category may start a page. */
 .results-category-total {
-    page-break-after: avoid;
-    break-after: avoid;
+    page-break-before: avoid;
+    break-before: avoid;
+    page-break-after: auto !important;
+    break-after: auto !important;
 }
 
 .results-excluded {
@@ -338,10 +341,7 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
 }
 
 @media print {
-    /* Keep each category group (title, table, total) on one page. */
     .results-embodied-wrapper > .q-mb-md {
-        page-break-inside: avoid;
-        break-inside: avoid;
         margin-bottom: 8px !important;
     }
 

@@ -9,6 +9,7 @@
             :rows="surveyResults.datacenterOperationalResults.result ?? []"
             :columns="operationalColumns"
             :row-key="(row: DatacenterOperationalResult) => row.datacenter.id"
+            table-header-class="bg-grey-2"
             class="results-table"
         >
             <template #header-cell="props">

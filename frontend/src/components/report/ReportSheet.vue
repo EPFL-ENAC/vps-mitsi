@@ -86,7 +86,10 @@ defineProps<{
         min-height: 0 !important;
         height: auto !important;
         margin: 0 !important;
-        padding: 10mm 14mm !important;
+        padding: 6mm 14mm !important;
+        /* Clone makes every page fragment keep the top/bottom padding. */
+        box-decoration-break: clone;
+        -webkit-box-decoration-break: clone;
         box-shadow: none !important;
         overflow: visible !important;
 
@@ -117,10 +120,14 @@ defineProps<{
         break-after: avoid;
     }
 
-    /* `inline-block` keeps tables and categories unbreakable in Chromium print. */
-    .report-sheet :deep(.q-markup-table),
-    .report-sheet :deep(.q-table__container),
-    .report-sheet :deep(.results-category) {
+    /* Compact header recovers vertical space on the one-page Results sheet. */
+    .report-sheet__header {
+        padding-bottom: 2mm !important;
+        margin-bottom: 3mm !important;
+    }
+
+    /* Short summary tables stay whole; data tables flow across pages. */
+    .report-sheet :deep(.q-markup-table:not(.report-boundary-table)) {
         display: inline-block !important;
         width: 100% !important;
         overflow: visible !important;
@@ -128,8 +135,15 @@ defineProps<{
         break-inside: avoid;
     }
 
-    .report-sheet :deep(.q-table__middle) {
+    /* Multi-row tables paginate: thead repeats, rows never split. */
+    .report-sheet :deep(.q-table__container),
+    .report-sheet :deep(.q-table__middle),
+    .report-sheet :deep(.results-category),
+    .report-sheet :deep(.report-boundary-table) {
+        display: block !important;
         overflow: visible !important;
+        page-break-inside: auto;
+        break-inside: auto;
     }
 
     .report-sheet__content > *:last-child {

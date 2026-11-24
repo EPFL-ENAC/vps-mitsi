@@ -132,18 +132,27 @@
                     <div class="text-weight-bold text-subtitle2 q-mb-sm">
                         {{ $t('scopeBoundariesInclExclTitle') }}
                     </div>
-                    <q-markup-table dense flat bordered class="report-table">
+                    <q-markup-table dense flat bordered class="report-table report-boundary-table">
+                        <colgroup>
+                            <col
+                                v-for="(width, index) in BOUNDARY_COL_WIDTHS"
+                                :key="index"
+                                :style="{ width }"
+                            />
+                        </colgroup>
                         <tbody>
                             <tr v-for="line in boundaryLines" :key="line.id">
-                                <td class="text-weight-bold text-no-wrap">{{ line.prefix }}</td>
-                                <td>
-                                    {{ line.type }} {{ $t('scopeBoundary.separators.usedFor') }}
-                                    {{ line.purpose }}
-                                    {{ $t('scopeBoundary.separators.because') }} {{ line.reason }}
+                                <td class="text-weight-bold boundary-nowrap">{{ line.prefix }}</td>
+                                <td class="text-weight-medium text-dark">{{ line.type }}</td>
+                                <td class="text-grey-7 boundary-nowrap">
+                                    {{ $t('scopeBoundary.separators.usedFor') }}
                                 </td>
+                                <td class="text-weight-medium text-dark">{{ line.purpose }}</td>
+                                <td class="text-grey-7 boundary-nowrap">{{ line.connector }}</td>
+                                <td class="text-weight-medium text-dark">{{ line.reason }}</td>
                             </tr>
                             <tr v-if="boundaryLines.length === 0">
-                                <td colspan="2" class="text-grey-7">—</td>
+                                <td colspan="6" class="text-grey-7">—</td>
                             </tr>
                         </tbody>
                     </q-markup-table>
@@ -212,6 +221,9 @@ function scrollToSection(id: string): void {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+/** prefix, type, "used for", purpose, "comment"/"because", reason. */
+const BOUNDARY_COL_WIDTHS = ['16%', '20%', '8%', '23%', '8%', '25%'] as const;
+
 /** Included and excluded items in one read-only table; blank drafts are skipped. */
 const boundaryLines = computed(() =>
     (['included', 'excluded'] as const).flatMap((kind) =>
@@ -222,6 +234,7 @@ const boundaryLines = computed(() =>
                 prefix: t(`scopeBoundary.${kind}.prefix`),
                 type: item.type || '—',
                 purpose: item.purpose || '—',
+                connector: t(`scopeBoundary.separators.${kind}Reason`),
                 reason: item.reason || '—',
             })),
     ),
@@ -327,6 +340,23 @@ const printReport = () => {
     }
 }
 
+/* Labels stay on one line; user values wrap at word boundaries in fixed columns. */
+.report-boundary-table {
+    :deep(table) {
+        table-layout: fixed;
+        width: 100%;
+    }
+
+    td {
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+    }
+
+    td.boundary-nowrap {
+        white-space: nowrap !important;
+    }
+}
+
 @media print {
     .print-hide {
         display: none !important;
@@ -353,17 +383,36 @@ const printReport = () => {
         }
     }
 
+    /* A wrapper border stretches to the page bottom when a table splits. */
+    .report-sheet :deep(.q-table__container),
+    .report-sheet :deep(.report-boundary-table) {
+        border: none !important;
+        border-radius: 0 !important;
+    }
+
+    .report-sheet :deep(.q-table__container table),
+    .report-sheet :deep(.report-boundary-table table) {
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+        border: 1px solid rgba(0, 0, 0, 0.45) !important;
+        border-radius: 4px !important;
+    }
+
     .report-toc__link {
         color: #1a1a1a !important;
     }
 
     /* Tightened vertical rhythm keeps Scope and Results on one page each. */
-    .q-mb-lg {
+    .report-sheet :deep(.q-mb-lg) {
         margin-bottom: 8px !important;
     }
 
-    .q-mb-md {
+    .report-sheet :deep(.q-mb-md) {
         margin-bottom: 6px !important;
+    }
+
+    .report-sheet :deep(.q-mt-md) {
+        margin-top: 6px !important;
     }
 }
 </style>
