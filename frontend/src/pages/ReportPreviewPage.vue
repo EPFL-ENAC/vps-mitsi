@@ -135,7 +135,7 @@
                     <q-markup-table dense flat bordered class="report-table">
                         <tbody>
                             <tr v-for="line in boundaryLines" :key="line.id">
-                                <td class="text-weight-bold">{{ line.prefix }}</td>
+                                <td class="text-weight-bold text-no-wrap">{{ line.prefix }}</td>
                                 <td>
                                     {{ line.type }} {{ $t('scopeBoundary.separators.usedFor') }}
                                     {{ line.purpose }}
@@ -212,10 +212,7 @@ function scrollToSection(id: string): void {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-/**
- * Included and excluded items in one read-only table, with the scope page's own
- * sentence wording. Blank drafts are skipped: `BoundaryItemSchema` requires text.
- */
+/** Included and excluded items in one read-only table; blank drafts are skipped. */
 const boundaryLines = computed(() =>
     (['included', 'excluded'] as const).flatMap((kind) =>
         surveyData.scope[`${kind}Items`]
@@ -358,6 +355,15 @@ const printReport = () => {
 
     .report-toc__link {
         color: #1a1a1a !important;
+    }
+
+    /* Tightened vertical rhythm keeps Scope and Results on one page each. */
+    .q-mb-lg {
+        margin-bottom: 8px !important;
+    }
+
+    .q-mb-md {
+        margin-bottom: 6px !important;
     }
 }
 </style>

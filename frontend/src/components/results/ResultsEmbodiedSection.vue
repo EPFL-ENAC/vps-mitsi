@@ -322,22 +322,17 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
 }
 
 @media print {
-    /* Flex rows get pushed whole to the next page and fall back to a column;
-       CSS Grid fragments predictably, so the two treemaps stay side by side. */
-    .results-embodied-charts {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-        break-inside: avoid;
+    /* Keep each category group (title, table, total) on one page. */
+    .results-embodied-wrapper > .q-mb-md {
         page-break-inside: avoid;
+        break-inside: avoid;
+        margin-bottom: 8px !important;
+    }
 
-        > * {
-            width: auto !important;
-            max-width: none !important;
-            /* Grid children default to min-width:auto and blow out around the canvas. */
-            min-width: 0;
-            break-inside: avoid;
-        }
+    /* Quasar's row already lays both treemaps side by side: never split it. */
+    .results-embodied-charts {
+        page-break-inside: avoid;
+        break-inside: avoid;
     }
 }
 </style>

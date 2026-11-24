@@ -73,18 +73,20 @@ defineProps<{
 }
 
 @media print {
+    /* Zero page margins suppress Chromium's native headers/footers. */
     @page {
         size: A4 landscape;
-        margin: 10mm;
+        margin: 0;
     }
 
-    /* The sheet fills the printable area so right edges never clip. */
+    /* Block layout paginates reliably; margins live as sheet padding. */
     .report-sheet {
+        display: block !important;
         width: 100% !important;
-        min-height: 190mm !important;
+        min-height: 0 !important;
         height: auto !important;
         margin: 0 !important;
-        padding: 0 0 8mm 0 !important;
+        padding: 10mm 14mm !important;
         box-shadow: none !important;
         overflow: visible !important;
 
@@ -102,22 +104,44 @@ defineProps<{
         break-after: auto;
     }
 
-    /* Chrome already prints native page numbers: no in-DOM footer on paper. */
     .report-sheet__footer {
         display: none !important;
     }
 
-    /* A sheet ending at the page edge must not emit a trailing blank page. */
-    .report-sheet__content > *:last-child {
-        margin-bottom: 0 !important;
+    /* Keep headings attached to their content across child components. */
+    .report-sheet__header,
+    .report-sheet :deep(h2),
+    .report-sheet :deep(.text-subtitle1),
+    .report-sheet :deep(.text-subtitle2) {
+        page-break-after: avoid;
+        break-after: avoid;
     }
 
-    .report-sheet__content tr {
+    /* `inline-block` keeps tables and categories unbreakable in Chromium print. */
+    .report-sheet :deep(.q-markup-table),
+    .report-sheet :deep(.q-table__container),
+    .report-sheet :deep(.results-category) {
+        display: inline-block !important;
+        width: 100% !important;
+        overflow: visible !important;
         page-break-inside: avoid;
         break-inside: avoid;
     }
 
-    .report-sheet__content thead {
+    .report-sheet :deep(.q-table__middle) {
+        overflow: visible !important;
+    }
+
+    .report-sheet__content > *:last-child {
+        margin-bottom: 0 !important;
+    }
+
+    .report-sheet__content :deep(tr) {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    .report-sheet__content :deep(thead) {
         display: table-header-group;
     }
 }
