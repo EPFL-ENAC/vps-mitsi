@@ -234,6 +234,8 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
         align: 'left',
         field: (row) => row.name,
         kind: 'text',
+        style: 'width: 22%',
+        headerStyle: 'width: 22%',
     },
     {
         name: 'description',
@@ -241,6 +243,8 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
         align: 'left',
         field: (row) => row.description,
         kind: 'text',
+        style: 'width: 36%',
+        headerStyle: 'width: 36%',
     },
     {
         name: 'number',
@@ -249,6 +253,8 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
         field: (row) => row.quantity.result,
         computation: (row) => row.quantity,
         kind: 'number',
+        style: 'width: 10%',
+        headerStyle: 'width: 10%',
     },
     {
         name: 'co2PerUnit',
@@ -258,6 +264,8 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
         computation: (row) => row.unitEmbodiedEmissionsKg,
         formatValue: formatKg,
         kind: 'number',
+        style: 'width: 16%',
+        headerStyle: 'width: 16%',
     },
     {
         name: 'co2RowTotal',
@@ -267,6 +275,8 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
         computation: (row) => row.rowEmbodiedEmissionsKg,
         formatValue: formatKg,
         kind: 'number',
+        style: 'width: 16%',
+        headerStyle: 'width: 16%',
     },
 ]);
 </script>
@@ -282,6 +292,12 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
     :deep(td) {
         white-space: normal !important;
         word-break: break-word;
+    }
+
+    /* Fixed layout so every category table aligns vertically. */
+    &:not(.results-total-table) :deep(table) {
+        table-layout: fixed;
+        width: 100%;
     }
 }
 
