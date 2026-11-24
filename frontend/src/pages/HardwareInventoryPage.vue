@@ -27,7 +27,7 @@
                 unelevated
                 color="primary"
                 :label="$t('inventoryAddRow')"
-                @click="surveyData.addHardwareItem()"
+                @click="table?.openDialog(surveyData.addHardwareItem(), 'edit', true)"
             />
         </div>
 

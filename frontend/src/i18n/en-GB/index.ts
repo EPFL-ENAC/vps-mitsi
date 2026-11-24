@@ -249,7 +249,7 @@ export default {
         gpuName: 'GPU – name',
         gpuQuantity: 'GPU – quantity (nb)',
         gpuLithography: 'GPU – lithography (nm)',
-        gpuDieSize: 'GPU – die (mm²)',
+        gpuDieSize: 'GPU – Die size (mm²)',
         gpuMemory: 'GPU – memory (GB)',
         // Network & PSU
         networkPorts: 'Network ports (nb)',

@@ -298,8 +298,11 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
         return dc.id;
     }
 
-    function addHardwareItem(): void {
-        hardware.value.push(HardwareItemDraftSchema.parse({ id: crypto.randomUUID() }));
+    /** Appends a blank hardware row and returns it so the caller can open it. */
+    function addHardwareItem(): HardwareItem {
+        const item = HardwareItemDraftSchema.parse({ id: crypto.randomUUID() });
+        hardware.value.push(item);
+        return item;
     }
 
     /** Creates a blank included/excluded boundary row (fresh uuid). */

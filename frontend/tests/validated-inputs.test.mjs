@@ -134,6 +134,11 @@ test('formatted number inputs display thousand separators and parse grouped text
     for (const value of ['1,234', '2,500.75', '']) grouped.input.$emit('update:modelValue', value);
     assert.deepEqual(grouped.updates, [1234, 2500.75, null]);
 
+    // Rules run against the grouped display text, so separators must not read as invalid.
+    assert.equal(input.rules[0]('1,568.32'), true);
+    assert.equal(input.rules[0]('14,921'), true);
+    assert.equal(input.rules[0]('12a'), 'Must be a number.');
+
     // Without the flag the raw number is displayed and no group separator appears.
     const plain = await renderInput(ZodValidatedNumberInput, { schema, modelValue: 1234.5 });
     assert.equal(plain.input.$props.modelValue, 1234.5);
