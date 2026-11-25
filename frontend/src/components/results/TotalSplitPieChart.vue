@@ -98,7 +98,7 @@ const chartOption = computed<ECOption>(() => {
                 const item = Array.isArray(p) ? p[0] : p;
                 if (!item) return '';
                 const value = Number(item.value);
-                return `${item.name}<br/>${formatKg(value)} (${((value / denom) * 100).toFixed(1)}${t('resultsColPercent')})`;
+                return `${echarts.format.encodeHTML(item.name)}<br/>${formatKg(value)} (${((value / denom) * 100).toFixed(1)}${t('resultsColPercent')})`;
             },
         },
         legend: { bottom: 0 },
