@@ -153,6 +153,6 @@ const chartOption = computed<ECOption>(() => ({
 <style scoped>
 .embodied-treemap {
     width: 100%;
-    height: 340px;
+    height: 260px;
 }
 </style>

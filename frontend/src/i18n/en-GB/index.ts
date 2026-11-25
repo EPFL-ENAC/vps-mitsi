@@ -406,6 +406,7 @@ export default {
     // --- Report (printable; see src/pages/ReportPreviewPage.vue) ---
     reportToolbarTitle: 'Report',
     reportPrint: 'Print',
+    reportTocTitle: 'Contents',
     reportGeneratedOn: 'Generated on {date}',
     // --- Validation messages (Zod -> Quasar; see composables/useValidation.ts) ---
     validation: {
