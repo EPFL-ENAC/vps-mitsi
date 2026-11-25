@@ -40,6 +40,9 @@ import type { ExportMetadataInput } from 'src/models/ExportMetadata/schema';
 /** Storage key used for browser persistence. */
 export const MITSI_STORAGE_KEY = 'mitsi-assessment';
 
+/** Upper bound accepted for an imported assessment file (100 MB). */
+export const MAX_IMPORT_BYTES = 100 * 1024 * 1024;
+
 export type DatacenterDeletionBlock = { hardwareRowCount: number };
 
 export type RemoveDatacenterResult =
@@ -257,6 +260,7 @@ export const useSurveyDataStore = defineStore('surveyData', () => {
     }
 
     function importJson(json: string): boolean {
+        if (json.length > MAX_IMPORT_BYTES) return false;
         try {
             const parsed = PersistedAssessmentSchema.safeParse(JSON.parse(json));
             if (!parsed.success) return false;

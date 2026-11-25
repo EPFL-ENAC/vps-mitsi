@@ -269,7 +269,7 @@
 </template>
 
 <script setup lang="ts">
-import { useSurveyDataStore } from 'src/stores/surveyData';
+import { useSurveyDataStore, MAX_IMPORT_BYTES } from 'src/stores/surveyData';
 import { useSurveyResultsStore } from 'src/stores/surveyResults';
 
 import { computed, ref } from 'vue';
@@ -324,6 +324,11 @@ function saveAssessment(): void {
 /** QFile returns a File object directly; existing data triggers a confirmation dialog */
 async function onFilePicked(file: File | null): Promise<void> {
     if (!file) return;
+
+    if (file.size > MAX_IMPORT_BYTES) {
+        $q.notify({ type: 'negative', message: t('mainImportTooLarge', { max: 100 }) });
+        return;
+    }
 
     const json = await file.text().catch(() => null);
     if (json === null) {
