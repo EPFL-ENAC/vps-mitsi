@@ -276,9 +276,9 @@ test('treemap data still contains only positive accounted values in both variant
         element.map(({ name, value }) => ({ name, value })),
         [{ name: 'Counted', value: 10 }],
     );
-    assert.equal(category[0].value, 10);
+    // Category tiles are flat (leafDepth: 1): one aggregated tile per category, no children.
     assert.deepEqual(
-        category[0].children.map(({ name, value }) => ({ name, value })),
-        [{ name: 'Counted', value: 10 }],
+        category.map(({ name, value }) => ({ name, value })),
+        [{ name: en.inventoryCategory_server, value: 10 }],
     );
 });

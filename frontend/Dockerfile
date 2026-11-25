@@ -10,7 +10,7 @@ RUN --mount=type=cache,target=/root/.npm \
 COPY . .
 RUN npm run build
 
-FROM nginxinc/nginx-unprivileged:stable-alpine-slim AS production-stage
+FROM nginx/nginx-unprivileged:stable-alpine-slim AS production-stage
 
 # apk needs root; the base image runs as uid 101 (nginx).
 USER root

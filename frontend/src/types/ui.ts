@@ -3,3 +3,12 @@ export type BlockStatus = 'complete' | 'partial' | 'not_started';
 
 /** The four assessment blocks, in the order shown in the navigation rail. */
 export type BlockKey = 'scope' | 'inventory' | 'energy' | 'results';
+
+export type DialogMode = 'view' | 'edit';
+
+export interface DialogOptions {
+    mode?: DialogMode;
+    field?: string | undefined;
+    /** Marks a row that was just created, so cancelling removes it again. */
+    isNew?: boolean | undefined;
+}

@@ -17,11 +17,11 @@ const datacenter = (overrides = {}) =>
         ...overrides,
     });
 
-test('summary table exposes exactly the five master-detail columns', async () => {
+test('summary table exposes exactly the six master-detail columns', async () => {
     const { columns } = await renderInventoryTable();
     assert.deepEqual(
         columns.map((column) => column.name),
-        ['category', 'name', 'quantity', 'datacenterId', 'actions'],
+        ['category', 'name', 'description', 'quantity', 'datacenterId', 'actions'],
     );
     assert.equal(columns.at(-1).align, 'right');
     assert.deepEqual(
@@ -29,6 +29,7 @@ test('summary table exposes exactly the five master-detail columns', async () =>
         [
             en.inventoryColumns.category,
             en.inventoryColumns.name,
+            en.inventoryColumns.description,
             en.inventoryColumns.quantity,
             en.inventoryColumns.datacenterId,
             '',
@@ -78,18 +79,26 @@ test('delete action confirms and removes the row', async () => {
     assert.equal(result.store.hardware.length, 0);
 });
 
-test('detail dialog shell exposes the back button, title context and mode badge', async () => {
+test('detail dialog shell exposes the unified header, title context and mode badge', async () => {
     const row = HardwareItemDraftSchema.parse({ id: 'h1', name: 'Server' });
     const readShell = await renderInventoryDialogShell({ row, readonly: true });
     const readHtml = await renderDialogContent(readShell);
-    assert.ok(readHtml.includes('arrow_back'));
+    // The header no longer offers a back arrow; viewing ends with a single close action.
+    assert.ok(!readHtml.includes('arrow_back'));
     assert.ok(readHtml.includes('Server'));
     assert.ok(readHtml.includes(en.inventoryCategory_server));
     assert.ok(readHtml.includes(en.inventoryModeReadonly));
+    assert.ok(readHtml.includes('>close<'));
+    assert.ok(!readHtml.includes(en.commonCancel));
+    assert.ok(!readHtml.includes(en.commonSave));
 
     const editShell = await renderInventoryDialogShell({ row });
     const editHtml = await renderDialogContent(editShell);
+    assert.ok(!editHtml.includes('arrow_back'));
     assert.ok(editHtml.includes(en.inventoryModeEditing));
+    assert.ok(editHtml.includes(en.commonCancel));
+    assert.ok(editHtml.includes(en.commonSave));
+    assert.ok(!editHtml.includes('>close<'));
 
     const untitled = await renderInventoryDialogShell({
         row: HardwareItemDraftSchema.parse({ id: 'h2' }),

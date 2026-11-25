@@ -116,10 +116,10 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useErrorNavigation, type DiagnosticIssue } from 'src/composables/useErrorNavigation';
+import { useErrorSummary, type DiagnosticIssue } from 'src/composables/useErrorSummary';
 
 const { t } = useI18n();
-const { issues, issueCount, hasIssues, navigateToIssue } = useErrorNavigation();
+const { issues, issueCount, hasIssues, navigateToIssue } = useErrorSummary();
 const dialogOpen = ref(false);
 
 function selectIssue(issue: DiagnosticIssue): void {

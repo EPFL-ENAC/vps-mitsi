@@ -1,11 +1,10 @@
-import { computed, nextTick } from 'vue';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import type { ZodType } from 'zod';
 
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useValidation } from 'src/composables/useValidation';
-import { useDetailDialogStore } from 'src/composables/useDetailDialog';
 import { ScopeSchema, BoundaryItemSchema } from 'src/models/Scope/schema';
 import { DatacenterGeneralInfoSchema, DatacenterEnergySchema } from 'src/models/Datacenter/schema';
 import { HardwareItemSchema } from 'src/models/HardwareItem/schema';
@@ -13,13 +12,6 @@ import { MonitoringPeriodSchema } from 'src/models/MonitoringPeriod/schema';
 import { formatDatacenterName } from 'src/utils/format';
 
 export type SectionId = 'scope' | 'inventory' | 'energy';
-
-/** Wait for a freshly opened dialog to mount before querying its fields. */
-const DIALOG_MOUNT_DELAY_MS = 120;
-/** Expansion item open animation before scrolling to the revealed field. */
-const EXPANSION_TRANSITION_MS = 260;
-/** Duration of the field highlight pulse; matches `field-pulse-amber` in app.scss. */
-const HIGHLIGHT_DURATION_MS = 1500;
 
 export interface DiagnosticIssue {
     id: string;
@@ -45,12 +37,11 @@ interface ValidationContext {
     idPrefix: string;
 }
 
-export function useErrorNavigation() {
+export function useErrorSummary() {
     const router = useRouter();
     const { t } = useI18n();
     const { formatIssue } = useValidation();
     const surveyData = useSurveyDataStore();
-    const detailDialog = useDetailDialogStore();
 
     function resolveFieldLabel(prefix: string, field: string): string {
         const fullKey = `${prefix}.${field}`;
@@ -58,7 +49,7 @@ export function useErrorNavigation() {
         return translated !== fullKey ? translated : field;
     }
 
-    /** Runs a Zod schema validation and transforms any issues into diagnostic items */
+    /** Runs a Zod schema validation and transforms any issues into diagnostic items. */
     function collectIssues(
         schema: ZodType,
         data: unknown,
@@ -212,71 +203,23 @@ export function useErrorNavigation() {
         return list;
     });
 
-    /** Handlers for sections requiring modal or drawer activation before focus */
-    const sectionOpeners: Partial<Record<SectionId, (issue: DiagnosticIssue) => void>> = {
-        inventory: (issue) => {
-            if (!issue.rowId) return;
-            const item = surveyData.hardware.find((row) => row.id === issue.rowId);
-            if (item) detailDialog.openHardware(item, 'edit');
-        },
-        energy: (issue) => {
-            if (!issue.rowId) return;
-            const dc = surveyData.datacenters.find((row) => row.id === issue.rowId);
-            if (dc) detailDialog.openEnergy(dc, 'edit');
-        },
-    };
-
-    function expandEnclosingSection(element: HTMLElement): boolean {
-        const closed = element.closest<HTMLElement>('.q-expansion-item--collapsed');
-        if (!closed) return false;
-        closed.querySelector<HTMLElement>('.q-item--clickable')?.click();
-        return true;
-    }
-
-    function focusElement(element: HTMLElement): void {
-        const wasClosed = expandEnclosingSection(element);
-        const delay = wasClosed ? EXPANSION_TRANSITION_MS : 0;
-
-        window.setTimeout(() => {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            element.classList.add('field-highlight-pulse');
-            window.setTimeout(
-                () => element.classList.remove('field-highlight-pulse'),
-                HIGHLIGHT_DURATION_MS,
-            );
-
-            const control = element.querySelector<HTMLElement>('input, textarea, select');
-            (control ?? element).focus({ preventScroll: true });
-        }, delay);
-    }
-
-    /** Navigates across routes, prepares target container, and triggers field focus */
-    async function executeScrollAndPulse(issue: DiagnosticIssue): Promise<void> {
-        if (router.currentRoute.value.path !== issue.route) {
-            await router.push(issue.route);
-            await nextTick();
-        }
-
-        // Run section-specific preparation (e.g. opening edit modal) if registered
-        sectionOpeners[issue.section]?.(issue);
-        await nextTick();
-
-        window.setTimeout(() => {
-            const selector = issue.rowId
-                ? `[data-row-id="${CSS.escape(issue.rowId)}"][data-field="${CSS.escape(issue.field)}"]`
-                : `[data-field="${CSS.escape(issue.field)}"]`;
-
-            const element = document.querySelector<HTMLElement>(selector);
-            if (element) {
-                focusElement(element);
-            }
-        }, DIALOG_MOUNT_DELAY_MS);
+    function navigateToIssue(issue: DiagnosticIssue): void {
+        const destination = {
+            path: issue.route,
+            query: {
+                selected: issue.field,
+                ...(issue.rowId && { row: issue.rowId }),
+            },
+        };
+        const sameLink =
+            router.resolve(destination).fullPath === router.currentRoute.value.fullPath;
+        void router.push(sameLink ? { ...destination, force: true, replace: true } : destination);
     }
 
     return {
         issues,
         issueCount: computed(() => issues.value.length),
         hasIssues: computed(() => issues.value.length > 0),
-        navigateToIssue: (issue: DiagnosticIssue) => void executeScrollAndPulse(issue),
+        navigateToIssue,
     };
 }
