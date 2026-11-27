@@ -23,6 +23,7 @@
                 >
                     <q-td key="category">{{ categoryLabel(slotProps.row) }}</q-td>
                     <q-td key="name" class="text-weight-medium">{{ rowName(slotProps.row) }}</q-td>
+                    <q-td key="description">{{ slotProps.row.description?.trim() || '—' }}</q-td>
                     <q-td key="quantity">{{ slotProps.row.quantity ?? '—' }}</q-td>
                     <q-td key="datacenterId">{{ datacenterLabel(slotProps.row) }}</q-td>
 
@@ -37,7 +38,7 @@
                                 icon="visibility"
                                 text-color="dark"
                                 :aria-label="$t('inventoryViewRow')"
-                                @click="detailDialog.openHardware(slotProps.row, 'view')"
+                                @click="openDialog(slotProps.row, 'view')"
                             >
                                 <q-tooltip>{{ $t('inventoryViewRow') }}</q-tooltip>
                             </q-btn>
@@ -49,7 +50,7 @@
                                 icon="edit"
                                 text-color="dark"
                                 :aria-label="$t('inventoryEditRow')"
-                                @click="detailDialog.openHardware(slotProps.row, 'edit')"
+                                @click="openDialog(slotProps.row)"
                             >
                                 <q-tooltip>{{ $t('inventoryEditRow') }}</q-tooltip>
                             </q-btn>
@@ -71,17 +72,12 @@
             </template>
         </q-table>
 
-        <HardwareDetailDialog
-            v-if="detailDialog.hardwareSelectedRow"
-            v-model:open="detailDialog.hardwareDialogOpen"
-            v-model:row="detailDialog.hardwareSelectedRow"
-            :readonly="detailDialog.hardwareDialogMode === 'view'"
-        />
+        <HardwareDetailDialog ref="dialog" @close="emit('close', $event)" />
     </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useQuasar, type QTableColumn } from 'quasar';
 import type { z } from 'zod';
@@ -90,12 +86,13 @@ import HardwareDetailDialog from 'src/components/inventory/HardwareDetailDialog.
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useSurveyResultsStore } from 'src/stores/surveyResults';
 import { HardwareItemSchema, type HardwareItem } from 'src/models/HardwareItem/schema';
-import { useDetailDialogStore } from 'src/composables/useDetailDialog';
+import type { DialogMode } from 'src/types/ui';
 import { formatCategoryName, formatDatacenterName } from 'src/utils/format';
 
 const surveyData = useSurveyDataStore();
 const surveyResults = useSurveyResultsStore();
-const detailDialog = useDetailDialogStore();
+const dialog = useTemplateRef<InstanceType<typeof HardwareDetailDialog>>('dialog');
+const emit = defineEmits<{ close: [rowId: string] }>();
 
 const { t } = useI18n();
 const $q = useQuasar();
@@ -121,6 +118,14 @@ const columns = computed<InventoryColumn[]>(() => [
         align: 'left',
         kind: 'text',
         zod: HardwareItemSchema.shape.name,
+    },
+    {
+        name: 'description',
+        label: t('inventoryColumns.description'),
+        field: 'description',
+        align: 'left',
+        kind: 'text',
+        zod: HardwareItemSchema.shape.description,
     },
     {
         name: 'quantity',
@@ -169,13 +174,20 @@ function confirmDeleteRow(row: HardwareItem): void {
     }).onOk(() => {
         const i = surveyData.hardware.findIndex((h) => h.id === row.id);
         if (i >= 0) surveyData.hardware.splice(i, 1);
-        if (detailDialog.hardwareSelectedRow?.id === row.id) {
-            detailDialog.closeHardware();
-        }
+        dialog.value?.closeIfShowing(row.id);
     });
 }
 
-defineExpose({ openDialog: detailDialog.openHardware });
+function openDialog(row: HardwareItem, mode: DialogMode = 'edit', isNew = false): void {
+    void dialog.value?.showAndFocus(row, isNew ? { mode, isNew } : { mode });
+}
+
+function showAndFocus(rowId: string, field?: string): Promise<void> | undefined {
+    const row = surveyData.hardware.find((item) => item.id === rowId);
+    if (row) return dialog.value?.showAndFocus(row, { field });
+}
+
+defineExpose({ openDialog, showAndFocus });
 </script>
 
 <style scoped lang="scss">

@@ -48,10 +48,10 @@ function categoryLabel(group: EmbodiedGroup): string {
     return formatCategoryName(group.category, group.categoryName, t);
 }
 
-/** Flat treemap (by element) */
+/** Flat treemap (by element): one tile per counted hardware item, distinct colours. */
 function toElementTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeriesOption['data']> {
-    return groups.flatMap((g, categoryIdx) => {
-        const categoryColor = getCategoryColor(categoryIdx);
+    let elementIdx = 0;
+    return groups.flatMap((g) => {
         const groupLabel = categoryLabel(g);
 
         return g.rows.flatMap((row) => {
@@ -60,47 +60,33 @@ function toElementTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSerie
                 ? []
                 : [
                       {
-                          name: row.name,
+                          name: row.name.trim() || t('resultsChartUntitledElement'),
                           categoryLabel: groupLabel,
                           value,
-                          itemStyle: { color: categoryColor },
+                          itemStyle: { color: getCategoryColor(elementIdx++) },
                       },
                   ];
         });
     });
 }
 
-/** Nested treemap (by category) */
+/** Flat treemap (by category): one aggregated tile per category. */
 function toCategoryTreemapData(groups: EmbodiedGroup[]): NonNullable<TreemapSeriesOption['data']> {
-    return groups
-        .flatMap((g, i) => {
-            const total = g.totalEmbodiedEmissionsKg.result;
-            if (total === null) return [];
-            const categoryColor = getCategoryColor(i);
-            const groupLabel = categoryLabel(g);
-
-            return [
-                {
-                    name: groupLabel,
-                    value: total,
-                    itemStyle: { color: categoryColor },
-                    children: g.rows.flatMap((row) => {
-                        const value = row.rowEmbodiedEmissionsKg.result;
-                        return row.excluded || value === null || !(value > 0)
-                            ? []
-                            : [
-                                  {
-                                      name: row.name,
-                                      categoryLabel: groupLabel,
-                                      value,
-                                      itemStyle: { color: categoryColor },
-                                  },
-                              ];
-                    }),
-                },
-            ];
-        })
-        .filter((g) => (g.children?.length ?? 0) > 0);
+    return groups.flatMap((g, i) => {
+        const total = g.rows.reduce((sum, row) => {
+            const value = row.rowEmbodiedEmissionsKg.result;
+            return row.excluded || value === null || !(value > 0) ? sum : sum + value;
+        }, 0);
+        return total > 0
+            ? [
+                  {
+                      name: categoryLabel(g),
+                      value: total,
+                      itemStyle: { color: getCategoryColor(i) },
+                  },
+              ]
+            : [];
+    });
 }
 
 /** Pre-computed data items for the treemap. */
@@ -128,7 +114,9 @@ const chartOption = computed<ECOption>(() => ({
                 props.grandTotal !== null && props.grandTotal > 0
                     ? (value / props.grandTotal) * 100
                     : 0;
-            return `${echarts.format.encodeHTML(item.name)}<br/>${formatKg(value)} (${pct.toFixed(1)}${t('resultsColPercent')})`;
+            const category = (item.data as { categoryLabel?: string } | undefined)?.categoryLabel;
+            const title = category ? `${item.name} (${category})` : `${item.name}`;
+            return `${echarts.format.encodeHTML(title)}<br/>${formatKg(value)} (${pct.toFixed(1)}${t('resultsColPercent')})`;
         },
     },
     series: [
@@ -139,9 +127,10 @@ const chartOption = computed<ECOption>(() => ({
             right: 0,
             bottom: 35,
             data: chartData.value,
+            leafDepth: 1,
             roam: true,
             nodeClick: 'zoomToNode',
-            breadcrumb: { show: true },
+            breadcrumb: { show: false },
             label: {
                 show: true,
                 position: 'insideTopLeft',
@@ -149,13 +138,7 @@ const chartOption = computed<ECOption>(() => ({
                 fontSize: 13,
                 fontWeight: 'bold',
                 lineHeight: 18,
-                formatter: (p: CallbackDataParams) => {
-                    const data = p.data as { categoryLabel?: string };
-                    const val = formatKg(Number(p.value));
-                    return data.categoryLabel
-                        ? `${data.categoryLabel}\n\n${p.name}\n${val}`
-                        : `${p.name}\n${val}`;
-                },
+                formatter: (p: CallbackDataParams) => `${p.name}\n${formatKg(Number(p.value))}`,
             },
             itemStyle: {
                 borderColor: '#fff',
@@ -170,6 +153,6 @@ const chartOption = computed<ECOption>(() => ({
 <style scoped>
 .embodied-treemap {
     width: 100%;
-    height: 340px;
+    height: 260px;
 }
 </style>

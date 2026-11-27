@@ -9,20 +9,31 @@ export function formatDatacenterName(dc: Pick<DatacenterDraft, 'id' | 'generalIn
     return abbreviation && name ? `${abbreviation} — ${name}` : abbreviation || name || dc.id;
 }
 
-/** kg CO₂-eq, en-US formatting with comma thousands separator, 2 decimals ("48,852.77"). */
-export function formatKg(n: number | null): string {
+/** Number with en-US comma thousands separator ("915,000" or "1,568.32"). */
+export function formatNumber(n: number | null, options?: Intl.NumberFormatOptions): string {
     if (n === null) return '—';
     return new Intl.NumberFormat('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        maximumFractionDigits: 10,
+        ...options,
     }).format(n);
+}
+
+/** Strips comma thousand separators and parses to number; leaves invalid text for Zod. */
+export function parseNumber(text: string): string | number {
+    const cleaned = text.replaceAll(',', '').trim();
+    if (cleaned === '') return '';
+    const value = Number(cleaned);
+    return Number.isNaN(value) ? text : value;
+}
+
+/** kg CO₂-eq, en-US formatting with comma thousands separator, 2 decimals ("48,852.77"). */
+export function formatKg(n: number | null): string {
+    return formatNumber(n, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 /** Integer capacity in GB, with comma thousands separators. */
 export function formatGb(value: number): string {
-    return `${new Intl.NumberFormat('en-US', {
-        maximumFractionDigits: 0,
-    }).format(value)} GB`;
+    return `${formatNumber(value, { maximumFractionDigits: 0 })} GB`;
 }
 
 /** Format a result with caller-provided missing and partial-result labels. */

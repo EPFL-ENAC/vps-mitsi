@@ -1,6 +1,8 @@
 export default {
     // --- Shared labels ---
     commonBack: 'Back',
+    commonCancel: 'Cancel',
+    commonSave: 'Save',
     commonYes: 'Yes',
     commonNo: 'No',
     // --- Welcome page ---
@@ -163,7 +165,8 @@ export default {
         },
         separators: {
             usedFor: 'used for',
-            because: 'because',
+            includedReason: 'comment',
+            excludedReason: 'because',
         },
         placeholders: {
             type: 'what?',
@@ -246,7 +249,7 @@ export default {
         gpuName: 'GPU – name',
         gpuQuantity: 'GPU – quantity (nb)',
         gpuLithography: 'GPU – lithography (nm)',
-        gpuDieSize: 'GPU – die (mm²)',
+        gpuDieSize: 'GPU – Die size (mm²)',
         gpuMemory: 'GPU – memory (GB)',
         // Network & PSU
         networkPorts: 'Network ports (nb)',
@@ -387,6 +390,7 @@ export default {
     resultsHostedIn: 'Hosted in: {dcs}',
     resultsChartTreemapByElement: 'Embodied emissions by element',
     resultsChartTreemapByCategory: 'Embodied emissions by category',
+    resultsChartUntitledElement: 'Untitled element',
     resultsChartTreemapByDatacenter: 'Operational emissions by datacenter',
     resultsChartSplitTitle: 'Emissions repartition',
     resultsColorBlindToggle: 'Colour-blind mode',
@@ -402,6 +406,7 @@ export default {
     // --- Report (printable; see src/pages/ReportPreviewPage.vue) ---
     reportToolbarTitle: 'Report',
     reportPrint: 'Print',
+    reportTocTitle: 'Contents',
     reportGeneratedOn: 'Generated on {date}',
     // --- Validation messages (Zod -> Quasar; see composables/useValidation.ts) ---
     validation: {

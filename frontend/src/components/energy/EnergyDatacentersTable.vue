@@ -21,6 +21,7 @@
                     <q-td key="carbonIntensity">
                         {{ formatCell(slotProps.row.energy.carbonIntensity, 'gCO₂/kWh') }}
                     </q-td>
+                    <q-td key="pue">{{ formatCell(slotProps.row.energy.pue) }}</q-td>
                     <q-td key="energyConsumption">
                         {{ formatCell(slotProps.row.energy.energyConsumption, 'kWh') }}
                     </q-td>
@@ -36,7 +37,7 @@
                                 icon="visibility"
                                 text-color="dark"
                                 :aria-label="$t('energyViewRow')"
-                                @click="detailDialog.openEnergy(slotProps.row, 'view')"
+                                @click="openDialog(slotProps.row, 'view')"
                             >
                                 <q-tooltip>{{ $t('energyViewRow') }}</q-tooltip>
                             </q-btn>
@@ -48,7 +49,7 @@
                                 icon="edit"
                                 text-color="dark"
                                 :aria-label="$t('energyEditRow')"
-                                @click="detailDialog.openEnergy(slotProps.row, 'edit')"
+                                @click="openDialog(slotProps.row)"
                             >
                                 <q-tooltip>{{ $t('energyEditRow') }}</q-tooltip>
                             </q-btn>
@@ -70,28 +71,24 @@
             </template>
         </q-table>
 
-        <EnergyDatacenterDetailDialog
-            v-if="detailDialog.energySelectedRow"
-            v-model:open="detailDialog.energyDialogOpen"
-            v-model:row="detailDialog.energySelectedRow"
-            :readonly="detailDialog.energyDialogMode === 'view'"
-        />
+        <EnergyDatacenterDetailDialog ref="dialog" @close="emit('close', $event)" />
     </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useQuasar, type QTableColumn } from 'quasar';
 
 import EnergyDatacenterDetailDialog from 'src/components/energy/EnergyDatacenterDetailDialog.vue';
 import { useSurveyDataStore } from 'src/stores/surveyData';
-import { useDetailDialogStore } from 'src/composables/useDetailDialog';
+import type { DialogMode } from 'src/types/ui';
 import type { DatacenterDraft } from 'src/models/Datacenter/schema';
-import { formatDatacenterName } from 'src/utils/format';
+import { formatDatacenterName, formatNumber } from 'src/utils/format';
 
 const surveyData = useSurveyDataStore();
-const detailDialog = useDetailDialogStore();
+const dialog = useTemplateRef<InstanceType<typeof EnergyDatacenterDetailDialog>>('dialog');
+const emit = defineEmits<{ close: [rowId: string] }>();
 
 const { t } = useI18n();
 const $q = useQuasar();
@@ -100,7 +97,7 @@ interface EnergyColumn extends QTableColumn<DatacenterDraft> {
     kind?: 'datacenter' | 'text' | 'number' | 'actions';
 }
 
-/** Compact master list: PUE and the comments live in the detail dialog only. */
+/** Compact master list: only the comments stay in the detail dialog. */
 const columns = computed<EnergyColumn[]>(() => [
     {
         name: 'datacenter',
@@ -124,6 +121,13 @@ const columns = computed<EnergyColumn[]>(() => [
         kind: 'number',
     },
     {
+        name: 'pue',
+        label: t('energyColumns.pue'),
+        field: (dc) => dc.energy.pue,
+        align: 'left',
+        kind: 'number',
+    },
+    {
         name: 'energyConsumption',
         label: t('energyColumns.energyConsumption'),
         field: (dc) => dc.energy.energyConsumption,
@@ -138,11 +142,13 @@ const columns = computed<EnergyColumn[]>(() => [
         kind: 'actions',
     },
 ]);
+
 function formatCell(val: string | number | null | undefined, unit?: string): string {
-    if (val === null || val === undefined || val === '' || Number.isNaN(val)) return '—';
-    const text = typeof val === 'number' ? val.toLocaleString() : val.trim();
+    if (val === null || val === undefined || val === '') return '—';
+    const text = typeof val === 'number' ? formatNumber(val) : val.trim();
     return !text ? '—' : unit ? `${text} ${unit}` : text;
 }
+
 function clearEnergy(dc: DatacenterDraft): void {
     $q.dialog({
         title: t('energyClearConfirmTitle'),
@@ -154,7 +160,16 @@ function clearEnergy(dc: DatacenterDraft): void {
     }).onOk(() => surveyData.clearDatacenterEnergy(dc.id));
 }
 
-defineExpose({ openDialog: detailDialog.openEnergy });
+function openDialog(row: DatacenterDraft, mode: DialogMode = 'edit'): void {
+    void dialog.value?.showAndFocus(row, { mode });
+}
+
+function showAndFocus(rowId: string, field?: string): Promise<void> | undefined {
+    const row = surveyData.datacenters.find((item) => item.id === rowId);
+    if (row) return dialog.value?.showAndFocus(row, { field });
+}
+
+defineExpose({ openDialog, showAndFocus });
 </script>
 
 <style scoped lang="scss">

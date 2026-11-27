@@ -16,7 +16,12 @@
         </q-banner>
 
         <!-- Usage monitoring period -->
-        <AssessmentSection :title="$t('energyMonitorTitle')" purpose="calculation" default-opened>
+        <AssessmentSection
+            :ref="registerSection"
+            :title="$t('energyMonitorTitle')"
+            purpose="calculation"
+            default-opened
+        >
             <EnergyMonitoringPeriodForm />
         </AssessmentSection>
 
@@ -30,22 +35,29 @@
 
         <!-- Datacenters' information -->
         <AssessmentSection
+            :ref="registerSection"
             :title="$t('energyDcTitle')"
             :title-tooltip="$t('energyDcColumnsTooltip')"
             purpose="calculation"
             default-opened
         >
-            <EnergyDatacentersTable />
+            <EnergyDatacentersTable ref="table" @close="clearRowSelection" />
         </AssessmentSection>
     </div>
 </template>
 
 <script setup lang="ts">
+import { useTemplateRef } from 'vue';
 import { useSurveyDataStore } from 'src/stores/surveyData';
 
 import AssessmentSection from 'src/components/AssessmentSection.vue';
 import EnergyMonitoringPeriodForm from 'src/components/energy/EnergyMonitoringPeriodForm.vue';
 import EnergyDatacentersTable from 'src/components/energy/EnergyDatacentersTable.vue';
+import { useAssessmentQueryFocus } from 'src/composables/useAssessmentQueryFocus';
 
 const surveyData = useSurveyDataStore();
+const table = useTemplateRef<InstanceType<typeof EnergyDatacentersTable>>('table');
+const { registerSection, clearRowSelection } = useAssessmentQueryFocus((rowId, field) =>
+    table.value?.showAndFocus(rowId, field),
+);
 </script>
