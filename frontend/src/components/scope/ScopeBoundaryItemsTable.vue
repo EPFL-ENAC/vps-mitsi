@@ -56,7 +56,7 @@
                     flat
                     dense
                     round
-                    icon="delete"
+                    icon="sym_r_delete"
                     :aria-label="t('scopeBndDelete')"
                     @click="removeItem(item.id)"
                 />
@@ -107,11 +107,11 @@ function removeItem(id: string): void {
     font-weight: 700;
     white-space: nowrap;
     min-width: 140px;
-    color: #1d1d1d;
+    color: var(--epfl-grey-900);
 }
 
 .boundary-separator {
-    color: #555;
+    color: var(--epfl-grey-700);
     white-space: nowrap;
 }
 

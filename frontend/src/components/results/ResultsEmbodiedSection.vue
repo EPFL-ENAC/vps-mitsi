@@ -138,8 +138,8 @@
         </q-markup-table>
 
         <!-- treemap by element + treemap by category -->
-        <div v-if="showChart" class="row q-col-gutter-md q-mt-sm">
-            <div class="col-12 col-md-6">
+        <div v-if="showChart" class="row q-col-gutter-md q-mt-sm results-embodied-charts">
+            <div class="col-12 col-sm-6">
                 <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
                     {{ $t('resultsChartTreemapByElement') }}
                     <ComputationResultDisplay
@@ -159,7 +159,7 @@
                     variant="element"
                 />
             </div>
-            <div class="col-12 col-md-6">
+            <div class="col-12 col-sm-6">
                 <div class="text-subtitle1 text-weight-bold text-grey-8 q-mb-xs">
                     {{ $t('resultsChartTreemapByCategory') }}
                     <ComputationResultDisplay
@@ -234,6 +234,8 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
         align: 'left',
         field: (row) => row.name,
         kind: 'text',
+        style: 'width: 22%',
+        headerStyle: 'width: 22%',
     },
     {
         name: 'description',
@@ -241,6 +243,8 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
         align: 'left',
         field: (row) => row.description,
         kind: 'text',
+        style: 'width: 36%',
+        headerStyle: 'width: 36%',
     },
     {
         name: 'number',
@@ -249,6 +253,8 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
         field: (row) => row.quantity.result,
         computation: (row) => row.quantity,
         kind: 'number',
+        style: 'width: 10%',
+        headerStyle: 'width: 10%',
     },
     {
         name: 'co2PerUnit',
@@ -258,6 +264,8 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
         computation: (row) => row.unitEmbodiedEmissionsKg,
         formatValue: formatKg,
         kind: 'number',
+        style: 'width: 16%',
+        headerStyle: 'width: 16%',
     },
     {
         name: 'co2RowTotal',
@@ -267,6 +275,8 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
         computation: (row) => row.rowEmbodiedEmissionsKg,
         formatValue: formatKg,
         kind: 'number',
+        style: 'width: 16%',
+        headerStyle: 'width: 16%',
     },
 ]);
 </script>
@@ -283,6 +293,12 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
         white-space: normal !important;
         word-break: break-word;
     }
+
+    /* Fixed layout so every category table aligns vertically. */
+    &:not(.results-total-table) :deep(table) {
+        table-layout: fixed;
+        width: 100%;
+    }
 }
 
 .results-category {
@@ -293,9 +309,12 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
     margin-bottom: 16px !important;
 }
 
+/* Stays glued to its table's last row, but the next category may start a page. */
 .results-category-total {
-    page-break-after: avoid;
-    break-after: avoid;
+    page-break-before: avoid;
+    break-before: avoid;
+    page-break-after: auto !important;
+    break-after: auto !important;
 }
 
 .results-excluded {
@@ -309,5 +328,27 @@ const embodiedColumns = computed<EmbodiedTableColumn[]>(() => [
 .results-not-counted {
     font-style: italic;
     color: rgba(0, 0, 0, 0.5);
+}
+
+.results-embodied-charts {
+    /* Both treemaps must stay on one landscape page: never split the row. */
+    page-break-inside: avoid;
+    break-inside: avoid;
+
+    > * {
+        break-inside: avoid;
+    }
+}
+
+@media print {
+    .results-embodied-wrapper > .q-mb-md {
+        margin-bottom: 8px !important;
+    }
+
+    /* Quasar's row already lays both treemaps side by side: never split it. */
+    .results-embodied-charts {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
 }
 </style>

@@ -169,8 +169,10 @@ test('the category cell swaps in place for a validated custom name', async () =>
     // The back button leaves the custom mode and clears the name.
     const back = buttons.find((control) => control.$attrs['aria-label'] === en.commonBack);
     assert.ok(back, 'missing the back button');
-    assert.equal(back.$props.icon, 'arrow_back');
-    assert.equal(html.includes('arrow_back'), true);
+    // Unified Material Symbols Rounded icon: `sym_r_` maps to the font class.
+    assert.equal(back.$props.icon, 'sym_r_arrow_back');
+    assert.equal(html.includes('material-symbols-rounded'), true);
+    assert.equal(html.includes('>arrow_back<'), true);
     back.$emit('click');
     assert.equal(row.category, 'server');
     assert.equal(row.categoryOther, '');

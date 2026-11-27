@@ -33,7 +33,7 @@
                                         round
                                         dense
                                         size="sm"
-                                        icon="arrow_back"
+                                        icon="sym_r_arrow_back"
                                         :aria-label="$t('commonBack')"
                                         @click="resetCustomCategory"
                                     >

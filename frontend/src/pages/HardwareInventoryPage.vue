@@ -60,8 +60,11 @@
         <q-banner
             v-if="surveyData.missingMandatoryHardware > 0"
             inline-actions
-            class="bg-warning text-white q-mb-md"
+            class="bg-warning text-dark q-mb-md"
         >
+            <template #avatar>
+                <q-icon name="sym_r_warning" />
+            </template>
             {{ $t('inventoryWarningBar', { n: surveyData.missingMandatoryHardware }) }}
         </q-banner>
 
@@ -111,7 +114,7 @@ const { clearRowSelection } = useAssessmentQueryFocus((rowId, field) =>
 }
 
 .inventory-footer {
-    border-top: 1px solid #e6e9ef;
+    border-top: 1px solid var(--epfl-grey-100);
     padding-top: 12px;
 }
 </style>

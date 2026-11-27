@@ -116,7 +116,7 @@ const chartOption = computed<ECOption>(() => ({
                     : 0;
             const category = (item.data as { categoryLabel?: string } | undefined)?.categoryLabel;
             const title = category ? `${item.name} (${category})` : `${item.name}`;
-            return `${title}<br/>${formatKg(value)} (${pct.toFixed(1)}${t('resultsColPercent')})`;
+            return `${echarts.format.encodeHTML(title)}<br/>${formatKg(value)} (${pct.toFixed(1)}${t('resultsColPercent')})`;
         },
     },
     series: [
@@ -153,6 +153,6 @@ const chartOption = computed<ECOption>(() => ({
 <style scoped>
 .embodied-treemap {
     width: 100%;
-    height: 340px;
+    height: 260px;
 }
 </style>
