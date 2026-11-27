@@ -40,13 +40,14 @@
 
     .q-td {
         vertical-align: middle;
+        font-variant-numeric: tabular-nums;
     }
 
     tbody tr:nth-child(even) {
-        background-color: #f1f5f9;
+        background-color: var(--epfl-grey-50);
     }
 
     tbody tr:nth-child(odd) {
-        background-color: #ffffff;
+        background-color: var(--epfl-white);
     }
 }

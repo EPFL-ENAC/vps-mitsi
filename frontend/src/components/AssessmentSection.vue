@@ -94,12 +94,12 @@ defineExpose({ focusField });
 }
 
 .assessment-section__badge--calculation {
-    background: #fff0f1;
-    color: #c1001a;
+    background: var(--epfl-red-tint);
+    color: var(--epfl-red-text);
 }
 
 .assessment-section__badge--report {
-    background: #eff2f6;
-    color: #48525f;
+    background: var(--epfl-grey-100);
+    color: var(--epfl-grey-700);
 }
 </style>

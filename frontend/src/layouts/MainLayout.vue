@@ -6,7 +6,7 @@
                     flat
                     dense
                     round
-                    icon="menu"
+                    icon="sym_r_menu"
                     :aria-label="$t('mainMenuAriaLabel')"
                     @click="leftDrawerOpen = !leftDrawerOpen"
                 />
@@ -20,23 +20,22 @@
                 </span>
                 <q-btn
                     unelevated
-                    class="text-white q-mr-sm"
-                    style="background-color: #00a79f"
+                    color="primary"
+                    class="q-mr-sm"
                     :label="$t('mainSave')"
                     @click="saveAssessment"
                 />
                 <q-btn
-                    unelevated
-                    class="text-white"
-                    style="background-color: #007480"
+                    outline
+                    color="primary"
                     :label="$t('mainExport')"
                     @click="exportAssessment"
                 />
                 <!-- import button-->
                 <q-btn
-                    unelevated
-                    class="text-white q-ml-sm"
-                    style="background-color: #007480"
+                    outline
+                    color="primary"
+                    class="q-ml-sm"
                     :label="$t('mainImport')"
                     @click="fileInputRef?.pickFiles()"
                 />
@@ -59,7 +58,7 @@
                 <!-- Welcome -->
                 <q-item v-ripple clickable to="/" exact>
                     <q-item-section avatar>
-                        <q-icon name="home" />
+                        <q-icon name="sym_r_home" />
                     </q-item-section>
                     <q-item-section>{{ $t('mainNavWelcome') }}</q-item-section>
                 </q-item>
@@ -69,14 +68,14 @@
                     default-opened
                     dense
                     switch-toggle-side
-                    expand-icon="keyboard_arrow_down"
+                    expand-icon="sym_r_keyboard_arrow_down"
                     header-class="text-weight-bold"
                     :label="$t('mainNavAssessment')"
                 >
                     <!-- Scope -->
                     <q-item v-ripple clickable to="/scope">
                         <q-item-section avatar>
-                            <q-icon name="my_location" />
+                            <q-icon name="sym_r_my_location" />
                         </q-item-section>
                         <q-item-section>
                             <q-item-label>{{ $t('mainNavScope') }}</q-item-label>
@@ -88,7 +87,7 @@
                             <span class="row items-center no-wrap">
                                 <q-icon
                                     v-if="surveyData.scopeStatus === 'partial'"
-                                    name="warning"
+                                    name="sym_r_warning"
                                     size="14px"
                                     class="q-mr-xs"
                                 />
@@ -105,7 +104,7 @@
                     <!-- Hardware -->
                     <q-item v-ripple clickable to="/inventory">
                         <q-item-section avatar>
-                            <q-icon name="memory" />
+                            <q-icon name="sym_r_memory" />
                         </q-item-section>
                         <q-item-section>
                             <q-item-label>{{ $t('mainNavInventory') }}</q-item-label>
@@ -117,7 +116,7 @@
                             <span class="row items-center no-wrap">
                                 <q-icon
                                     v-if="surveyData.missingMandatoryHardware > 0"
-                                    name="warning"
+                                    name="sym_r_warning"
                                     size="14px"
                                     class="q-mr-xs"
                                 />
@@ -129,7 +128,7 @@
                     <!-- Energy -->
                     <q-item v-ripple clickable to="/energy">
                         <q-item-section avatar>
-                            <q-icon name="bolt" />
+                            <q-icon name="sym_r_bolt" />
                         </q-item-section>
                         <q-item-section>
                             <q-item-label>{{ $t('mainNavEnergy') }}</q-item-label>
@@ -141,7 +140,7 @@
                             <span class="row items-center no-wrap">
                                 <q-icon
                                     v-if="surveyData.hasIncompleteEnergy"
-                                    name="warning"
+                                    name="sym_r_warning"
                                     size="14px"
                                     class="q-mr-xs"
                                 />
@@ -160,7 +159,7 @@
                     :to="resultsUnlocked ? '/results' : undefined"
                 >
                     <q-item-section avatar>
-                        <q-icon :name="resultsUnlocked ? 'insights' : 'lock'" />
+                        <q-icon :name="resultsUnlocked ? 'sym_r_analytics' : 'sym_r_lock'" />
                     </q-item-section>
                     <q-item-section>
                         <q-item-label>{{ $t('mainNavResults') }}</q-item-label>
@@ -339,12 +338,11 @@ async function onFilePicked(file: File | null): Promise<void> {
     const fileIsEmpty = isImportEmpty(json);
 
     $q.dialog({
-        title: fileIsEmpty ? `⚠️ ${t('mainImportWarningTitle')}` : t('mainImportWarningTitle'),
+        title: fileIsEmpty ? t('mainImportWarningTitleEmptyFile') : t('mainImportWarningTitle'),
         message: fileIsEmpty ? t('mainImportWarningEmptyFile') : t('mainImportWarning'),
-        cancel: true,
+        cancel: { label: t('mainCancel'), flat: true, color: 'dark' },
+        ok: { label: t('mainReplace'), color: 'negative', unelevated: true },
         persistent: true,
-        // Red OK button looks different for case when file is empty
-        ...(fileIsEmpty && { ok: { color: 'negative' } }),
     }).onOk(() => importText(json));
 }
 
@@ -463,10 +461,10 @@ function formatTimeAgo(ts: number): string {
 /* bage status */
 .nav-badge {
     white-space: nowrap;
-    color: #6b7280;
+    color: var(--epfl-grey-600);
 }
 
 .q-item .nav-badge .q-icon {
-    color: #f59e0b !important;
+    color: var(--q-warning, #f59e0b) !important;
 }
 </style>

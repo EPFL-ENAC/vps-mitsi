@@ -1,8 +1,15 @@
 <template>
     <div class="report-view-container bg-grey-3">
         <!-- toolbar-->
-        <q-toolbar class="print-hide report-toolbar bg-white text-dark shadow-1">
-            <q-btn flat round dense icon="arrow_back" aria-label="Back" @click="router.back()" />
+        <q-toolbar class="print-hide report-toolbar bg-white text-dark bordered">
+            <q-btn
+                flat
+                round
+                dense
+                icon="sym_r_arrow_back"
+                aria-label="Back"
+                @click="router.back()"
+            />
             <q-toolbar-title class="text-weight-bold text-subtitle1">
                 {{ $t('reportToolbarTitle') }}
             </q-toolbar-title>
@@ -10,7 +17,7 @@
             <q-btn
                 color="primary"
                 unelevated
-                icon="print"
+                icon="sym_r_print"
                 :label="$t('reportPrint')"
                 @click="printReport"
             />
@@ -20,8 +27,11 @@
             <q-banner
                 v-if="!surveyData.isScopeValid"
                 inline-actions
-                class="bg-warning text-white q-mb-md print-hide"
+                class="bg-warning text-dark q-mb-md print-hide"
             >
+                <template #avatar>
+                    <q-icon name="sym_r_warning" />
+                </template>
                 {{ $t('resultsNoScopeHint') }}
             </q-banner>
 
@@ -29,7 +39,7 @@
                 <!-- Sheet 1: Title Sheet -->
                 <ReportSheet>
                     <div class="report-cover">
-                        <h1 class="text-h3 text-weight-bolder text-primary q-mb-lg">
+                        <h1 class="text-h3 text-weight-bolder text-epfl-red q-mb-lg">
                             {{ surveyData.scope.serviceName || $t('resultsSummaryServiceName') }}
                         </h1>
 
@@ -86,7 +96,7 @@
                         </div>
                     </div>
 
-                    <div class="q-mb-md text-body2 text-primary text-weight-medium">
+                    <div class="q-mb-md text-body2 text-epfl-red text-weight-medium">
                         {{ fuSentence }}
                     </div>
 
