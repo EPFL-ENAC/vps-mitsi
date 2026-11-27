@@ -545,3 +545,21 @@ test('heading statuses translate and disappear when the sources are repaired', a
     split.store.datacenters[1].energy.energyConsumption = 0;
     assert.equal(text(heading(await split.renderAgain(), en.resultsChartSplitTitle)), '');
 });
+
+test('split chart tooltip escapes HTML in labels and keeps its line break', async () => {
+    const result = await renderTables(TotalSplitPieChart, {
+        props: {
+            embodied: ComputationResult.success(10),
+            operational: ComputationResult.success(10),
+            labels: { embodied: 'A & B <b>', operational: 'Energy' },
+        },
+    });
+    const option = result.charts[0].option;
+    for (const item of option.series[0].data) {
+        const name = item.name === 'A & B <b>' ? 'A &amp; B &lt;b&gt;' : 'Energy';
+        assert.equal(
+            option.tooltip.formatter(item),
+            `${name}<br/>${item.value.toFixed(2)} (50.0%)`,
+        );
+    }
+});
