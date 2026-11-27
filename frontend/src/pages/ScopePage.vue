@@ -10,7 +10,7 @@
             class="bg-blue-1 text-blue-9 q-mb-md rounded-borders"
         >
             <template #avatar>
-                <q-icon name="sym_r_info" size="sm" />
+                <q-icon :name="symRoundedInfo" size="sm" />
             </template>
             {{ $t('scopeBlockFirstHint') }}
         </q-banner>
@@ -222,6 +222,7 @@
 </template>
 
 <script setup lang="ts">
+import { symRoundedInfo } from '@quasar/extras/material-symbols-rounded';
 import { useSurveyDataStore } from 'src/stores/surveyData';
 
 import AssessmentSection from 'src/components/AssessmentSection.vue';

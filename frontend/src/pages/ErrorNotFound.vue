@@ -1,7 +1,7 @@
 <template>
     <div class="fullscreen text-primary text-center q-pa-md flex flex-center">
         <div>
-            <div style="font-size: 30vh">404</div>
+            <div style="font-size: 30vh">{{ t('notFoundCode') }}</div>
 
             <div class="text-h2">{{ t('notFoundMessage') }}</div>
 

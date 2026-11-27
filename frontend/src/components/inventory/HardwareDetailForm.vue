@@ -33,7 +33,7 @@
                                         round
                                         dense
                                         size="sm"
-                                        icon="sym_r_arrow_back"
+                                        :icon="symRoundedArrowBack"
                                         :aria-label="$t('commonBack')"
                                         @click="resetCustomCategory"
                                     >
@@ -566,6 +566,7 @@
 </template>
 
 <script setup lang="ts">
+import { symRoundedArrowBack } from '@quasar/extras/material-symbols-rounded';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 

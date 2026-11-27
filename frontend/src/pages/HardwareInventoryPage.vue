@@ -16,7 +16,7 @@
             class="bg-blue-1 text-blue-9 q-mb-md rounded-borders"
         >
             <template #avatar>
-                <q-icon name="sym_r_info" size="sm" />
+                <q-icon :name="symRoundedInfo" size="sm" />
             </template>
             {{ $t('inventoryNoScopeHint') }}
         </q-banner>
@@ -63,7 +63,7 @@
             class="bg-warning text-dark q-mb-md"
         >
             <template #avatar>
-                <q-icon name="sym_r_warning" />
+                <q-icon :name="symRoundedWarning" />
             </template>
             {{ $t('inventoryWarningBar', { n: surveyData.missingMandatoryHardware }) }}
         </q-banner>
@@ -90,6 +90,7 @@
 </template>
 
 <script setup lang="ts">
+import { symRoundedInfo, symRoundedWarning } from '@quasar/extras/material-symbols-rounded';
 import { useTemplateRef } from 'vue';
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import { useSurveyResultsStore } from 'src/stores/surveyResults';

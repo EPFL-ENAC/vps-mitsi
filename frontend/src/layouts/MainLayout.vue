@@ -6,13 +6,13 @@
                     flat
                     dense
                     round
-                    icon="sym_r_menu"
+                    :icon="symRoundedMenu"
                     :aria-label="$t('mainMenuAriaLabel')"
                     @click="leftDrawerOpen = !leftDrawerOpen"
                 />
                 <q-toolbar-title class="header-brand text-weight-medium">
-                    <img :src="epflLogoUrl" alt="EPFL" class="header-brand__logo" />
-                    <span class="text-weight-bold">MITSI</span>
+                    <img :src="epflLogoUrl" :alt="$t('mainLogoAlt')" class="header-brand__logo" />
+                    <span class="text-weight-bold">{{ $t('mainBrand') }}</span>
                 </q-toolbar-title>
                 <q-space />
                 <span class="text-caption text-grey-7 q-mr-sm gt-xs">
@@ -58,7 +58,7 @@
                 <!-- Welcome -->
                 <q-item v-ripple clickable to="/" exact>
                     <q-item-section avatar>
-                        <q-icon name="sym_r_home" />
+                        <q-icon :name="symRoundedHome" />
                     </q-item-section>
                     <q-item-section>{{ $t('mainNavWelcome') }}</q-item-section>
                 </q-item>
@@ -68,14 +68,14 @@
                     default-opened
                     dense
                     switch-toggle-side
-                    expand-icon="sym_r_keyboard_arrow_down"
+                    :expand-icon="symRoundedKeyboardArrowDown"
                     header-class="text-weight-bold"
                     :label="$t('mainNavAssessment')"
                 >
                     <!-- Scope -->
                     <q-item v-ripple clickable to="/scope">
                         <q-item-section avatar>
-                            <q-icon name="sym_r_my_location" />
+                            <q-icon :name="symRoundedMyLocation" />
                         </q-item-section>
                         <q-item-section>
                             <q-item-label>{{ $t('mainNavScope') }}</q-item-label>
@@ -87,7 +87,7 @@
                             <span class="row items-center no-wrap">
                                 <q-icon
                                     v-if="surveyData.scopeStatus === 'partial'"
-                                    name="sym_r_warning"
+                                    :name="symRoundedWarning"
                                     size="14px"
                                     class="q-mr-xs"
                                 />
@@ -104,7 +104,7 @@
                     <!-- Hardware -->
                     <q-item v-ripple clickable to="/inventory">
                         <q-item-section avatar>
-                            <q-icon name="sym_r_memory" />
+                            <q-icon :name="symRoundedMemory" />
                         </q-item-section>
                         <q-item-section>
                             <q-item-label>{{ $t('mainNavInventory') }}</q-item-label>
@@ -116,7 +116,7 @@
                             <span class="row items-center no-wrap">
                                 <q-icon
                                     v-if="surveyData.missingMandatoryHardware > 0"
-                                    name="sym_r_warning"
+                                    :name="symRoundedWarning"
                                     size="14px"
                                     class="q-mr-xs"
                                 />
@@ -128,7 +128,7 @@
                     <!-- Energy -->
                     <q-item v-ripple clickable to="/energy">
                         <q-item-section avatar>
-                            <q-icon name="sym_r_bolt" />
+                            <q-icon :name="symRoundedBolt" />
                         </q-item-section>
                         <q-item-section>
                             <q-item-label>{{ $t('mainNavEnergy') }}</q-item-label>
@@ -140,7 +140,7 @@
                             <span class="row items-center no-wrap">
                                 <q-icon
                                     v-if="surveyData.hasIncompleteEnergy"
-                                    name="sym_r_warning"
+                                    :name="symRoundedWarning"
                                     size="14px"
                                     class="q-mr-xs"
                                 />
@@ -159,7 +159,7 @@
                     :to="resultsUnlocked ? '/results' : undefined"
                 >
                     <q-item-section avatar>
-                        <q-icon :name="resultsUnlocked ? 'sym_r_analytics' : 'sym_r_lock'" />
+                        <q-icon :name="resultsUnlocked ? symRoundedAnalytics : symRoundedLock" />
                     </q-item-section>
                     <q-item-section>
                         <q-item-label>{{ $t('mainNavResults') }}</q-item-label>
@@ -268,6 +268,17 @@
 </template>
 
 <script setup lang="ts">
+import {
+    symRoundedAnalytics,
+    symRoundedBolt,
+    symRoundedHome,
+    symRoundedKeyboardArrowDown,
+    symRoundedLock,
+    symRoundedMemory,
+    symRoundedMenu,
+    symRoundedMyLocation,
+    symRoundedWarning,
+} from '@quasar/extras/material-symbols-rounded';
 import { useSurveyDataStore, MAX_IMPORT_BYTES } from 'src/stores/surveyData';
 import { useSurveyResultsStore } from 'src/stores/surveyResults';
 

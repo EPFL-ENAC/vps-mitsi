@@ -10,7 +10,7 @@
             @click="dialogOpen = true"
         >
             <q-icon
-                :name="hasIssues ? 'sym_r_warning' : 'sym_r_check_circle'"
+                :name="hasIssues ? symRoundedWarning : symRoundedCheckCircle"
                 size="20px"
                 class="q-mr-xs"
                 :class="hasIssues ? 'text-warning' : 'text-positive'"
@@ -34,7 +34,7 @@
                 <q-card-section class="row items-center justify-between q-pb-none">
                     <div class="row items-center q-gutter-x-sm">
                         <q-icon
-                            :name="hasIssues ? 'sym_r_warning' : 'sym_r_check_circle'"
+                            :name="hasIssues ? symRoundedWarning : symRoundedCheckCircle"
                             :color="hasIssues ? 'warning' : 'positive'"
                             size="30px"
                         />
@@ -51,7 +51,7 @@
                         flat
                         round
                         dense
-                        icon="sym_r_close"
+                        :icon="symRoundedClose"
                         :aria-label="t('errorPanel.closeAriaLabel')"
                     />
                 </q-card-section>
@@ -101,7 +101,7 @@
                                     size="md"
                                     no-caps
                                     color="primary"
-                                    icon-right="sym_r_arrow_forward"
+                                    :icon-right="symRoundedArrowForward"
                                     :label="t('errorPanel.goToField')"
                                 />
                             </q-item-section>
@@ -114,6 +114,12 @@
 </template>
 
 <script setup lang="ts">
+import {
+    symRoundedArrowForward,
+    symRoundedCheckCircle,
+    symRoundedClose,
+    symRoundedWarning,
+} from '@quasar/extras/material-symbols-rounded';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useErrorSummary, type DiagnosticIssue } from 'src/composables/useErrorSummary';

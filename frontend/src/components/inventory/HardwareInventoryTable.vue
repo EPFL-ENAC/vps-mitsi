@@ -35,7 +35,7 @@
                                 round
                                 dense
                                 size="sm"
-                                icon="sym_r_visibility"
+                                :icon="symRoundedVisibility"
                                 text-color="dark"
                                 :aria-label="$t('inventoryViewRow')"
                                 @click="openDialog(slotProps.row, 'view')"
@@ -47,7 +47,7 @@
                                 round
                                 dense
                                 size="sm"
-                                icon="sym_r_edit"
+                                :icon="symRoundedEdit"
                                 text-color="dark"
                                 :aria-label="$t('inventoryEditRow')"
                                 @click="openDialog(slotProps.row)"
@@ -59,7 +59,7 @@
                                 round
                                 dense
                                 size="sm"
-                                icon="sym_r_delete"
+                                :icon="symRoundedDelete"
                                 text-color="negative"
                                 :aria-label="$t('inventoryDeleteRow')"
                                 @click="confirmDeleteRow(slotProps.row)"
@@ -77,6 +77,11 @@
 </template>
 
 <script setup lang="ts">
+import {
+    symRoundedDelete,
+    symRoundedEdit,
+    symRoundedVisibility,
+} from '@quasar/extras/material-symbols-rounded';
 import { computed, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useQuasar, type QTableColumn } from 'quasar';

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { symRoundedArrowBack, symRoundedClose } from '@quasar/extras/material-symbols-rounded';
 import { h } from 'vue';
 import {
     renderTables,
@@ -11,6 +12,9 @@ import {
 import { DatacenterDraftSchema, DatacenterEnergySchema } from '../src/models/Datacenter/schema.ts';
 import { formatNumber } from '../src/utils/format.ts';
 import en from '../src/i18n/en-GB/index.ts';
+
+const backPath = `d="${symRoundedArrowBack.split('|')[0]}"`;
+const closePath = `d="${symRoundedClose.split('|')[0]}"`;
 
 const datacenter = (overrides = {}) =>
     DatacenterDraftSchema.parse({
@@ -134,21 +138,21 @@ test('detail dialog shell shows the title, mode badge and mode-specific header a
     const readShell = await renderEnergyDialogShell({ row: filled(), readonly: true });
     const readHtml = await renderDialogContent(readShell);
     // The header no longer offers a back arrow; viewing ends with a single close action.
-    assert.ok(!readHtml.includes('arrow_back'));
+    assert.ok(!readHtml.includes(backPath));
     assert.ok(readHtml.includes('DC — Main datacenter'));
     assert.ok(readHtml.includes(en.energyDcTitle));
     assert.ok(readHtml.includes(en.inventoryModeReadonly));
-    assert.ok(readHtml.includes('>close<'));
+    assert.ok(readHtml.includes(closePath));
     assert.ok(!readHtml.includes(en.commonCancel));
     assert.ok(!readHtml.includes(en.commonSave));
 
     const editShell = await renderEnergyDialogShell({ row: filled() });
     const editHtml = await renderDialogContent(editShell);
-    assert.ok(!editHtml.includes('arrow_back'));
+    assert.ok(!editHtml.includes(backPath));
     assert.ok(editHtml.includes(en.inventoryModeEditing));
     assert.ok(editHtml.includes(en.commonCancel));
     assert.ok(editHtml.includes(en.commonSave));
-    assert.ok(!editHtml.includes('>close<'));
+    assert.ok(!editHtml.includes(closePath));
 });
 
 test('Cancel discards the draft while Save publishes it to the row', async () => {
