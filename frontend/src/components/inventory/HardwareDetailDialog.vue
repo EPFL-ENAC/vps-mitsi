@@ -20,7 +20,7 @@
                     class="q-pa-xs text-weight-medium rounded-borders q-mr-sm"
                 >
                     <q-icon
-                        :name="isReadonly ? 'sym_r_visibility' : 'sym_r_edit'"
+                        :name="isReadonly ? symRoundedVisibility : symRoundedEdit"
                         size="14px"
                         class="q-mr-xs"
                     />
@@ -34,7 +34,7 @@
                     flat
                     round
                     dense
-                    icon="sym_r_close"
+                    :icon="symRoundedClose"
                     text-color="grey-7"
                     class="q-ml-sm"
                 />
@@ -70,6 +70,11 @@
 </template>
 
 <script setup lang="ts">
+import {
+    symRoundedClose,
+    symRoundedEdit,
+    symRoundedVisibility,
+} from '@quasar/extras/material-symbols-rounded';
 import { computed, nextTick, ref, toRaw, useTemplateRef } from 'vue';
 import type { QCard } from 'quasar';
 import { useI18n } from 'vue-i18n';

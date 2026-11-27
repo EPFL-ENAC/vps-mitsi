@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { createSSRApp, h } from 'vue';
 import { renderToString } from 'vue/server-renderer';
 import { createI18n } from 'vue-i18n';
-import { Quasar } from 'quasar';
+import { QIcon, Quasar } from 'quasar';
 import { z } from 'zod';
 import ComputationResultDisplay from '../src/components/ComputationResultDisplay.vue';
 import ResultsTotalSection from '../src/components/results/ResultsTotalSection.vue';
@@ -26,7 +26,7 @@ async function renderResult(computation, { props = {}, slots = {}, messages = en
             if (this.$options.name === 'QTooltip') tooltip = this;
         },
     });
-    app.use(Quasar, {}, context);
+    app.use(Quasar, { components: { QIcon } }, context);
     app.use(createI18n({ legacy: false, locale: 'en', messages: { en: messages } }));
     const html = await renderToString(app, context);
     const diagnosticHtml = tooltip
@@ -52,7 +52,10 @@ test('disabled tooltips preserve values, formatting and slots with plain transla
             },
         });
         assert.equal(result.tooltip, undefined);
-        assert.doesNotMatch(result.html, /<button|info_outline|aria-describedby/);
+        assert.doesNotMatch(
+            result.html,
+            /<button|computation-result-display__indicator-icon|aria-describedby/,
+        );
         if (computation.success === 'success') assert.equal(text(result.html), '0.00');
         else {
             assert.match(result.html, new RegExp(`status--${computation.success}`));
@@ -98,6 +101,12 @@ test('partial flag labels keep formatted values and slots and are replaced in pl
         assert.match(text(partial.html), disableTooltip ? /Partial result/ : /Incomplete/);
         assert.doesNotMatch(text(partial.html), disableTooltip ? /Incomplete/ : /Partial result/);
         assert.equal(Boolean(partial.tooltip), !disableTooltip);
+        assert.equal(
+            /class="[^"]*computation-result-display__indicator-icon[^"]*"[^>]*><svg\b/.test(
+                partial.html,
+            ),
+            !disableTooltip,
+        );
         const slotted = await renderResult(ComputationResult.partial(2), {
             props: { partialFlagLabel: '(Partial)', disableTooltip },
             slots: { default: ({ result }) => h('b', `${result} kg`) },
@@ -252,7 +261,7 @@ test('value, failure, and indicator slots receive narrowed computations', async 
     });
     assert.match(failed.html, /No measurement/);
     assert.match(failed.html, /<span>Details<\/span>/);
-    assert.doesNotMatch(failed.html, /info_outline/);
+    assert.doesNotMatch(failed.html, /computation-result-display__indicator-icon/);
     assert.match(failed.html, /aria-label=/);
 });
 

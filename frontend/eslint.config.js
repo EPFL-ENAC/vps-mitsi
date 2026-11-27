@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import vueI18n from '@intlify/eslint-plugin-vue-i18n';
 import globals from 'globals';
 import pluginVue from 'eslint-plugin-vue';
 import prettier from 'eslint-config-prettier';
@@ -11,6 +12,22 @@ export default defineConfigWithVueTs(
     pluginVue.configs['flat/recommended'],
     // https://github.com/vuejs/eslint-config-typescript
     vueTsConfigs.recommendedTypeChecked,
+
+    {
+        files: ['src/**/*.vue'],
+        plugins: { '@intlify/vue-i18n': vueI18n },
+        rules: {
+            '@intlify/vue-i18n/no-raw-text': [
+                'error',
+                {
+                    attributes: {
+                        '/.+/': ['alt', 'aria-label', 'label', 'placeholder', 'title'],
+                    },
+                    ignorePattern: '^[\\s\\p{P}+]*$',
+                },
+            ],
+        },
+    },
 
     {
         files: ['**/*.ts', '**/*.vue'],

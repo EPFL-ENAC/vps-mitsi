@@ -34,7 +34,7 @@
                                 round
                                 dense
                                 size="sm"
-                                icon="sym_r_visibility"
+                                :icon="symRoundedVisibility"
                                 text-color="dark"
                                 :aria-label="$t('energyViewRow')"
                                 @click="openDialog(slotProps.row, 'view')"
@@ -46,7 +46,7 @@
                                 round
                                 dense
                                 size="sm"
-                                icon="sym_r_edit"
+                                :icon="symRoundedEdit"
                                 text-color="dark"
                                 :aria-label="$t('energyEditRow')"
                                 @click="openDialog(slotProps.row)"
@@ -58,7 +58,7 @@
                                 round
                                 dense
                                 size="sm"
-                                icon="sym_r_restart_alt"
+                                :icon="symRoundedRestartAlt"
                                 text-color="negative"
                                 :aria-label="$t('energyDcClear')"
                                 @click="clearEnergy(slotProps.row)"
@@ -76,6 +76,11 @@
 </template>
 
 <script setup lang="ts">
+import {
+    symRoundedEdit,
+    symRoundedRestartAlt,
+    symRoundedVisibility,
+} from '@quasar/extras/material-symbols-rounded';
 import { computed, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useQuasar, type QTableColumn } from 'quasar';

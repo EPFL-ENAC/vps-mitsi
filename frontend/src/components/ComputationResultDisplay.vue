@@ -1,4 +1,5 @@
 <script setup lang="ts" generic="C extends ComputationResult<unknown, unknown>">
+import { symRoundedInfo } from '@quasar/extras/material-symbols-rounded';
 import { computed, onBeforeUnmount, ref, useId, watch } from 'vue';
 import { QTooltip } from 'quasar';
 import { useI18n } from 'vue-i18n';
@@ -187,7 +188,7 @@ onBeforeUnmount(() => {
         >
             <slot name="indicator" :computation="computation">
                 <q-icon
-                    name="sym_r_info"
+                    :name="symRoundedInfo"
                     class="computation-result-display__indicator-icon"
                     aria-hidden="true"
                 />

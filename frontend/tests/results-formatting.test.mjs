@@ -2,13 +2,30 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createI18n } from 'vue-i18n';
 import en from '../src/i18n/en-GB/index.ts';
+import { i18n } from '../src/i18n/index.ts';
 import { FunctionalUnitSchema } from '../src/models/FunctionalUnit/schema.ts';
 import {
     buildFunctionalUnitSentence,
     formatCategoryName,
+    formatKg,
     formatPueInclusion,
     formatResult,
 } from '../src/utils/format.ts';
+
+test('kg formatting follows the active locale and preserves zero and missing values', (context) => {
+    const { locale } = i18n.global;
+    const previousLocale = locale.value;
+    context.after(() => {
+        locale.value = previousLocale;
+    });
+
+    assert.equal(formatKg(1234.5), '1,234.50');
+    assert.equal(formatKg(0), '0.00');
+    assert.equal(formatKg(null), '—');
+
+    locale.value = 'de-DE';
+    assert.equal(formatKg(1234.5), '1.234,50');
+});
 
 test('missing results use the supplied label without formatting or a partial suffix', () => {
     assert.equal(

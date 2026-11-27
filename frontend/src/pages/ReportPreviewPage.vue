@@ -6,8 +6,8 @@
                 flat
                 round
                 dense
-                icon="sym_r_arrow_back"
-                aria-label="Back"
+                :icon="symRoundedArrowBack"
+                :aria-label="$t('commonBack')"
                 @click="router.back()"
             />
             <q-toolbar-title class="text-weight-bold text-subtitle1">
@@ -17,7 +17,7 @@
             <q-btn
                 color="primary"
                 unelevated
-                icon="sym_r_print"
+                :icon="symRoundedPrint"
                 :label="$t('reportPrint')"
                 @click="printReport"
             />
@@ -30,7 +30,7 @@
                 class="bg-warning text-dark q-mb-md print-hide"
             >
                 <template #avatar>
-                    <q-icon name="sym_r_warning" />
+                    <q-icon :name="symRoundedWarning" />
                 </template>
                 {{ $t('resultsNoScopeHint') }}
             </q-banner>
@@ -200,6 +200,11 @@
 </template>
 
 <script setup lang="ts">
+import {
+    symRoundedArrowBack,
+    symRoundedPrint,
+    symRoundedWarning,
+} from '@quasar/extras/material-symbols-rounded';
 import { useSurveyDataStore } from 'src/stores/surveyData';
 
 import { computed } from 'vue';

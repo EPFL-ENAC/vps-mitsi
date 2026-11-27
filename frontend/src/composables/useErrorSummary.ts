@@ -1,3 +1,8 @@
+import {
+    symRoundedBolt,
+    symRoundedMemory,
+    symRoundedMyLocation,
+} from '@quasar/extras/material-symbols-rounded';
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -91,7 +96,7 @@ export function useErrorSummary() {
                     id: `scope-${pathStr}`,
                     section: 'scope',
                     route: '/scope',
-                    sectionIcon: 'sym_r_my_location',
+                    sectionIcon: symRoundedMyLocation,
                     sectionLabel: t('mainNavScope'),
                     entityName: pathStr.startsWith('functionalUnit')
                         ? t('errorPanel.scopeFuEntity')
@@ -109,7 +114,7 @@ export function useErrorSummary() {
                 id: 'scope-no-dc',
                 section: 'scope',
                 route: '/scope',
-                sectionIcon: 'sym_r_my_location',
+                sectionIcon: symRoundedMyLocation,
                 sectionLabel: t('mainNavScope'),
                 entityName: t('scopeBoundariesDcTitle'),
                 fieldLabel: t('inventoryColumns.datacenterId'),
@@ -122,7 +127,7 @@ export function useErrorSummary() {
                     ...collectIssues(DatacenterGeneralInfoSchema, dc.generalInfo, {
                         section: 'scope',
                         route: '/scope',
-                        sectionIcon: 'sym_r_my_location',
+                        sectionIcon: symRoundedMyLocation,
                         sectionLabel: t('mainNavScope'),
                         entityName: formatDatacenterName(dc),
                         labelPrefix: 'scopeDatacenterColumns',
@@ -144,7 +149,7 @@ export function useErrorSummary() {
                     ...collectIssues(BoundaryItemSchema, item, {
                         section: 'scope',
                         route: '/scope',
-                        sectionIcon: 'sym_r_my_location',
+                        sectionIcon: symRoundedMyLocation,
                         sectionLabel: t('mainNavScope'),
                         entityName: t(`scopeBoundary.${kind}.prefix`),
                         labelPrefix: 'scopeBoundary.placeholders',
@@ -161,7 +166,7 @@ export function useErrorSummary() {
                 ...collectIssues(HardwareItemSchema, item, {
                     section: 'inventory',
                     route: '/inventory',
-                    sectionIcon: 'sym_r_memory',
+                    sectionIcon: symRoundedMemory,
                     sectionLabel: t('mainNavInventory'),
                     entityName:
                         item.name.trim() || t('errorPanel.hardwareRowEntity', { index: index + 1 }),
@@ -177,7 +182,7 @@ export function useErrorSummary() {
             ...collectIssues(MonitoringPeriodSchema, surveyData.monitoringPeriod, {
                 section: 'energy',
                 route: '/energy',
-                sectionIcon: 'sym_r_bolt',
+                sectionIcon: symRoundedBolt,
                 sectionLabel: t('mainNavEnergy'),
                 entityName: t('energyMonitorTitle'),
                 labelPrefix: 'energyColumns',
@@ -190,7 +195,7 @@ export function useErrorSummary() {
                 ...collectIssues(DatacenterEnergySchema, dc.energy, {
                     section: 'energy',
                     route: '/energy',
-                    sectionIcon: 'sym_r_bolt',
+                    sectionIcon: symRoundedBolt,
                     sectionLabel: t('mainNavEnergy'),
                     entityName: formatDatacenterName(dc),
                     labelPrefix: 'energyColumns',

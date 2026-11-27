@@ -9,7 +9,7 @@
             class="bg-warning text-dark q-mb-md"
         >
             <template #avatar>
-                <q-icon name="sym_r_warning" />
+                <q-icon :name="symRoundedWarning" />
             </template>
             {{ $t('resultsNoScopeHint') }}
         </q-banner>
@@ -17,7 +17,7 @@
         <!-- Accessibility: one switch patterns every chart below. -->
         <div class="row items-center justify-end q-mb-sm">
             <q-toggle v-model="userPrefs.colorBlind" dense :label="$t('resultsColorBlindToggle')" />
-            <q-icon name="sym_r_info" class="q-ml-xs cursor-pointer">
+            <q-icon :name="symRoundedInfo" class="q-ml-xs cursor-pointer">
                 <q-tooltip>{{ $t('resultsColorBlindTooltip') }}</q-tooltip>
             </q-icon>
         </div>
@@ -60,6 +60,7 @@
 </template>
 
 <script setup lang="ts">
+import { symRoundedInfo, symRoundedWarning } from '@quasar/extras/material-symbols-rounded';
 import { useSurveyDataStore } from 'src/stores/surveyData';
 
 import GenerateReportButton from 'src/components/GenerateReportButton.vue';

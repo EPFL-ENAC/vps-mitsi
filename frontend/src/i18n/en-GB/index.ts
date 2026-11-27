@@ -5,6 +5,8 @@ export default {
     commonSave: 'Save',
     commonYes: 'Yes',
     commonNo: 'No',
+    // --- Not found page ---
+    notFoundCode: '404',
     // --- Welcome page ---
     welcomeEyebrow: 'Assessment workflow · LCA of an IT service',
     welcomeTitle: 'Assess the carbon footprint of your IT service',
@@ -25,6 +27,8 @@ export default {
         'Your draft is stored only in this browser. Export a JSON file to keep a copy or transfer it to another machine.',
     // --- Main layout (header, nav rail, footer) ---
     mainMenuAriaLabel: 'Menu',
+    mainLogoAlt: 'EPFL',
+    mainBrand: 'MITSI',
     mainTagline: 'IT service carbon impact assessment',
     mainSaveFailed:
         'Could not save the assessment. Check invalid fields and available browser storage, then try again.',

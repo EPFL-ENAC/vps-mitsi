@@ -1,3 +1,4 @@
+import { i18n } from 'src/i18n/index';
 import type { DatacenterDraft } from 'src/models/Datacenter/schema';
 import type { PueInclusion } from 'src/models/Datacenter/computations';
 import type { Scope } from 'src/models/Scope/schema';
@@ -26,9 +27,14 @@ export function parseNumber(text: string): string | number {
     return Number.isNaN(value) ? text : value;
 }
 
-/** kg CO₂-eq, en-US formatting with comma thousands separator, 2 decimals ("48,852.77"). */
-export function formatKg(n: number | null): string {
-    return formatNumber(n, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+/** Format kg CO₂-eq with two decimal places in the active locale. */
+export function formatKg(value: number | null): string {
+    if (value === null) return '—';
+
+    return new Intl.NumberFormat(i18n.global.locale.value, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(value);
 }
 
 /** Integer capacity in GB, with comma thousands separators. */

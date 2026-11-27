@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { symRoundedArrowBack, symRoundedClose } from '@quasar/extras/material-symbols-rounded';
 import {
     renderInventoryTable,
     renderInventoryDialog,
@@ -9,6 +10,9 @@ import {
 import { DatacenterDraftSchema } from '../src/models/Datacenter/schema.ts';
 import { HardwareItemDraftSchema, HardwareItemSchema } from '../src/models/HardwareItem/schema.ts';
 import en from '../src/i18n/en-GB/index.ts';
+
+const backPath = `d="${symRoundedArrowBack.split('|')[0]}"`;
+const closePath = `d="${symRoundedClose.split('|')[0]}"`;
 
 const datacenter = (overrides = {}) =>
     DatacenterDraftSchema.parse({
@@ -84,21 +88,21 @@ test('detail dialog shell exposes the unified header, title context and mode bad
     const readShell = await renderInventoryDialogShell({ row, readonly: true });
     const readHtml = await renderDialogContent(readShell);
     // The header no longer offers a back arrow; viewing ends with a single close action.
-    assert.ok(!readHtml.includes('arrow_back'));
+    assert.ok(!readHtml.includes(backPath));
     assert.ok(readHtml.includes('Server'));
     assert.ok(readHtml.includes(en.inventoryCategory_server));
     assert.ok(readHtml.includes(en.inventoryModeReadonly));
-    assert.ok(readHtml.includes('>close<'));
+    assert.ok(readHtml.includes(closePath));
     assert.ok(!readHtml.includes(en.commonCancel));
     assert.ok(!readHtml.includes(en.commonSave));
 
     const editShell = await renderInventoryDialogShell({ row });
     const editHtml = await renderDialogContent(editShell);
-    assert.ok(!editHtml.includes('arrow_back'));
+    assert.ok(!editHtml.includes(backPath));
     assert.ok(editHtml.includes(en.inventoryModeEditing));
     assert.ok(editHtml.includes(en.commonCancel));
     assert.ok(editHtml.includes(en.commonSave));
-    assert.ok(!editHtml.includes('>close<'));
+    assert.ok(!editHtml.includes(closePath));
 
     const untitled = await renderInventoryDialogShell({
         row: HardwareItemDraftSchema.parse({ id: 'h2' }),
@@ -169,10 +173,8 @@ test('the category cell swaps in place for a validated custom name', async () =>
     // The back button leaves the custom mode and clears the name.
     const back = buttons.find((control) => control.$attrs['aria-label'] === en.commonBack);
     assert.ok(back, 'missing the back button');
-    // Unified Material Symbols Rounded icon: `sym_r_` maps to the font class.
-    assert.equal(back.$props.icon, 'sym_r_arrow_back');
-    assert.equal(html.includes('material-symbols-rounded'), true);
-    assert.equal(html.includes('>arrow_back<'), true);
+    assert.equal(back.$props.icon, symRoundedArrowBack);
+    assert.ok(html.includes(backPath));
     back.$emit('click');
     assert.equal(row.category, 'server');
     assert.equal(row.categoryOther, '');

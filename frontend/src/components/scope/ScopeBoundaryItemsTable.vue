@@ -56,7 +56,7 @@
                     flat
                     dense
                     round
-                    icon="sym_r_delete"
+                    :icon="symRoundedDelete"
                     :aria-label="t('scopeBndDelete')"
                     @click="removeItem(item.id)"
                 />
@@ -75,6 +75,7 @@
 </template>
 
 <script setup lang="ts">
+import { symRoundedDelete } from '@quasar/extras/material-symbols-rounded';
 import { useSurveyDataStore } from 'src/stores/surveyData';
 import ZodValidatedTextInput from 'src/components/inputs/ZodValidatedTextInput.vue';
 import { computed } from 'vue';
