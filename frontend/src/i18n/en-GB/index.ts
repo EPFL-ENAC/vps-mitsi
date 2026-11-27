@@ -44,14 +44,17 @@ export default {
     exportDialogCommentPlaceholder: 'Anything worth noting about this export',
     exportDialogCancel: 'Cancel',
     exportDialogConfirm: 'Export',
-    mainImport: 'IMPORT',
+    mainImport: 'Import',
     mainImportWarningTitle: 'Import will replace the draft',
+    mainImportWarningTitleEmptyFile: 'Import will replace the draft with an empty one',
     mainImportWarning:
         'Your current assessment will be deleted. Use Export first if you want to keep it.',
     mainImportSuccess: 'Assessment imported successfully.',
     mainImportEmpty: 'Assessment imported, but the file contains no survey data.',
     mainImportFailed: 'Import failed: the file is not a valid assessment file.',
     mainImportTooLarge: 'Import failed: the file exceeds {max} MB.',
+    mainCancel: 'Cancel',
+    mainReplace: 'Replace',
     mainImportWarningEmptyFile:
         'The selected file contains NO SURVEY DATA. Your current assessment will be deleted and replaced with an empty one. Use Export first if you want to keep it.',
     mainNavWelcome: 'Welcome',
@@ -190,7 +193,7 @@ export default {
     inventoryNoScopeHint: 'Complete the “Scope” block first to unlock the fields.',
     inventoryStats: '{rows} items · {elements} elements · {total} kgCO₂e',
     inventoryWarningBar:
-        '⚠ {n} rows are missing a mandatory value. Missing measurements are shown as unavailable; affected totals remain unavailable until the required values are supplied.',
+        '{n} rows are missing a mandatory value. Missing measurements are shown as unavailable; affected totals remain unavailable until the required values are supplied.',
     inventoryFooter: 'Total embodied — {n} second-hand element(s) excluded',
     inventoryAddRow: '+ Add row',
     inventoryDeleteRow: 'Delete',

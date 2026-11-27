@@ -20,7 +20,7 @@
                     class="q-pa-xs text-weight-medium rounded-borders q-mr-sm"
                 >
                     <q-icon
-                        :name="isReadonly ? 'visibility' : 'edit'"
+                        :name="isReadonly ? 'sym_r_visibility' : 'sym_r_edit'"
                         size="14px"
                         class="q-mr-xs"
                     />
@@ -34,7 +34,7 @@
                     flat
                     round
                     dense
-                    icon="close"
+                    icon="sym_r_close"
                     text-color="grey-7"
                     class="q-ml-sm"
                 />

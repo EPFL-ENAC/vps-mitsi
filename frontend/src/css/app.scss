@@ -1,11 +1,34 @@
 // app global css in SCSS form
 
+// EPFL design tokens
+:root {
+    --epfl-white: #ffffff;
+    --epfl-red-text: #b51f1f;
+    --epfl-red-tint: #fff0f1;
+    --epfl-amber-text: #8a5a00;
+    --epfl-grey-50: #f6f6f6;
+    --epfl-grey-100: #ebebeb;
+    --epfl-grey-600: #6b7280;
+    --epfl-grey-700: #4d4d4d;
+    --epfl-grey-900: #212121;
+}
+
 $border-color: rgba(0, 0, 0, 0.15);
 
 body {
-    font-family: 'Google Sans Flex', sans-serif;
+    font-family: "Suisse Int'l", 'SuisseIntl', Arial, sans-serif;
     touch-action: pan-x pan-y;
     overscroll-behavior: none;
+}
+
+// EPFL typography is sentence case, so Quasar's uppercase button labels are
+// switched off app-wide (one rule instead of `.no-uppercase` on every button).
+.q-btn {
+    text-transform: none;
+}
+
+.text-epfl-red {
+    color: var(--epfl-red-text);
 }
 
 // ─── Header / Toolbar ────────────────────────────────────────────────────────
@@ -164,4 +187,28 @@ body {
     .results-total td {
         border-top: none !important;
     }
+}
+
+// EPFL keeps disabled controls opaque and differentiates them by surface.
+.q-btn--disabled,
+.q-field--disabled {
+    opacity: 1 !important;
+    color: var(--epfl-grey-700) !important;
+}
+
+// Accessible keyboard focus ring (EPFL red), kept distinct from field borders.
+:focus-visible {
+    outline: 2px solid var(--epfl-red-text);
+    outline-offset: 2px;
+}
+
+// Normal focus must not look like a validation error: grey ring, not red.
+.q-field--outlined.q-field--focused:not(.q-field--error) .q-field__control {
+    color: var(--epfl-grey-900);
+}
+
+// Tabular figures keep numeric columns aligned.
+.results-table td,
+.results-table th {
+    font-variant-numeric: tabular-nums;
 }

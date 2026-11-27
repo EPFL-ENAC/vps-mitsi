@@ -186,7 +186,11 @@ onBeforeUnmount(() => {
             @click.stop="togglePinned"
         >
             <slot name="indicator" :computation="computation">
-                <span class="material-icons" aria-hidden="true">info_outline</span>
+                <q-icon
+                    name="sym_r_info"
+                    class="computation-result-display__indicator-icon"
+                    aria-hidden="true"
+                />
             </slot>
             <QTooltip
                 :id="tooltipId"
@@ -284,29 +288,24 @@ onBeforeUnmount(() => {
     font: inherit;
 }
 
-.computation-result-display__indicator .material-icons {
+.computation-result-display__indicator .computation-result-display__indicator-icon {
     font-size: 18px;
 }
 
 .computation-result-display__indicator--partial,
 .computation-result-display__status--partial {
-    color: #946200;
+    color: var(--epfl-amber-text);
 }
 
 .computation-result-display__indicator--failure,
 .computation-result-display__status--failure {
-    color: #c1001a;
+    color: var(--epfl-red-text);
 }
 
 .computation-result-display__status {
     margin-left: 4px;
     font-size: 0.85em;
     font-weight: normal;
-}
-
-.computation-result-display__indicator:focus-visible {
-    outline: 2px solid currentColor;
-    outline-offset: 2px;
 }
 
 :global(.computation-result-display__tooltip) {

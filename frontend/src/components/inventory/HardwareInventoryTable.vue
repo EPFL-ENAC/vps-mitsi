@@ -35,7 +35,7 @@
                                 round
                                 dense
                                 size="sm"
-                                icon="visibility"
+                                icon="sym_r_visibility"
                                 text-color="dark"
                                 :aria-label="$t('inventoryViewRow')"
                                 @click="openDialog(slotProps.row, 'view')"
@@ -47,7 +47,7 @@
                                 round
                                 dense
                                 size="sm"
-                                icon="edit"
+                                icon="sym_r_edit"
                                 text-color="dark"
                                 :aria-label="$t('inventoryEditRow')"
                                 @click="openDialog(slotProps.row)"
@@ -59,7 +59,7 @@
                                 round
                                 dense
                                 size="sm"
-                                icon="delete"
+                                icon="sym_r_delete"
                                 text-color="negative"
                                 :aria-label="$t('inventoryDeleteRow')"
                                 @click="confirmDeleteRow(slotProps.row)"
@@ -198,6 +198,6 @@ defineExpose({ openDialog, showAndFocus });
 }
 
 .inventory-row--excluded .q-td {
-    background: #faf8f8;
+    background: var(--epfl-grey-50);
 }
 </style>

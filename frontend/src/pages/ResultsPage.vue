@@ -6,15 +6,18 @@
         <q-banner
             v-if="!surveyData.isScopeValid"
             inline-actions
-            class="bg-warning text-white q-mb-md"
+            class="bg-warning text-dark q-mb-md"
         >
+            <template #avatar>
+                <q-icon name="sym_r_warning" />
+            </template>
             {{ $t('resultsNoScopeHint') }}
         </q-banner>
 
         <!-- Accessibility: one switch patterns every chart below. -->
         <div class="row items-center justify-end q-mb-sm">
             <q-toggle v-model="userPrefs.colorBlind" dense :label="$t('resultsColorBlindToggle')" />
-            <q-icon name="info_outline" class="q-ml-xs cursor-pointer">
+            <q-icon name="sym_r_info" class="q-ml-xs cursor-pointer">
                 <q-tooltip>{{ $t('resultsColorBlindTooltip') }}</q-tooltip>
             </q-icon>
         </div>

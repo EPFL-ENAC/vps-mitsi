@@ -56,11 +56,9 @@
 }
 
 .welcome__eyebrow {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
-    color: #78828f;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--epfl-grey-700);
     margin-bottom: 8px;
 }
 
@@ -78,7 +76,7 @@
 }
 
 .welcome__link {
-    color: #0072b2;
+    color: var(--epfl-red-text);
     text-decoration: none;
     font-weight: 500;
 }
@@ -88,7 +86,7 @@
 }
 
 .welcome__hint {
-    color: #78828f;
+    color: var(--epfl-grey-700);
     font-size: 0.875em;
     margin-left: 6px;
 }

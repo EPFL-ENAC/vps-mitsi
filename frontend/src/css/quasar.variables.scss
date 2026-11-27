@@ -1,21 +1,21 @@
 // Quasar SCSS (& Sass) Variables
 // --------------------------------------------------
-// EPFL-aligned color palette
+// EPFL design system palette
 
-// EPFL red (exact brand color)
-$primary: #00a9b9;
-$secondary: #4f8fcc;
-$accent: #00a79f;
+// EPFL Web Red; #b51f1f is the AA-safe text red (--epfl-red-text in app.scss).
+$primary: #ff0000;
+$secondary: #4d4d4d;
+$accent: #ff0000;
 
-$dark: #1d1d1d;
+$dark: #212121;
 $dark-page: #121212;
 
-$positive: #21ba45;
-$negative: #ff6d4a;
-$info: #31ccec;
-$warning: #f2c037;
+$positive: #2e7d32;
+$negative: #b51f1f;
+$info: #007480;
+$warning: #f59e0b;
 
-$generic-border-radius: 6px;
+$generic-border-radius: 2px;
 $separator-color: rgba(0, 0, 0, 0.1);
-$button-border-radius: 6px;
+$button-border-radius: 2px;
 $button-padding: 8px 16px;

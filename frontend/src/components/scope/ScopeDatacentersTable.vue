@@ -61,7 +61,7 @@
                     <q-btn
                         flat
                         dense
-                        icon="delete"
+                        icon="sym_r_delete"
                         :aria-label="t('scopeDcDelete')"
                         @click="removeDatacenter(props.row)"
                     />
@@ -177,5 +177,10 @@ function removeDatacenter(dc: DatacenterDraft): void {
 
 .scope-datacenters-table {
     @include table-cells.cells;
+
+    // `Used by` and the delete button must sit on the input baseline.
+    :deep(.q-td) {
+        vertical-align: middle;
+    }
 }
 </style>

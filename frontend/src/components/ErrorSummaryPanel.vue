@@ -10,7 +10,7 @@
             @click="dialogOpen = true"
         >
             <q-icon
-                :name="hasIssues ? 'warning' : 'check_circle'"
+                :name="hasIssues ? 'sym_r_warning' : 'sym_r_check_circle'"
                 size="20px"
                 class="q-mr-xs"
                 :class="hasIssues ? 'text-warning' : 'text-positive'"
@@ -34,7 +34,7 @@
                 <q-card-section class="row items-center justify-between q-pb-none">
                     <div class="row items-center q-gutter-x-sm">
                         <q-icon
-                            :name="hasIssues ? 'warning' : 'check_circle'"
+                            :name="hasIssues ? 'sym_r_warning' : 'sym_r_check_circle'"
                             :color="hasIssues ? 'warning' : 'positive'"
                             size="30px"
                         />
@@ -51,7 +51,7 @@
                         flat
                         round
                         dense
-                        icon="close"
+                        icon="sym_r_close"
                         :aria-label="t('errorPanel.closeAriaLabel')"
                     />
                 </q-card-section>
@@ -100,8 +100,8 @@
                                     dense
                                     size="md"
                                     no-caps
-                                    style="color: #007480"
-                                    icon-right="arrow_forward"
+                                    color="primary"
+                                    icon-right="sym_r_arrow_forward"
                                     :label="t('errorPanel.goToField')"
                                 />
                             </q-item-section>

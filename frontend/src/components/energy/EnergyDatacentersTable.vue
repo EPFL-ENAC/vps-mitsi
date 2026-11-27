@@ -34,7 +34,7 @@
                                 round
                                 dense
                                 size="sm"
-                                icon="visibility"
+                                icon="sym_r_visibility"
                                 text-color="dark"
                                 :aria-label="$t('energyViewRow')"
                                 @click="openDialog(slotProps.row, 'view')"
@@ -46,7 +46,7 @@
                                 round
                                 dense
                                 size="sm"
-                                icon="edit"
+                                icon="sym_r_edit"
                                 text-color="dark"
                                 :aria-label="$t('energyEditRow')"
                                 @click="openDialog(slotProps.row)"
@@ -58,7 +58,7 @@
                                 round
                                 dense
                                 size="sm"
-                                icon="restart_alt"
+                                icon="sym_r_restart_alt"
                                 text-color="negative"
                                 :aria-label="$t('energyDcClear')"
                                 @click="clearEnergy(slotProps.row)"
