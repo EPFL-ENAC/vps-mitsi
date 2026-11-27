@@ -12,13 +12,12 @@
             content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width<% if (ctx.mode.cordova || ctx.mode.capacitor) { %>, viewport-fit=cover<% } %>"
         />
 
+        <meta
+            http-equiv="Content-Security-Policy"
+            content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://enac-it-fonts.epfl.ch; font-src 'self' https://enac-it-fonts.epfl.ch; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
+        />
         <link rel="icon" type="image/png" href="favicon.png" />
         <link rel="stylesheet" href="https://enac-it-fonts.epfl.ch/tokens/fonts.css" />
-        <script>
-            document.addEventListener('gesturestart', function (event) {
-                event.preventDefault();
-            });
-        </script>
     </head>
     <body>
         <!-- quasar:entry-point -->

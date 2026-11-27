@@ -52,6 +52,7 @@ export default {
     mainImportSuccess: 'Assessment imported successfully.',
     mainImportEmpty: 'Assessment imported, but the file contains no survey data.',
     mainImportFailed: 'Import failed: the file is not a valid assessment file.',
+    mainImportTooLarge: 'Import failed: the file exceeds {max} MB.',
     mainCancel: 'Cancel',
     mainReplace: 'Replace',
     mainImportWarningEmptyFile:
